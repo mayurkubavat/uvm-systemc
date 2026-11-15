@@ -177,7 +177,7 @@ class test : public uvm_test
 
 int sc_main(int, char*[])
 {
-  sc_core::sc_signal<transaction> pif;
+  sc_core::sc_signal<transaction> pif("pif");
   dut mydut("dut");
   mydut.in(pif);
 
