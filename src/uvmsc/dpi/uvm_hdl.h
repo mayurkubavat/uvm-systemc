@@ -69,6 +69,20 @@ bool uvm_hdl_release_time( const std::string& path, sc_core::sc_time time );
 // Returns 1 if the call succeeded, 0 otherwise.
 //----------------------------------------------------------------------
 
+// Message for an object in the design which cannot be accessed with
+// the type T used for the access
+inline std::string uvm_hdl_type_mismatch( const std::string& path,
+                                          const sc_core::sc_object* obj,
+                                          unsigned int n_bits )
+{
+  std::ostringstream str;
+  str << "Object " << path << " (" << obj->kind() << ") cannot be accessed: it is "
+      << "not a uvm_sc_if<T> or an sc_signal<T, SC_MANY_WRITERS>, or an sc_vector of "
+      << "them, with exactly the value type T of the access, a type of " << n_bits
+      << " bits (register and memory backdoor accesses use uvm_reg_data_t).";
+  return str.str();
+}
+
 template <typename T>
 bool uvm_hdl_deposit( const std::string& path, const T& value )
 {
@@ -192,7 +206,7 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
     }
   }
 
-  uvm_report_error("HDL_DEPOSIT", "Object " + objname2 + " is not of type uvm_sc_if or sc_signal.");
+  uvm_report_error("HDL_DEPOSIT", uvm_hdl_type_mismatch(objname2, obj, value.length()));
   return false;
 }
 
@@ -289,7 +303,7 @@ bool uvm_hdl_read( const std::string& path, T& value )
   {
     if ((idx_start != -1) && (idx_stop != -1))
     {
-      uvm_report_error("HDL_DEPOSIT", "Reading part-select on sc_signal<T> is not supported. ");
+      uvm_report_error("HDL_READ", "Reading part-select on sc_signal<T> is not supported. ");
       return false;
     }
 
@@ -308,7 +322,7 @@ bool uvm_hdl_read( const std::string& path, T& value )
     if ( (idx_start > (value.length()-1)) || (idx_start < -1) ||
          (idx_stop > (value.length()-1)) || (idx_stop < -1) )
     {
-      uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
+      uvm_report_error("HDL_READ", "Specified index for bit select is out of range.");
       return false;
     }
 
@@ -335,7 +349,7 @@ bool uvm_hdl_read( const std::string& path, T& value )
 
     if ( (vidx_start > (((int)vec_element.size())-1)) || (vidx_start < 0) )
     {
-      uvm_report_error("HDL_DEPOSIT", "Specified index of sc_vector out of range.");
+      uvm_report_error("HDL_READ", "Specified index of sc_vector out of range.");
       return false;
     }
 
@@ -345,7 +359,7 @@ bool uvm_hdl_read( const std::string& path, T& value )
       if ( (idx_start > (value.length()-1)) || (idx_start < -1) ||
            (idx_stop > (value.length()-1)) || (idx_stop < -1) )
       {
-        uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
+        uvm_report_error("HDL_READ", "Specified index for bit select is out of range.");
         return false;
       }
 
@@ -361,7 +375,7 @@ bool uvm_hdl_read( const std::string& path, T& value )
     {
       if ((idx_start != -1) && (idx_stop != -1))
       {
-        uvm_report_error("HDL_DEPOSIT", "Reading part-select on sc_signal<T> is not supported. ");
+        uvm_report_error("HDL_READ", "Reading part-select on sc_signal<T> is not supported. ");
         return false;
       }
 
@@ -373,7 +387,7 @@ bool uvm_hdl_read( const std::string& path, T& value )
     }
   }
 
-  uvm_report_error("HDL_READ", "Object " + objname2 + " is not of type uvm_sc_if or sc_signal.");
+  uvm_report_error("HDL_READ", uvm_hdl_type_mismatch(objname2, obj, value.length()));
   return false;
 }
 
