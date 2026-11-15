@@ -40,6 +40,7 @@ class uvm_reg_block;
 class uvm_mem;
 class uvm_sequencer_base;
 class uvm_reg_adapter;
+class uvm_reg_transaction_order_policy;
 class uvm_vreg;
 class uvm_vreg_field;
 
@@ -199,6 +200,10 @@ public:
 
   bool get_check_on_read() const;
 
+  void set_transaction_order_policy( uvm_reg_transaction_order_policy* pol );
+
+  uvm_reg_transaction_order_policy* get_transaction_order_policy() const;
+
   virtual void do_bus_write( uvm_reg_item* rw,
                              uvm_sequencer_base* sequencer,
                              uvm_reg_adapter* adapter );
@@ -276,6 +281,7 @@ private:
    uvm_sequencer_base* m_sequencer;
    bool                m_auto_predict;
    bool                m_check_on_read;
+   uvm_reg_transaction_order_policy* m_policy;
 
    uvm_reg_block*      m_parent;
 

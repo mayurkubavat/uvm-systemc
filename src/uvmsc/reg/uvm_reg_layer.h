@@ -34,6 +34,7 @@
 #include "uvmsc/reg/uvm_reg_indirect_ftdr_seq.h"
 #include "uvmsc/reg/uvm_reg_item.h"
 #include "uvmsc/reg/uvm_reg_map.h"
+#include "uvmsc/reg/uvm_reg_transaction_order_policy.h"
 #include "uvmsc/reg/uvm_reg_model.h"
 #include "uvmsc/reg/uvm_reg_predictor.h"
 #include "uvmsc/reg/uvm_reg_read_only_cbs.h"
