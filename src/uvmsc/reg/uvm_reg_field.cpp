@@ -356,10 +356,11 @@ bool uvm_reg_field::define_access( std::string name )
 std::string uvm_reg_field::get_access( uvm_reg_map* map ) const
 {
   std::string _access = m_access;
-  std::string _rights = m_parent->get_rights(map);
 
   if( map == uvm_reg_map::backdoor() )
     return _access;
+
+  std::string _rights = m_parent->get_rights(map);
 
   // Is the register restricted in this map?
   if (_rights == "RW")   // No restrictions
