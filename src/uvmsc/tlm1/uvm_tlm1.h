@@ -28,5 +28,6 @@
 #include "uvmsc/tlm1/uvm_imps.h"
 #include "uvmsc/tlm1/uvm_ports.h"
 #include "uvmsc/tlm1/uvm_tlm_req_rsp_channel.h"
+#include "uvmsc/tlm1/uvm_tlm_fifos.h"
 
 #endif /* UVM_TLM1_H_ */

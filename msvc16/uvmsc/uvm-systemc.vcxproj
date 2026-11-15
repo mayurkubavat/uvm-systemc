@@ -269,7 +269,10 @@
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_comps.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_driver.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_env.h" />
+    <ClInclude Include="..\..\src\uvmsc\comps\uvm_in_order_comparator.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_monitor.h" />
+    <ClInclude Include="..\..\src\uvmsc\comps\uvm_pair.h" />
+    <ClInclude Include="..\..\src\uvmsc\comps\uvm_policies.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_scoreboard.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_subscriber.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_test.h" />
@@ -386,6 +389,7 @@
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_imps.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_ports.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_sqr_connections.h" />
+    <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm_fifos.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm1.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm_req_rsp_channel.h" />
   </ItemGroup>
