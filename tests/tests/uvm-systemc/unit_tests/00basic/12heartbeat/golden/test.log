@@ -1,0 +1,76 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+a warning for a start without event is expected
+UVM_WARNING @ 0 s: test [NOEVNT] start() was called for: hb with a null trigger and no currently set trigger
+default mode is UVM_ALL_ACTIVE: 1
+0 s: all active, all three alive
+  failures: 0
+30 ns: all active, c2 silent
+UVM_WARNING @ 40 ns: test [HBFAIL] Did not recieve an update of hb_objection for component test.c2 since last event trigger at time 30 ns : last update time was 25 ns
+UVM_WARNING @ 50 ns: test [HBFAIL] Did not recieve an update of hb_objection for component test.c2 since last event trigger at time 40 ns : last update time was 25 ns
+  failures: 2
+50 ns: any active, only c1 alive
+  failures: 0
+70 ns: any active, nobody alive
+UVM_WARNING @ 80 ns: test [HBFAIL] Did not recieve an update of hb_objection on any component since last event trigger at time 70 ns. The list of registered components is:
+  test.c0
+  test.c1
+  test.c2
+UVM_WARNING @ 90 ns: test [HBFAIL] Did not recieve an update of hb_objection on any component since last event trigger at time 80 ns. The list of registered components is:
+  test.c0
+  test.c1
+  test.c2
+  failures: 2
+90 ns: one active, only c0 alive
+  failures: 0
+110 ns: one active, c0 and c1 alive
+UVM_WARNING @ 120 ns: test [HBFAIL] Recieved update of hb_objection from more than one component since last event trigger at time 110 ns. The list of triggered components is:
+  test.c0 (updated: 115 ns)
+  test.c1 (updated: 115 ns)
+UVM_WARNING @ 130 ns: test [HBFAIL] Recieved update of hb_objection from more than one component since last event trigger at time 120 ns. The list of triggered components is:
+  test.c0 (updated: 125 ns)
+  test.c1 (updated: 125 ns)
+  failures: 2
+130 ns: one active, nobody alive
+UVM_WARNING @ 140 ns: test [HBFAIL] Did not recieve an update of hb_objection on any component since last event trigger at time 130 ns. The list of registered components is:
+  test.c0
+  test.c1
+  test.c2
+UVM_WARNING @ 150 ns: test [HBFAIL] Did not recieve an update of hb_objection on any component since last event trigger at time 140 ns. The list of registered components is:
+  test.c0
+  test.c1
+  test.c2
+  failures: 2
+150 ns: all active without c2, c2 silent
+  failures: 0
+170 ns: stopped, nobody alive
+  failures: 0
+an error for a different event is expected
+UVM_ERROR @ 190 ns: test [ILHBVNT] start() was called for: hb with trigger other which is different from the original trigger hb_event
+190 ns: started again, c0 and c1 alive
+  failures: 0
+heartbeat failures in total: 8
+waiting for the event after start and stop: 1
+UVM_INFO <removed by verify-uvm.pl> @ 212 ns: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    8
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    0
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 212 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   2
+UVM_WARNING   :   9
+UVM_ERROR     :   1
+UVM_FATAL     :   0
+** Report counts by id
+[HBFAIL]                8
+[ILHBVNT]               1
+[NOEVNT]                1
+[RNTST]                 1
+[UVM/REPORT/CATCHER]    1
+UVM_INFO @ 212 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
+heartbeat deleted after the simulation

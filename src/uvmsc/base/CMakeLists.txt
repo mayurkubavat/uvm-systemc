@@ -5,6 +5,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_default_coreservice_t.cpp
   uvm_event_callback.cpp
   uvm_event.cpp
+  uvm_heartbeat.cpp
   uvm_globals.cpp
   uvm_mutex.cpp
   uvm_object.cpp
@@ -19,6 +20,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_default_coreservice_t.h
   uvm_event_callback.h
   uvm_event.h
+  uvm_heartbeat.h
   uvm_export_base.h
   uvm_globals.h
   uvm_mutex.h
