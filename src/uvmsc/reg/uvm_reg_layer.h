@@ -54,6 +54,12 @@
 
 #include "uvmsc/reg/sequences/uvm_reg_bit_bash_seq.h"
 #include "uvmsc/reg/sequences/uvm_reg_mem_hdl_paths_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_hw_reset_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_access_seq.h"
+#include "uvmsc/reg/sequences/uvm_mem_walk_seq.h"
+#include "uvmsc/reg/sequences/uvm_mem_access_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_mem_shared_access_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_mem_built_in_seq.h"
 
 // SystemC inspection interface
 #include "uvmsc/reg/uvm_sc_if.h"
