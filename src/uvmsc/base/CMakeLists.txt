@@ -40,6 +40,7 @@ install_headers (
   uvm_default_coreservice_t.h
   uvm_event_callback.h
   uvm_event.h
+  uvm_heartbeat.h
   uvm_export_base.h
   uvm_globals.h
   uvm_mutex.h
