@@ -2492,7 +2492,7 @@ bool uvm_reg::do_check( uvm_reg_data_t expected,
   for( unsigned int i = 0; i < m_fields.size(); i++ )
   {
     std::string acc = m_fields[i]->get_access(map);
-    acc = acc.substr(0, 1);
+    acc = acc.substr(0, 2);
     if (m_fields[i]->get_compare() == UVM_NO_CHECK ||
         acc == "WO")
     {
@@ -2517,7 +2517,7 @@ bool uvm_reg::do_check( uvm_reg_data_t expected,
   for( unsigned int i = 0; i < m_fields.size(); i++ )
   {
     std::string acc = m_fields[i]->get_access(map);
-    acc = acc.substr(0, 1);
+    acc = acc.substr(0, 2);
     if (!(m_fields[i]->get_compare() == UVM_NO_CHECK || acc == "WO"))
     {
       uvm_reg_data_t mask = uvm_mask_size(m_fields[i]->get_n_bits());
