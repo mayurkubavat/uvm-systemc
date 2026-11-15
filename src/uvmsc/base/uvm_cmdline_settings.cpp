@@ -250,7 +250,10 @@ bool string_to_time( const std::string& str, sc_core::sc_time& t )
 
 // Convert an integral value with an optional radix prefix
 // ('b, 0b, 'o, 'd, 'h, 'x or 0x).
-bool string_to_integral( const std::string& str, uvm_integral_t& value )
+// A decimal value is read as a signed 64 bit number, unless is_unsigned
+// is set and it has no minus sign.
+bool string_to_integral( const std::string& str, uvm_integral_t& value,
+                         bool is_unsigned = false )
 {
   std::string digits = str;
   int base = 10;
@@ -271,10 +274,24 @@ bool string_to_integral( const std::string& str, uvm_integral_t& value )
   if (digits.empty())
     return false;
 
+  // underscores after the first digit are ignored, as in 'hFFFF_FFFF
+  std::string::size_type first = (digits[0] == '-' || digits[0] == '+') ? 1 : 0;
+
+  if (first < digits.size() && digits[first] == '_')
+    return false;
+
+  digits.erase(std::remove(digits.begin(), digits.end(), '_'), digits.end());
+
   char* end = nullptr;
   errno = 0;
 
-  if (base == 10)
+  if (base == 10 && is_unsigned && digits[0] != '-')
+  {
+    // all 64 bits can be used
+    unsigned long long v = std::strtoull(digits.c_str(), &end, 10);
+    value = static_cast<sc_dt::uint64>(v);
+  }
+  else if (base == 10)
   {
     long long v = std::strtoll(digits.c_str(), &end, 10);
     value = static_cast<sc_dt::int64>(v);
@@ -757,6 +774,7 @@ bool check_config_fields( uvm_root* top,
 }
 
 // +uvm_set_config_int=<comp>,<field>,<value>
+// +uvm_set_config_bitstream=<comp>,<field>,<value>
 // +uvm_set_config_string=<comp>,<field>,<value>
 // +uvm_set_default_sequence=<seqr>,<phase>,<type>
 void do_config_settings( uvm_root* top )
@@ -789,6 +807,33 @@ void do_config_settings( uvm_root* top )
     // the value is also stored as int when it fits
     if (value.to_int64() >= INT_MIN && value.to_int64() <= INT_MAX)
       uvm_config_db<int>::set(top, args[0], args[1], static_cast<int>(value.to_int64()));
+  }
+
+  // unlike +uvm_set_config_int, the value is stored as uvm_bitstream_t only
+  values = get_values("+uvm_set_config_bitstream=", "+UVM_SET_CONFIG_BITSTREAM=");
+
+  for (unsigned int i = 0; i < values.size(); i++)
+  {
+    std::vector<std::string> args = split(values[i]);
+    uvm_integral_t value;
+
+    if (!check_config_fields(top, values[i], args))
+      continue;
+
+    if (!string_to_integral(args[2], value, true))
+    {
+      top->uvm_report_error("UVM_CMDLINE_PROC",
+        "Invalid +uvm_set_config command\"" + values[i] +
+        "\" : value \"" + args[2] + "\" is not an integral value.", UVM_NONE);
+      continue;
+    }
+
+    top->uvm_report_info("UVM_CMDLINE_PROC",
+      "Applying config setting from the command line: +uvm_set_config_bitstream=" +
+      values[i], UVM_NONE);
+
+    uvm_config_db<uvm_bitstream_t>::set(top, args[0], args[1],
+                                        uvm_bitstream_t(value.to_uint64()));
   }
 
   values = get_values("+uvm_set_config_string=", "+UVM_SET_CONFIG_STRING=");

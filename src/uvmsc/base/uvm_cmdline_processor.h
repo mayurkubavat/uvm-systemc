@@ -66,12 +66,15 @@ namespace uvm {
 //! +uvm_set_inst_override=<req_type>,<override_type>,<full_inst_path>
 //! +uvm_set_type_override=<req_type>,<override_type>[,<replace>]
 //! +uvm_set_config_int=<comp>,<field>,<value>
+//! +uvm_set_config_bitstream=<comp>,<field>,<value>
 //! +uvm_set_config_string=<comp>,<field>,<value>
 //! +uvm_set_default_sequence=<seqr>,<phase>,<type>
 //!
 //! A value set with +uvm_set_config_int is stored for both the types
 //! uvm_bitstream_t (uvm_config_int) and int, so it is found by
 //! uvm_config_db<int>::get as well.
+//! A value set with +uvm_set_config_bitstream is stored for the type
+//! uvm_bitstream_t only. Values of up to 64 bits can be given.
 //----------------------------------------------------------------------
 
 class uvm_cmdline_processor : public uvm_report_object
