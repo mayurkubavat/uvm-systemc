@@ -28,9 +28,6 @@ int sc_main(int, char*[])
   // read the settings of CRAVE; the file is created if it does not exist
   crave::init("crave.cfg");
 
-  // use a fixed seed to get the same packets in every run
-  crave::set_global_seed(20260101);
-
   // instantiate testbench
   testbench tb("tb");
 
