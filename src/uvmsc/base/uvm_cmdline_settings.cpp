@@ -32,6 +32,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <exception>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -50,6 +51,7 @@
 #include "uvmsc/conf/uvm_resource_db_options.h"
 #include "uvmsc/factory/uvm_factory.h"
 #include "uvmsc/factory/uvm_object_wrapper.h"
+#include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/report/uvm_report_server.h"
 
 namespace uvm {
@@ -862,6 +864,62 @@ bool has_uvm_args()
 
 } // anonymous namespace
 
+// +UVM_SEED=<seed>|random
+//
+// Parsed by init, so that also components which are constructed before
+// run_test is called get their seeds from the seed of the command line.
+static void parse_seed()
+{
+  std::vector<std::string> values = get_values("+UVM_SEED=");
+  unsigned int seed = 0;
+
+  if (values.empty())
+    return;
+
+  if (values.size() > 1)
+  {
+    std::ostringstream str;
+    str << "Multiple (" << values.size()
+        << ") +UVM_SEED arguments provided on the command line.  '"
+        << values[0] << "' will be used.  Provided list: "
+        << join(values, "; ") << ".";
+    add_report(UVM_WARNING, "MULTSEED", str.str());
+  }
+
+  const std::string& value = values[0];
+
+  if (value == "random")
+  {
+    std::random_device rd;
+    seed = rd();
+  }
+  else
+  {
+    // decimal digits only: strtoul would also accept a sign and
+    // leading white space
+    bool valid = !value.empty() && value.size() <= 10 &&
+      value.find_first_not_of("0123456789") == std::string::npos;
+    unsigned long long v = valid ? std::strtoull(value.c_str(), nullptr, 10) : 0;
+
+    if (!valid || v > 0xffffffffull)
+    {
+      add_report(UVM_ERROR, "UVM_CMDLINE_PROC", "Invalid seed for +UVM_SEED=" +
+        value + ", setting will be ignored.");
+      return;
+    }
+    seed = static_cast<unsigned int>(v);
+  }
+
+  uvm_set_random_seed(seed);
+
+  // The seed is reported, so a run with +UVM_SEED=random can be repeated.
+  std::ostringstream str;
+  str << "'+UVM_SEED=" << value
+      << "' provided on the command line is being applied; the global seed is "
+      << seed << ".";
+  add_report(UVM_INFO, "SEEDSET", str.str());
+}
+
 //----------------------------------------------------------------------
 // member function: init (static)
 //----------------------------------------------------------------------
@@ -887,6 +945,7 @@ void uvm_cmdline_settings::init( uvm_root* top )
   parse_set_verbosity();
   parse_set_action();
   parse_set_severity();
+  parse_seed();
 
   if (has_arg("+UVM_CONFIG_DB_TRACE"))
     uvm_config_db_options::turn_on_tracing();
@@ -916,6 +975,8 @@ void uvm_cmdline_settings::apply( uvm_root* top )
 
     if (r.severity == UVM_INFO)
       top->uvm_report_info(r.id, r.message, UVM_NONE);
+    else if (r.severity == UVM_ERROR)
+      top->uvm_report_error(r.id, r.message, UVM_NONE);
     else
       top->uvm_report_warning(r.id, r.message, UVM_NONE);
   }
