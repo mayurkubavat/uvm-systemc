@@ -31,7 +31,7 @@ UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
 Quit count :     0 of    10
 ** Report counts by severity
 UVM_INFO      :  25
-UVM_WARNING   :   1
+UVM_WARNING   :   0
 UVM_ERROR     :   0
 UVM_FATAL     :   0
 ** Report counts by id
@@ -39,7 +39,6 @@ UVM_FATAL     :   0
 [REG_PREDICT]           2
 [RNTST]                 1
 [RegModel]              2
-[TPRGED]                1
 [Test]                  3
 [uvm_reg_map]           4
 UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

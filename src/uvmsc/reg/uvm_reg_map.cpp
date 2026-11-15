@@ -44,50 +44,6 @@
 
 namespace uvm {
 
-class reg_rw : public uvm_sequence_item
-{
-  using uvm_sequence_item::uvm_report;
-  using uvm_sequence_item::uvm_report_info;
-  using uvm_sequence_item::uvm_report_warning;
-  using uvm_sequence_item::uvm_report_error;
-  using uvm_sequence_item::uvm_report_fatal;
-
- public:
-
-  bool read; // TODO randomize these 4
-  sc_dt::sc_bv<32> addr;
-  sc_dt::sc_lv<32> data;
-  sc_dt::sc_lv<4>  byte_en;
-
-  reg_rw (const std::string& name = "reg_rw") : uvm_sequence_item(name)
-  {}
-
-  UVM_OBJECT_UTILS(reg_rw);
-
-  /* TODO implement other methods
-   `uvm_object_utils_begin(reg_rw)
-     `uvm_field_int(read, UVM_ALL_ON | UVM_NOPACK);
-     `uvm_field_int(addr, UVM_ALL_ON | UVM_NOPACK);
-     `uvm_field_int(data, UVM_ALL_ON | UVM_NOPACK);
-     `uvm_field_int(byte_en, UVM_ALL_ON | UVM_NOPACK);
-   `uvm_object_utils_end
-   */
-
-  std::string convert2string() const
-  {
-    std::ostringstream str;
-
-    str << "reg_rw: "
-        << ((read) ? "READ" : "WRITE" )
-        << " addr = 0x" << addr.to_string(sc_dt::SC_HEX_US, false)
-        << " data = 0x" << data.to_string(sc_dt::SC_HEX_US, false)
-        << " byte_en = " << byte_en;
-    return str.str();
-  }
-
-}; // class reg_rw
-
-
 //------------------------------------------------------------------------------
 // static data member initialization
 //------------------------------------------------------------------------------

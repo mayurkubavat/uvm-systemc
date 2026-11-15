@@ -10,7 +10,7 @@ Type Overrides:
   Requested Type  Override Type
   --------------  -------------
   packet          mypacket
-All types registered with the factory: 22 total
+All types registered with the factory: 21 total
   Type Name
   ---------
   env
@@ -18,7 +18,6 @@ All types registered with the factory: 22 total
   mygen
   mypacket
   packet
-  reg_rw
   top
 (*) Types with no associated type name will be printed as <unknown>
 ####
