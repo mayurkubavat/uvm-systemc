@@ -1,5 +1,6 @@
 H_FILES += \
 	base/uvm_base.h \
+	base/uvm_cmdline_processor.h \
 	base/uvm_component.h \
 	base/uvm_component_name.h \
 	base/uvm_coreservice_t.h \
@@ -17,7 +18,12 @@ H_FILES += \
 	base/uvm_void.h \
 	base/uvm_version.h
 
+NO_H_FILES += \
+	base/uvm_cmdline_settings.h
+
 CXX_FILES += \
+	base/uvm_cmdline_processor.cpp \
+	base/uvm_cmdline_settings.cpp \
 	base/uvm_component.cpp \
 	base/uvm_component_name.cpp \
 	base/uvm_coreservice_t.cpp \

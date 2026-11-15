@@ -27,6 +27,7 @@
 #include <stdexcept>
 
 #include "uvmsc/base/uvm_root.h"
+#include "uvmsc/base/uvm_cmdline_settings.h"
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_component_name.h"
 #include "uvmsc/base/uvm_globals.h"
@@ -97,6 +98,9 @@ uvm_root::uvm_root( uvm_component_name nm )
 
   // print header
   m_uvm_header();
+
+  // command line arguments which take effect before components exist
+  uvm_cmdline_settings::init(this);
 }
 
 //----------------------------------------------------------------------
@@ -125,8 +129,14 @@ void uvm_root::run_test( const std::string& test_name )
   // TODO make switch available to enable SystemC messages
   sc_core::sc_report_handler::set_actions("/OSCI/SystemC", sc_core::SC_DO_NOTHING);
 
+  // apply the command line arguments; +UVM_TESTNAME overrules test_name
+  uvm_cmdline_settings::apply(this);
+  if (uvm_cmdline_settings::has_arg("+UVM_PHASE_TRACE"))
+    uvm_phase::m_phase_trace = true;
+  const std::string name = uvm_cmdline_settings::get_test_name(this, test_name);
+
   // check and register test object
-  m_register_test(test_name);
+  m_register_test(name);
 
   // start objection mechanism fired as spawned process
   sc_process_handle m_init_objections_proc =
@@ -157,7 +167,7 @@ void uvm_root::run_test( const std::string& test_name )
     sc_core::sc_stop();
 
   // Clean-up 
-  m_unregister_test(test_name);
+  m_unregister_test(name);
 }
 
 //----------------------------------------------------------------------
@@ -517,7 +527,7 @@ void uvm_root::m_register_test( const std::string& test_name )
   if(test_name=="")
     uvm_report_info("RNTST", "Running test ...", UVM_LOW);
   else
-    if (test_name == uvm_test_top->get_type_name())
+    if (uvm_test_top == nullptr || test_name == uvm_test_top->get_type_name())
       uvm_report_info("RNTST", "Running test " + test_name + "...", UVM_LOW);
     else
       uvm_report_info("RNTST", "Running test " + uvm_test_top->get_type_name() +

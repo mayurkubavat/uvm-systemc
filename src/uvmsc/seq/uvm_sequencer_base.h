@@ -26,6 +26,7 @@
 
 
 #include <list>
+#include <random>
 #include <vector>
 
 #include "uvmsc/base/uvm_component.h"
@@ -147,6 +148,8 @@ public:
 
   void m_start_default_seq_proc(uvm_sequence_base* seq);
 
+  unsigned int m_urandom_range( unsigned int max, unsigned int min = 0 );
+
   // member variables
 
   int m_wait_for_item_sequence_id;
@@ -157,6 +160,9 @@ public:
 
   int m_lock_arb_size;
   int m_arb_size;
+
+  std::mt19937 m_rng;
+  bool m_rng_seeded;
 
  protected:
   int m_sequencer_id;
