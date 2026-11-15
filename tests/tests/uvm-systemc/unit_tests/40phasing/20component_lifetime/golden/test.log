@@ -1,0 +1,17 @@
+SystemC Simulation
+parent and child deleted
+children of uvm_top: 2
+UVM_INFO @ 0 s: reporter [RNTST] Running test ...
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: kept1 [RUN] run phase of kept1 done
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: kept2 [RUN] run phase of kept2 done
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   3
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[RUN]                   2
+UVM_INFO @ 20 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

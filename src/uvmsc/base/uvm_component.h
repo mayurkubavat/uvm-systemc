@@ -467,7 +467,6 @@ class uvm_component : public sc_core::sc_module,
   uvm_domain* m_common; //common domain
 
   // keep track of dynamically added elements
-  std::list<uvm_phase*> m_schedule_list;
   std::list<uvm_config_object_wrapper*> m_config_object_wrapper_list;
 };
 
