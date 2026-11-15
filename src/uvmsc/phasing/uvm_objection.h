@@ -27,6 +27,9 @@
 
 #include "uvmsc/base/uvm_object.h"
 #include "uvmsc/base/uvm_root.h"
+#include "uvmsc/cb/uvm_callbacks.h"
+#include "uvmsc/macros/uvm_callback_defines.h"
+#include "uvmsc/phasing/uvm_objection_callback.h"
 
 #include <map>
 #include <list>
@@ -85,6 +88,8 @@ class uvm_objection : public uvm_object
   //--------------------------------------------------------------------------
   // UVM Standard LRM API below
   //--------------------------------------------------------------------------
+
+  UVM_REGISTER_CB(uvm_objection, uvm_objection_callback)
 
   // Constructors
   uvm_objection();
