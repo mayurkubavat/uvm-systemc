@@ -373,6 +373,7 @@
     <ClInclude Include="..\..\src\uvmsc\report\uvm_report_server.h" />
     <ClInclude Include="..\..\src\uvmsc\seq\uvm_seq.h" />
     <ClInclude Include="..\..\src\uvmsc\seq\uvm_sequence.h" />
+    <ClInclude Include="..\..\src\uvmsc\seq\uvm_sequence_library.h" />
     <ClInclude Include="..\..\src\uvmsc\seq\uvm_sequencer.h" />
     <ClInclude Include="..\..\src\uvmsc\seq\uvm_sequencer_base.h" />
     <ClInclude Include="..\..\src\uvmsc\seq\uvm_sequencer_ifs.h" />

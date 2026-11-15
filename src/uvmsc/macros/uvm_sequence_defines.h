@@ -170,4 +170,84 @@
   }
 
 
+//----------------------------------------------------------------------
+// MACRO: UVM_SEQUENCE_LIBRARY_UTILS
+//
+//! Declares the infrastructure needed to define extensions to the
+//! uvm_sequence_library class. Use this macro in the class of the
+//! sequence library, which must also call init_sequence_library() in
+//! its constructor:
+//!
+//!   class my_seq_lib : public uvm::uvm_sequence_library<my_item>
+//!   {
+//!    public:
+//!     UVM_OBJECT_UTILS(my_seq_lib);
+//!     UVM_SEQUENCE_LIBRARY_UTILS(my_seq_lib);
+//!
+//!     my_seq_lib( const std::string& name = "" )
+//!     : uvm::uvm_sequence_library<my_item>(name)
+//!     { init_sequence_library(); }
+//!   };
+//----------------------------------------------------------------------
+
+#define UVM_SEQUENCE_LIBRARY_UTILS(TYPE) \
+  static std::vector< ::uvm::uvm_object_wrapper*>& m_typewide_sequences() \
+  { \
+    static std::vector< ::uvm::uvm_object_wrapper*> typewide_sequences; \
+    return typewide_sequences; \
+  } \
+  static std::vector< ::uvm::uvm_object_wrapper* (*)()>& m_typewide_getters() \
+  { \
+    static std::vector< ::uvm::uvm_object_wrapper* (*)()> typewide_getters; \
+    return typewide_getters; \
+  } \
+  static bool m_add_typewide_sequence( ::uvm::uvm_object_wrapper* (*getter)() ) \
+  { \
+    TYPE::m_typewide_getters().push_back(getter); \
+    return true; \
+  } \
+  static void add_typewide_sequence( ::uvm::uvm_object_wrapper* seq_type ) \
+  { \
+    std::vector< ::uvm::uvm_object_wrapper*>& typewide = TYPE::m_typewide_sequences(); \
+    for (unsigned int i = 0; i < typewide.size(); i++) \
+      if (typewide[i] == seq_type) return; \
+    if (TYPE::m_check(seq_type, nullptr)) \
+      typewide.push_back(seq_type); \
+  } \
+  static void add_typewide_sequences( const std::vector< ::uvm::uvm_object_wrapper*>& seq_types ) \
+  { \
+    for (unsigned int i = 0; i < seq_types.size(); i++) \
+      TYPE::add_typewide_sequence(seq_types[i]); \
+  } \
+  void init_sequence_library() \
+  { \
+    this->m_init_from(TYPE::m_typewide_sequences(), TYPE::m_typewide_getters()); \
+  }
+
+//----------------------------------------------------------------------
+// MACRO: UVM_ADD_TO_SEQ_LIB
+//
+//! Adds the given sequence TYPE to the given sequence library LIBTYPE.
+//! Use this macro in the class of the sequence, after UVM_OBJECT_UTILS.
+//! It may be used more than once to add the sequence to several
+//! libraries. The sequence becomes available to all instances of the
+//! library which are created afterwards.
+//!
+//! The class of the library shall be defined before the class of the
+//! sequence, and the macro shall be on a line of its own: it defines
+//! members which are named after the line it is on. It needs C++17.
+//----------------------------------------------------------------------
+
+#define M_UVM_SEQ_LIB_CONCAT_(A, B) A##B
+#define M_UVM_SEQ_LIB_CONCAT(A, B) M_UVM_SEQ_LIB_CONCAT_(A, B)
+
+#define UVM_ADD_TO_SEQ_LIB(TYPE, LIBTYPE) \
+  static ::uvm::uvm_object_wrapper* M_UVM_SEQ_LIB_CONCAT(m_uvm_seq_lib_wrapper_, __LINE__)() \
+  { \
+    return ::uvm::uvm_object_registry<TYPE>::get(); \
+  } \
+  static inline const bool M_UVM_SEQ_LIB_CONCAT(m_uvm_seq_lib_added_, __LINE__) = \
+    LIBTYPE::m_add_typewide_sequence(&M_UVM_SEQ_LIB_CONCAT(m_uvm_seq_lib_wrapper_, __LINE__));
+
+
 #endif /* UVM_SEQUENCE_DEFINES_H_ */
