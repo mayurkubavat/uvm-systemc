@@ -3,6 +3,7 @@ H_FILES += \
 	comps/uvm_comps.h \
 	comps/uvm_driver.h \
 	comps/uvm_env.h \
+	comps/uvm_algorithmic_comparator.h \
 	comps/uvm_in_order_comparator.h \
 	comps/uvm_monitor.h \
 	comps/uvm_pair.h \

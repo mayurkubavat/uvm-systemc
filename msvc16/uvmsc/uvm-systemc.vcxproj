@@ -269,6 +269,7 @@
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_comps.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_driver.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_env.h" />
+    <ClInclude Include="..\..\src\uvmsc\comps\uvm_algorithmic_comparator.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_in_order_comparator.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_monitor.h" />
     <ClInclude Include="..\..\src\uvmsc\comps\uvm_pair.h" />
