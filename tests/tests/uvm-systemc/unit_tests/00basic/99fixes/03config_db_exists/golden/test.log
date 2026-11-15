@@ -1,0 +1,27 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+context 'test' inst 'env' field 'from_test': get=1 exists=1
+context 'test' inst 'env' field 'for_all': get=1 exists=1
+context 'test' inst '' field 'for_test': get=1 exists=1
+context 'test' inst 'env' field 'for_test': get=0 exists=0
+context '' inst 'test.env' field 'from_top': get=1 exists=1
+context '' inst 'test.env' field 'from_test': get=1 exists=1
+context '' inst 'test.other' field 'from_top': get=0 exists=0
+context '' inst '' field 'at_top': get=1 exists=1
+context 'test.env' inst '' field 'from_test': get=1 exists=1
+context 'test.env' inst '' field 'for_all': get=1 exists=1
+context '' inst 'test.env' field 'from_test': get=1 exists=1
+context '' inst 'test.env' field 'from_top': get=1 exists=1
+context 'test.env' inst '' field 'from_tset': get=0 exists=0
+context 'test.env' inst '' field 'from_test': get=0 exists=0
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
