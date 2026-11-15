@@ -45,7 +45,9 @@ EXTRA_DIST += \
 			  src/uvmsc/report/CMakeLists.txt \
 			  src/uvmsc/seq/CMakeLists.txt \
 			  src/uvmsc/tlm1/CMakeLists.txt \
-			  tests/CMakeLists.txt
+			  tests/CMakeLists.txt \
+			  tests/tests/fc4sc/coverage/subscriber/subscriber.f \
+			  tests/tests/fc4sc/coverage/subscriber/golden/subscriber.log
 
 ## ****************************************************************************
 

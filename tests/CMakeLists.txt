@@ -49,6 +49,9 @@ set(_UVM_TEST_COMMON_INCLUDE "${_UVM_TEST_ROOT}/include")
 
 function(configure_and_add_regression_test TEST_PATH)
   string(REGEX REPLACE "^uvm-systemc/([^/]+).*$" "\\1" TEST_GROUP "${TEST_PATH}")
+  if (TEST_PATH MATCHES "^fc4sc/")
+    set(TEST_GROUP fc4sc)
+  endif()
   get_filename_component(TEST_FOLDER "${TEST_PATH}" DIRECTORY)
   string(REPLACE "/" "-" TEST_NAME "${TEST_PATH}")
   # Strip leading "uvm-systemc-" prefix to keep target names short.
@@ -103,6 +106,9 @@ function(configure_and_add_regression_test TEST_PATH)
     "${test_source_dir}"
     "${_UVM_TEST_COMMON_INCLUDE}")
   target_link_libraries(${TEST_NAME} PRIVATE UVMSystemC::uvm-systemc)
+  if (TEST_PATH MATCHES "^fc4sc/")
+    target_link_libraries(${TEST_NAME} PRIVATE FC4SC::fc4sc)
+  endif()
 
   set(testname ${TEST_PATH}${TEST_SUFFIX})
   add_test(NAME ${testname}
@@ -177,6 +183,10 @@ function(discover_regression_tests)
        CONFIGURE_DEPENDS "${_UVM_TEST_ROOT}/golden"
   )
   foreach(test ${tests})
+    # The tests below fc4sc/ require the optional FC4SC library.
+    if(test MATCHES "^fc4sc/" AND NOT UVM_SYSTEMC_ENABLE_FC4SC)
+      continue()
+    endif()
     if(IS_DIRECTORY "${_UVM_TEST_ROOT}/${test}/golden")
       configure_and_add_regression_test(${test})
     endif()
