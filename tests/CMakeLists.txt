@@ -68,6 +68,12 @@ function(configure_and_add_regression_test TEST_PATH)
     set(test_source_dir
         "${PROJECT_SOURCE_DIR}/examples/uvmsc/simple/registers/models/fifo_reg")
   endif()
+  if (TEST_PATH MATCHES "^crave/(.*)$")
+    # The CRAVE tests build the examples in examples/uvmsc/simple/crave.
+    set(TEST_GROUP crave)
+    set(test_source_dir
+        "${PROJECT_SOURCE_DIR}/examples/uvmsc/simple/crave/${CMAKE_MATCH_1}")
+  endif()
 
   file(GLOB sources CONFIGURE_DEPENDS "${test_data_dir}/*.f")
   if(sources) # found a file list
@@ -103,6 +109,9 @@ function(configure_and_add_regression_test TEST_PATH)
     "${test_source_dir}"
     "${_UVM_TEST_COMMON_INCLUDE}")
   target_link_libraries(${TEST_NAME} PRIVATE UVMSystemC::uvm-systemc)
+  if (TEST_GROUP STREQUAL "crave")
+    target_link_libraries(${TEST_NAME} PRIVATE crave2uvm::crave2uvm)
+  endif()
 
   set(testname ${TEST_PATH}${TEST_SUFFIX})
   add_test(NAME ${testname}
@@ -177,6 +186,9 @@ function(discover_regression_tests)
        CONFIGURE_DEPENDS "${_UVM_TEST_ROOT}/golden"
   )
   foreach(test ${tests})
+    if(test MATCHES "^crave/" AND NOT UVM_SYSTEMC_ENABLE_CRAVE)
+      continue()
+    endif()
     if(IS_DIRECTORY "${_UVM_TEST_ROOT}/${test}/golden")
       configure_and_add_regression_test(${test})
     endif()
