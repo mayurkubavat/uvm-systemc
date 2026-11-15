@@ -1,0 +1,24 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+10 ns: driver got item 100
+10 ns: the two waiting processes were killed
+UVM_ERROR <removed by verify-uvm.pl> @ 10 ns: test.sqr [SEQLCKZMB] The task responsible for requesting a lock on sequencer 'test.sqr' for sequence 'test.sqr.lock_zombie' has been killed, to avoid a deadlock the sequence will be removed from the arbitration queues.
+UVM_ERROR <removed by verify-uvm.pl> @ 10 ns: test.sqr [SEQREQZMB] The task responsible for requesting a wait_for_grant on sequencer 'test.sqr' for sequence 'grant_zombie' has been killed, to avoid a deadlock the sequence will be removed from the arbitration queues.
+20 ns: driver got item 101
+30 ns: driver got item 102
+40 ns: driver got item 300
+50 ns: driver got item 200
+60 ns: driver got item 201
+sequencer is free
+UVM_INFO <removed by verify-uvm.pl> @ 210 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   2
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[SEQLCKZMB]             1
+[SEQREQZMB]             1
+UVM_INFO @ 210 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

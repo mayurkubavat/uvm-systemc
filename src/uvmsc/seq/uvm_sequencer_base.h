@@ -130,6 +130,9 @@ public:
   void m_sequence_exiting(uvm_sequence_base* sequence_ptr);
   void remove_sequence_from_queues(uvm_sequence_base* sequence_ptr);
   void m_unregister_sequence(int sequence_id);
+  bool m_is_request_zombie( const uvm_sequence_request* request ) const;
+  void m_remove_zombie_request( unsigned int idx );
+
   void grant_queued_locks();
   void m_select_sequence();
   int m_choose_next_request();
@@ -192,7 +195,7 @@ class uvm_sequence_request
   int sequence_id;
   int request_id;
   int item_priority;
-  uvm_process process_id;
+  sc_core::sc_process_handle process_id; // the process which made the request
   uvm_sequencer_base::seq_req_t request;
   uvm_sequence_base* sequence_ptr;
 };
