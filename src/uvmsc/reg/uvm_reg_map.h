@@ -283,25 +283,25 @@ private:
 
    uvm_reg_map*        m_parent_map;
 
-   typedef std::map<uvm_reg_map*, uvm_reg_addr_t> m_parent_maps_t; // value=offset of this map at parent level
+   typedef std::map<uvm_reg_inst_key<uvm_reg_map>, uvm_reg_addr_t> m_parent_maps_t; // value=offset of this map at parent level
    typedef m_parent_maps_t::iterator m_parent_maps_itt;
    m_parent_maps_t m_parent_maps;
 
-   typedef std::map< uvm_reg_map*, uvm_reg_addr_t> m_submaps_t;     // value=offset of submap at this level
+   typedef std::map<uvm_reg_inst_key<uvm_reg_map>, uvm_reg_addr_t> m_submaps_t;     // value=offset of submap at this level
    typedef m_submaps_t::iterator m_submaps_itt;
    typedef m_submaps_t::const_iterator m_submaps_citt;
    m_submaps_t m_submaps;
 
-   typedef std::map< uvm_reg_map*, std::string> m_submap_rights_t;       // value=rights of submap at this level
+   typedef std::map<uvm_reg_inst_key<uvm_reg_map>, std::string> m_submap_rights_t;       // value=rights of submap at this level
    typedef m_submap_rights_t::const_iterator m_submap_rights_citt;
    m_submap_rights_t m_submap_rights;
 
-   typedef std::map<uvm_reg*, uvm_reg_map_info*> m_regs_info_t;
+   typedef std::map<uvm_reg_inst_key<uvm_reg>, uvm_reg_map_info*> m_regs_info_t;
    typedef m_regs_info_t::iterator m_regs_info_itt;
    typedef m_regs_info_t::const_iterator m_regs_info_citt;
    m_regs_info_t m_regs_info;
 
-   typedef std::map<uvm_mem*, uvm_reg_map_info*> m_mems_info_t;
+   typedef std::map<uvm_reg_inst_key<uvm_mem>, uvm_reg_map_info*> m_mems_info_t;
    typedef m_mems_info_t::iterator m_mems_info_itt;
    typedef m_mems_info_t::const_iterator m_mems_info_citt;
    m_mems_info_t m_mems_info;

@@ -424,7 +424,7 @@ class uvm_reg : public uvm_object
   unsigned int m_n_bits;
   unsigned int m_n_used_bits;
 
-  typedef std::map<uvm_reg_map*, bool> m_maps_t;
+  typedef std::map<uvm_reg_inst_key<uvm_reg_map>, bool> m_maps_t;
   typedef m_maps_t::const_iterator m_maps_citt;
   m_maps_t m_maps;
 

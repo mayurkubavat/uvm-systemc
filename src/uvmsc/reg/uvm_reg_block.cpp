@@ -1772,6 +1772,9 @@ uvm_reg_block::~uvm_reg_block()
 {
   m_hdl_paths_pool.clear();
   m_root_hdl_paths.clear();
+
+  // the list of root blocks shall not refer to a block which is gone
+  m_roots.erase(this);
 }
 
 //----------------------------------------------------------------------
