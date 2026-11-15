@@ -49,12 +49,12 @@ class test_seq : public uvm_reg_sequence<>
 
     UVM_INFO("TEST_SEQ", "Backdoor mirror the shadow. Expect mismatch errors", UVM_LOW);
 
-    // Directly set the mirror value to 'habcd, which is different then the DUT value of 'h0
+    // Directly set the mirror value to 'habcd, which is different then the DUT value of 'h12345678
     model->ureg0->predict(0xabcd);
 
-    // Call mirror() to update the mirror to reflect the DUT value of 0. But UVM_CHECK says
+    // Call mirror() to update the mirror to reflect the DUT value. But UVM_CHECK says
     // to check the current mirror against the DUT value before we make that update.
-    // We expect a miscompare ('habcd != 0)
+    // We expect a miscompare ('habcd != 'h12345678)
     model->ureg0->mirror(status, UVM_CHECK, UVM_BACKDOOR, nullptr, dynamic_cast<uvm_sequence_base*>(this));
   }
 
@@ -175,11 +175,21 @@ class test : public uvm_test
   }
 };
 
+// The HDL paths of the register model start at testm.dut
+class testm : public sc_core::sc_module
+{
+ public:
+  dut mydut;
+
+  testm( sc_core::sc_module_name name ) : sc_core::sc_module(name), mydut("dut")
+  {}
+};
+
 int sc_main(int, char*[])
 {
   sc_core::sc_signal<transaction> pif("pif");
-  dut mydut("dut");
-  mydut.in(pif);
+  testm top("testm");
+  top.mydut.in(pif);
 
   // register interfaces via configuration mechanism
   uvm::uvm_config_db<uvc_intf*>::set(0, "*", "pif", &pif);
