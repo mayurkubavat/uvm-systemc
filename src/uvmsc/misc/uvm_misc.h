@@ -58,11 +58,18 @@ std::string uvm_object_value_str( const uvm_object* v );
 
 const std::string uvm_string_queue_join( const std::vector<std::string>& q );
 
+unsigned int uvm_create_random_seed( const std::string& type_id,
+                                     const std::string& inst_id = "" );
+
 /////////////////////////////////////////////////////////////////
 // some other utilities functions not defined in UVM-SV
 /////////////////////////////////////////////////////////////////
 
 std::string uvm_toupper(const std::string& str);
+
+void uvm_set_random_seed( unsigned int seed );
+
+unsigned int uvm_get_random_seed();
 
 sc_dt::sc_uint<64> uvm_realtobits( double val );
 
