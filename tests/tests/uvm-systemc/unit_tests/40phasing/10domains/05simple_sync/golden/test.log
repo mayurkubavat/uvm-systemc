@@ -1,7 +1,7 @@
 SystemC Simulation
 UVM_INFO @ 0 s: reporter [RNTST] Running test test...
-UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.leaf2 [RESET] Starting Reset
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.leaf1 [RESET] Starting Reset
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.leaf2 [RESET] Starting Reset
 UVM_INFO <removed by verify-uvm.pl> @ 200 s: test.leaf1 [RESET] Ending Reset
 UVM_INFO <removed by verify-uvm.pl> @ 250 s: test.leaf2 [RESET] Ending Reset
 UVM_INFO <removed by verify-uvm.pl> @ 250 s: test.leaf1 [MAIN] Starting Main

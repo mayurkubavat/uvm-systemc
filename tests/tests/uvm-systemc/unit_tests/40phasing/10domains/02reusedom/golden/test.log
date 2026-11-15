@@ -7,13 +7,13 @@ UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env2.l1 [run] Starting run
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env2.l2 [run] Starting run
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env2 [run] Starting run
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1 [run] Starting run
-UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env2.l1 [reset] Starting reset
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env1.l1 [reset] Starting reset
-UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env1.l2 [reset] Starting reset
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env1 [reset] Starting reset
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env2 [reset] Starting reset
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1 [reset] Starting reset
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env2.l1 [reset] Starting reset
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env2.l2 [reset] Starting reset
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test1.env1.l2 [reset] Starting reset
 UVM_INFO <removed by verify-uvm.pl> @ 108 s: test1.env2.l1 [reset] Ending reset
 UVM_INFO <removed by verify-uvm.pl> @ 108 s: test1.env2.l1 [main] Starting main
 UVM_INFO <removed by verify-uvm.pl> @ 151 s: test1.env2.l2 [reset] Ending reset
@@ -23,9 +23,9 @@ UVM_INFO <removed by verify-uvm.pl> @ 205 s: test1.env1.l1 [main] Starting main
 UVM_INFO <removed by verify-uvm.pl> @ 216 s: test1.env2.l1 [main] Ending main
 UVM_INFO <removed by verify-uvm.pl> @ 216 s: test1.env2.l1 [shutdown] Starting shutdown
 UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1.env1 [reset] Ending reset
-UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1.env1.l2 [reset] Ending reset
 UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1.env2 [reset] Ending reset
 UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1 [reset] Ending reset
+UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1.env1.l2 [reset] Ending reset
 UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1.env1.l2 [main] Starting main
 UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1.env1 [main] Starting main
 UVM_INFO <removed by verify-uvm.pl> @ 300 s: test1.env2 [main] Starting main
