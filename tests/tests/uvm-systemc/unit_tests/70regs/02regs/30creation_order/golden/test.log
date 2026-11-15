@@ -1,0 +1,28 @@
+SystemC Simulation
+registers of the block: reg0 reg1 reg2 reg3
+registers of the map: reg0 reg1 reg2 reg3
+memories of the block: mem0 mem1 mem2
+memories of the map: mem0 mem1 mem2
+blocks of the block: sub0 sub1 sub2
+-------------------------------------------------
+Name         Type         Size  Value
+-------------------------------------------------
+default_map  uvm_reg_map  -     @<removed by verify-uvm.pl>
+  endian                  ...   UVM_LITTLE_ENDIAN
+  reg0       <unknown>    ...   @<removed by verify-uvm.pl>+ 0x0
+  reg1       <unknown>    ...   @<removed by verify-uvm.pl>+ 0x10
+  reg2       <unknown>    ...   @<removed by verify-uvm.pl>+ 0x20
+  reg3       <unknown>    ...   @<removed by verify-uvm.pl>+ 0x30
+  mem0       <unknown>    ...   @<removed by verify-uvm.pl> + 0x1000
+  mem1       <unknown>    ...   @<removed by verify-uvm.pl> + 0x2000
+  mem2       <unknown>    ...   @<removed by verify-uvm.pl> + 0x3000
+-------------------------------------------------
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   0
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+** UVM TEST PASSED **
