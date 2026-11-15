@@ -164,6 +164,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\uvmsc\base\uvm_component.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\base\uvm_cmdline_processor.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\base\uvm_cmdline_settings.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_component_name.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_coreservice_t.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_default_coreservice_t.cpp" />
@@ -241,6 +243,8 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\uvm.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_base.h" />
+    <ClInclude Include="..\..\src\uvmsc\base\uvm_cmdline_processor.h" />
+    <ClInclude Include="..\..\src\uvmsc\base\uvm_cmdline_settings.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_component.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_component_name.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_coreservice_t.h" />
