@@ -27,6 +27,10 @@
 #include "uvmsc/base/uvm_transaction.h"
 #include "uvmsc/print/uvm_printer.h"
 #include "uvmsc/base/uvm_component.h"
+#include "uvmsc/policy/uvm_links.h"
+#include "uvmsc/policy/uvm_recorder.h"
+#include "uvmsc/policy/uvm_tr_database.h"
+#include "uvmsc/policy/uvm_tr_stream.h"
 
 using namespace sc_core;
 
@@ -77,52 +81,191 @@ int uvm_transaction::get_transaction_id() const
 }
 
 //----------------------------------------------------------------------
-// Member function: begin_tr
+// member function: accept_tr
 //
-//! This function indicates that the transaction has been started and is not
-//! the child of another transaction. Generally, a consumer component begins
-//! execution of a transactions it receives.
-//!
-//! Typically a <uvm_driver> would call <uvm_component::begin_tr>, which
-//! calls this method, before actual execution of a sequence item transaction.
-//! Sequence items received by a driver are always a child of a parent sequence.
-//! In this case, begin_tr obtains the parent handle and delegates to <begin_child_tr>.
-//!
-//! See <accept_tr> for more information on how the
-//! begin-time might differ from when the transaction item was received.
-//!
-//! This function performs the following actions:
-//!
-//! - The transaction's internal start time is set to the current simulation
-//!   time, or to begin_time if provided and non-zero. The begin_time may be
-//!   any time, past or future, but should not be less than the accept time.
-//!
-//! - If recording is enabled, then a new database-transaction is started with
-//!   the same begin time as above.
-//!
-//! - The <do_begin_tr> method is called to allow for any post-begin action in
-//!   derived classes.
-//!
-//! - The transaction's internal begin event is triggered. Any processes
-//!   waiting on this event will resume in the next delta cycle.
-//!
-//! The return value is a transaction handle, which is valid (non-zero) only if
-//! recording is enabled. The meaning of the handle is implementation specific.
+//! Marks the time at which the transaction is accepted. An accept time
+//! of zero is the current simulation time.
 //----------------------------------------------------------------------
 
-
-int uvm_transaction::begin_tr( const sc_time& begin_time )
+void uvm_transaction::accept_tr( const sc_time& accept_time )
 {
-  // TODO begin transaction
-  return 0;
+  this->accept_time = (accept_time == SC_ZERO_TIME) ? sc_time_stamp() : accept_time;
+  do_accept_tr();
 }
 
+//----------------------------------------------------------------------
+// member function: begin_tr
+//
+//! Starts the transaction. When recording is enabled, it opens a
+//! recorder on the stream of the transaction, linked as a child to the
+//! recorder of \p parent_handle if one is given. Returns the handle of
+//! the recorder, or 0 when the transaction is not recorded.
+//----------------------------------------------------------------------
+
+int uvm_transaction::begin_tr( const sc_time& begin_time, int parent_handle )
+{
+  return m_begin_tr(begin_time, parent_handle);
+}
+
+int uvm_transaction::begin_child_tr( const sc_time& begin_time, int parent_handle )
+{
+  return m_begin_tr(begin_time, parent_handle);
+}
+
+int uvm_transaction::m_begin_tr( const sc_time& begin_time, int parent_handle )
+{
+  const sc_time tmp_time = (begin_time == SC_ZERO_TIME) ? sc_time_stamp() : begin_time;
+  uvm_recorder* parent_recorder = nullptr;
+  int handle = 0;
+
+  if (parent_handle != 0)
+    parent_recorder = uvm_recorder::get_recorder_from_handle(parent_handle);
+
+  // a transaction which is still being recorded ends first
+  if (m_get_recorder() != nullptr)
+    end_tr(tmp_time);
+
+  m_active = true;
+  this->begin_time = tmp_time;
+
+  if (is_recording_enabled())
+  {
+    uvm_tr_database* db = m_stream->get_db();
+
+    uvm_recorder* recorder = m_stream->open_recorder(get_type_name(), this->begin_time,
+      (parent_recorder == nullptr) ? "Begin_No_Parent, Link" : "Begin_End, Link");
+
+    if (recorder != nullptr)
+    {
+      if (parent_recorder != nullptr && db != nullptr)
+      {
+        uvm_parent_child_link link("pc_link");
+        link.set(parent_recorder, recorder);
+        db->establish_link(&link);
+      }
+
+      handle = recorder->get_handle();
+    }
+  }
+
+  m_recorder_handle = handle;
+
+  do_begin_tr();
+
+  return handle;
+}
+
+//----------------------------------------------------------------------
+// member function: end_tr
+//
+//! Ends the transaction. When it is recorded, its fields are recorded,
+//! and the recorder is closed, and freed unless \p free_handle is false.
+//! The end event of the transaction is triggered.
+//----------------------------------------------------------------------
 
 void uvm_transaction::end_tr( const sc_time& end_time, bool free_handle )
 {
-  // TODO incomplete at this stage, only notification we are done with transaction
+  this->end_time = (end_time == SC_ZERO_TIME) ? sc_time_stamp() : end_time;
+  m_active = false;
+
+  do_end_tr();
+
+  // the recorder is found by its handle: it is gone when its stream was
+  // freed in the meantime
+  uvm_recorder* recorder = m_get_recorder();
+  m_recorder_handle = 0;
+
+  if (is_recording_enabled() && recorder != nullptr)
+  {
+    record(recorder);
+    recorder->close(this->end_time);
+
+    if (free_handle)
+      recorder->free();
+  }
 
   end_event.trigger();
+}
+
+int uvm_transaction::get_tr_handle() const
+{
+  return (m_get_recorder() != nullptr) ? m_recorder_handle : 0;
+}
+
+uvm_recorder* uvm_transaction::m_get_recorder() const
+{
+  return uvm_recorder::get_recorder_from_handle(m_recorder_handle);
+}
+
+void uvm_transaction::enable_recording( uvm_tr_stream* stream )
+{
+  m_stream = stream;
+}
+
+void uvm_transaction::disable_recording()
+{
+  m_stream = nullptr;
+}
+
+bool uvm_transaction::is_recording_enabled() const
+{
+  return m_stream != nullptr;
+}
+
+bool uvm_transaction::is_active() const
+{
+  return m_active;
+}
+
+sc_time uvm_transaction::get_accept_time() const
+{
+  return accept_time;
+}
+
+sc_time uvm_transaction::get_begin_time() const
+{
+  return begin_time;
+}
+
+sc_time uvm_transaction::get_end_time() const
+{
+  return end_time;
+}
+
+void uvm_transaction::set_initiator( uvm_component* initiator )
+{
+  this->initiator = initiator;
+}
+
+uvm_component* uvm_transaction::get_initiator() const
+{
+  return initiator;
+}
+
+void uvm_transaction::do_accept_tr() {}
+void uvm_transaction::do_begin_tr() {}
+void uvm_transaction::do_end_tr() {}
+
+//----------------------------------------------------------------------
+// member function: do_record (virtual)
+//
+//! Records the accept time and the initiator of the transaction. Other
+//! than in UVM-SV, the time is recorded with record_time() and the
+//! initiator by its full name; an accept time of zero means that the
+//! transaction was not accepted.
+//----------------------------------------------------------------------
+
+void uvm_transaction::do_record( const uvm_recorder& recorder )
+{
+  uvm_object::do_record(recorder);
+
+  uvm_recorder* r = const_cast<uvm_recorder*>(&recorder);
+
+  if (accept_time != SC_ZERO_TIME)
+    r->record_time("accept_time", accept_time);
+
+  if (initiator != nullptr)
+    r->record_string("initiator", initiator->get_full_name());
 }
 
 
@@ -131,6 +274,44 @@ void uvm_transaction::end_tr( const sc_time& end_time, bool free_handle )
 //////// Implementation-defined member functions start here ////////////
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
+
+//----------------------------------------------------------------------
+// Copy constructor and assignment
+//
+// Implementation defined
+// A copy gets the fields and the stream of the transaction, but not its
+// recorder: only the transaction which began recording ends it.
+//----------------------------------------------------------------------
+
+uvm_transaction::uvm_transaction( const uvm_transaction& rhs )
+: uvm_object(rhs),
+  m_transaction_id(rhs.m_transaction_id),
+  initiator(rhs.initiator),
+  begin_time(rhs.begin_time),
+  end_time(rhs.end_time),
+  accept_time(rhs.accept_time),
+  end_event(rhs.end_event),
+  m_stream(rhs.m_stream),
+  m_recorder_handle(0),
+  m_active(false)
+{}
+
+uvm_transaction& uvm_transaction::operator=( const uvm_transaction& rhs )
+{
+  if (this != &rhs)
+  {
+    uvm_object::operator=(rhs);
+    m_transaction_id = rhs.m_transaction_id;
+    initiator = rhs.initiator;
+    begin_time = rhs.begin_time;
+    end_time = rhs.end_time;
+    accept_time = rhs.accept_time;
+    end_event = rhs.end_event;
+    m_stream = rhs.m_stream;
+    // the recorder of this transaction stays with it
+  }
+  return *this;
+}
 
 //----------------------------------------------------------------------
 // member function: m_init_transaction
@@ -147,6 +328,9 @@ void uvm_transaction::m_init_transaction()
   begin_time = SC_ZERO_TIME; // TODO replace by sc_max_time?
   end_time = SC_ZERO_TIME;
   accept_time = SC_ZERO_TIME;
+  m_stream = nullptr;
+  m_recorder_handle = 0;
+  m_active = false;
 }
 
 

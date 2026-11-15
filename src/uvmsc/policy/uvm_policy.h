@@ -21,6 +21,9 @@
 #define UVM_POLICY_H_
 
 #include "uvmsc/policy/uvm_recorder.h"
+#include "uvmsc/policy/uvm_links.h"
+#include "uvmsc/policy/uvm_tr_database.h"
+#include "uvmsc/policy/uvm_tr_stream.h"
 #include "uvmsc/policy/uvm_comparer.h"
 #include "uvmsc/policy/uvm_packer.h"
 

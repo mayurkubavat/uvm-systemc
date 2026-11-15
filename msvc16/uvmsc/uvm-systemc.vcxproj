@@ -202,6 +202,9 @@
     <ClCompile Include="..\..\src\uvmsc\policy\uvm_comparer.cpp" />
     <ClCompile Include="..\..\src\uvmsc\policy\uvm_packer.cpp" />
     <ClCompile Include="..\..\src\uvmsc\policy\uvm_recorder.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\policy\uvm_links.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\policy\uvm_tr_database.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\policy\uvm_tr_stream.cpp" />
     <ClCompile Include="..\..\src\uvmsc\print\uvm_printer.cpp" />
     <ClCompile Include="..\..\src\uvmsc\print\uvm_printer_globals.cpp" />
     <ClCompile Include="..\..\src\uvmsc\print\uvm_table_printer.cpp" />
@@ -321,6 +324,9 @@
     <ClInclude Include="..\..\src\uvmsc\policy\uvm_packer.h" />
     <ClInclude Include="..\..\src\uvmsc\policy\uvm_policy.h" />
     <ClInclude Include="..\..\src\uvmsc\policy\uvm_recorder.h" />
+    <ClInclude Include="..\..\src\uvmsc\policy\uvm_links.h" />
+    <ClInclude Include="..\..\src\uvmsc\policy\uvm_tr_database.h" />
+    <ClInclude Include="..\..\src\uvmsc\policy\uvm_tr_stream.h" />
     <ClInclude Include="..\..\src\uvmsc\print\uvm_line_printer.h" />
     <ClInclude Include="..\..\src\uvmsc\print\uvm_print.h" />
     <ClInclude Include="..\..\src\uvmsc\print\uvm_printer.h" />

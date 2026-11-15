@@ -7,21 +7,24 @@ UVM_WARNING @ 0 s: test_2m_4s.ubus_example_tb0.ubus0.slaves[1] [ACTPASS:] Active
 UVM_WARNING @ 0 s: test_2m_4s.ubus_example_tb0.ubus0.slaves[2] [ACTPASS:] Active or passive mode for agent 'test_2m_4s.ubus_example_tb0.ubus0.slaves[2]' has not been defined. Default behavior is active.
 UVM_WARNING @ 0 s: test_2m_4s.ubus_example_tb0.ubus0.slaves[3] [ACTPASS:] Active or passive mode for agent 'test_2m_4s.ubus_example_tb0.ubus0.slaves[3]' has not been defined. Default behavior is active.
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test_2m_4s [test_2m_4s] Printing the test topology :
---------------------------------------------------------
-Name                Type                     Size  Value
---------------------------------------------------------
-test_2m_4s          test_2m_4s               -     @<removed by verify-uvm.pl>
-  ubus_example_tb0  ubus_example_tb          -     @<removed by verify-uvm.pl>
-    scoreboard0     ubus_example_scoreboard  -     @<removed by verify-uvm.pl>
-    ubus0           ubus_env                 -     @<removed by verify-uvm.pl>
-      bus_monitor   ubus_bus_monitor         -     @<removed by verify-uvm.pl>
-      masters[0]    ubus_master_agent        -     @<removed by verify-uvm.pl>
-      masters[1]    ubus_master_agent        -     @<removed by verify-uvm.pl>
-      slaves[0]     ubus_slave_agent         -     @<removed by verify-uvm.pl>
-      slaves[1]     ubus_slave_agent         -     @<removed by verify-uvm.pl>
-      slaves[2]     ubus_slave_agent         -     @<removed by verify-uvm.pl>
-      slaves[3]     ubus_slave_agent         -     @<removed by verify-uvm.pl>
---------------------------------------------------------
+---------------------------------------------------------------
+Name                    Type                     Size  Value
+---------------------------------------------------------------
+test_2m_4s              test_2m_4s               -     @<removed by verify-uvm.pl>
+  ubus_example_tb0      ubus_example_tb          -     @<removed by verify-uvm.pl>
+    scoreboard0         ubus_example_scoreboard  -     @<removed by verify-uvm.pl>
+      recording_detail  uvm_verbosity            32    UVM_FULL
+    ubus0               ubus_env                 -     @<removed by verify-uvm.pl>
+      bus_monitor       ubus_bus_monitor         -     @<removed by verify-uvm.pl>
+      masters[0]        ubus_master_agent        -     @<removed by verify-uvm.pl>
+      masters[1]        ubus_master_agent        -     @<removed by verify-uvm.pl>
+      slaves[0]         ubus_slave_agent         -     @<removed by verify-uvm.pl>
+      slaves[1]         ubus_slave_agent         -     @<removed by verify-uvm.pl>
+      slaves[2]         ubus_slave_agent         -     @<removed by verify-uvm.pl>
+      slaves[3]         ubus_slave_agent         -     @<removed by verify-uvm.pl>
+      recording_detail  uvm_verbosity            32    UVM_FULL
+    recording_detail    uvm_verbosity            32    UVM_FULL
+---------------------------------------------------------------
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test_2m_4s.ubus_example_tb0.ubus0.masters[0].monitor [test_2m_4s.ubus_example_tb0.ubus0.masters[0].monitor] MASTER ID = 0
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test_2m_4s.ubus_example_tb0.ubus0.masters[1].monitor [test_2m_4s.ubus_example_tb0.ubus0.masters[1].monitor] MASTER ID = 1
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: test_2m_4s.ubus_example_tb0.ubus0.slaves[0].sequencer@@slave_memory_seq [slave_memory_seq] slave_memory_seq starting...
@@ -1365,6 +1368,7 @@ UVM_INFO <removed by verify-uvm.pl> @ 2330 ns: test_2m_4s.ubus_example_tb0.score
 Name                Type                     Size  Value
 -------------------------------------------------------------
 scoreboard0         ubus_example_scoreboard  -     @<removed by verify-uvm.pl>
+  recording_detail  uvm_verbosity            32    UVM_FULL
 -------------------------------------------------------------
 UVM_INFO <removed by verify-uvm.pl> @ 2330 ns: test_2m_4s [test_2m_4s] ** UVM TEST PASSED **
 UVM_INFO <removed by verify-uvm.pl> @ 2330 ns: reporter [UVM/REPORT/SERVER]
