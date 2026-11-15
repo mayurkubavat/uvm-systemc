@@ -24,6 +24,8 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <utility>
+
 #include <systemc>
 
 #include "uvmsc/base/uvm_component.h"
@@ -35,16 +37,9 @@
 #include "uvmsc/seq/uvm_sequence_item.h"
 #include "uvmsc/conf/uvm_config_db.h"
 #include "uvmsc/print/uvm_printer.h"
+#include "uvmsc/misc/uvm_misc.h"
 
 namespace uvm {
-
-// TODO - replace by proven RNG
-unsigned int urandom_range( unsigned int max, unsigned int min)
-{
-  if (min == max) return min;
-  unsigned int i = (unsigned int)(rand() % (max - min) + min + 1);
-  return i;
-}
 
 //------------------------------------------------------------------------------
 // static data member initialization
@@ -77,7 +72,7 @@ uvm_sequencer_base::uvm_sequencer_base( uvm_component_name name_ )
   m_lock_arb_size = -1;
   m_arb_size = -1;
 
-  srand(25); // TODO make global function to specify seed for RNG
+  m_rng_seeded = false;
 
   m_current_sequence_item = nullptr;
 }
@@ -923,6 +918,42 @@ void uvm_sequencer_base::m_set_arbitration_completed(int request_id)
 }
 
 //----------------------------------------------------------------------
+// member function: m_urandom_range
+//
+// Implementation-defined member function
+//
+// Returns a uniformly distributed number in the range [min, max]. Each
+// sequencer has its own generator, which is seeded on first use from the
+// global seed and the full name of the sequencer.
+//----------------------------------------------------------------------
+
+unsigned int uvm_sequencer_base::m_urandom_range( unsigned int max, unsigned int min )
+{
+  if (max < min)
+    std::swap(max, min);
+
+  if (!m_rng_seeded)
+  {
+    m_rng.seed(uvm_create_random_seed(get_type_name(), get_full_name()));
+    m_rng_seeded = true;
+  }
+
+  // std::uniform_int_distribution gives different numbers on different
+  // standard library implementations, so reduce the range here.
+  const unsigned int span = max - min + 1; // 0 for the full 32 bit range
+  if (span == 0)
+    return static_cast<unsigned int>(m_rng());
+
+  const unsigned int limit = 0xffffffffu - (0xffffffffu % span + 1u) % span;
+  unsigned int value;
+  do
+    value = static_cast<unsigned int>(m_rng());
+  while (value > limit);
+
+  return min + value % span;
+}
+
+//----------------------------------------------------------------------
 // member function: m_choose_next_request
 //
 // Implementation-defined member function
@@ -1008,7 +1039,9 @@ int uvm_sequencer_base::m_choose_next_request()
     for (i = 0; i < avail_sequences.size(); i++)
       sum_priority_val += m_get_seq_item_priority(arb_sequence_q[avail_sequences[i]]);
 
-    temp = urandom_range(sum_priority_val-1, 0);
+    // without any priority there is nothing to select; this ends in the
+    // fatal error below
+    temp = (sum_priority_val > 0) ? m_urandom_range(sum_priority_val-1, 0) : 0;
 
     sum_priority_val = 0;
 
@@ -1025,7 +1058,7 @@ int uvm_sequencer_base::m_choose_next_request()
   //  Random Distribution
   if (m_arbitration == SEQ_ARB_RANDOM)
   {
-    i = urandom_range((unsigned int)avail_sequences.size()-1, 0);
+    i = m_urandom_range((unsigned int)avail_sequences.size()-1, 0);
     return avail_sequences[i];
   }
 
@@ -1053,7 +1086,7 @@ int uvm_sequencer_base::m_choose_next_request()
     if (m_arbitration == SEQ_ARB_STRICT_FIFO)
       return(highest_sequences[0]);
 
-    i = urandom_range((unsigned int)highest_sequences.size()-1, 0); // TODO improve random function (see above)
+    i = m_urandom_range((unsigned int)highest_sequences.size()-1, 0);
     return highest_sequences[i];
   }
 

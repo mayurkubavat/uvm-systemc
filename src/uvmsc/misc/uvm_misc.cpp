@@ -34,6 +34,8 @@
 #include <iomanip>
 #include <sstream>
 #include <cstdarg>
+#include <map>
+#include <utility>
 
 #include <systemc>
 
@@ -174,6 +176,109 @@ std::string uvm_flatten_name( const std::string& full_name, const char* scope_se
   return s;
 }
 
+
+//----------------------------------------------------------------------
+// Random seeding
+//
+// The global seed and the table of the seeds which were created from it.
+// Both are function-local statics so that they can be used during static
+// initialization.
+//----------------------------------------------------------------------
+
+namespace {
+
+unsigned int& m_global_random_seed()
+{
+  static unsigned int seed = 1;
+  return seed;
+}
+
+typedef std::map<std::pair<std::string, std::string>,
+                 std::pair<unsigned int, unsigned int> > uvm_seed_table_t;
+
+uvm_seed_table_t& m_random_seed_table()
+{
+  static uvm_seed_table_t table;
+  return table;
+}
+
+// FNV-1a hash. std::hash is not used, since its result differs between
+// standard library implementations.
+unsigned int m_oneway_hash( const std::string& str, unsigned int seed )
+{
+  unsigned int hash = 2166136261u ^ seed;
+  for (std::string::size_type i = 0; i < str.size(); i++)
+  {
+    hash ^= static_cast<unsigned char>(str[i]);
+    hash *= 16777619u;
+  }
+  return hash;
+}
+
+} // anonymous namespace
+
+//----------------------------------------------------------------------
+// Global function: uvm_set_random_seed
+//
+//! Implementation defined
+//!
+//! Sets the global seed from which all seeds returned by
+//! uvm_create_random_seed are derived. Seeds which were created before
+//! are forgotten. Should be called before run_test.
+//----------------------------------------------------------------------
+
+void uvm_set_random_seed( unsigned int seed )
+{
+  m_global_random_seed() = seed;
+  m_random_seed_table().clear();
+}
+
+//----------------------------------------------------------------------
+// Global function: uvm_get_random_seed
+//
+//! Implementation defined
+//!
+//! Returns the global seed (uvm_global_random_seed in UVM-SystemVerilog).
+//----------------------------------------------------------------------
+
+unsigned int uvm_get_random_seed()
+{
+  return m_global_random_seed();
+}
+
+//----------------------------------------------------------------------
+// Global function: uvm_create_random_seed
+//
+//! Creates a seed which is unique for the combination of the type name
+//! \p type_id and the instance name \p inst_id. The seed only depends on
+//! these two names and on the global seed, so it is stable when other
+//! parts of the environment change. Repeated calls with the same names
+//! return a new seed each time.
+//----------------------------------------------------------------------
+
+unsigned int uvm_create_random_seed( const std::string& type_id,
+                                     const std::string& inst_id )
+{
+  const std::string inst = inst_id.empty() ? "__global__" : inst_id;
+
+  uvm_seed_table_t& table = m_random_seed_table();
+  std::pair<std::string, std::string> key(inst, type_id);
+
+  uvm_seed_table_t::iterator it = table.find(key);
+  if (it == table.end())
+  {
+    unsigned int seed = m_oneway_hash(type_id + "::" + inst, m_global_random_seed());
+    it = table.insert(std::make_pair(key, std::make_pair(seed, 0u))).first;
+  }
+
+  unsigned int& seed = it->second.first;
+  unsigned int& count = it->second.second;
+
+  seed += count;
+  count++;
+
+  return seed;
+}
 
 //----------------------------------------------------------------------
 // Global function: uvm_leaf_scope
