@@ -50,6 +50,7 @@
 #include "uvmsc/conf/uvm_resource_db_options.h"
 #include "uvmsc/factory/uvm_factory.h"
 #include "uvmsc/factory/uvm_object_wrapper.h"
+#include "uvmsc/phasing/uvm_objection.h"
 #include "uvmsc/report/uvm_report_server.h"
 
 namespace uvm {
@@ -893,6 +894,17 @@ void uvm_cmdline_settings::init( uvm_root* top )
 
   if (has_arg("+UVM_RESOURCE_DB_TRACE"))
     uvm_resource_db_options::turn_on_tracing();
+
+  // Objections read +UVM_OBJECTION_TRACE when they are created. Turn on
+  // the trace mode of those which were created before the arguments
+  // were available.
+  if (has_arg("+UVM_OBJECTION_TRACE"))
+  {
+    uvm_objection::m_objections_list& objections = uvm_objection::m_objections();
+
+    for (unsigned int i = 0; i < objections.size(); i++)
+      objections[i]->trace_mode(1);
+  }
 }
 
 //----------------------------------------------------------------------

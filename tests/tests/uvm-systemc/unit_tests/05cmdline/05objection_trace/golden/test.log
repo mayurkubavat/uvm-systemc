@@ -1,0 +1,30 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [OBJTN_TRC] Object test.c1 raised 1 objection(s)  (comp is busy) count = 1 total = 1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [OBJTN_TRC] Object test added 1 objection(s) to its total (raised from source object test.c1, comp is busy): count = 0 total = 1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [OBJTN_TRC] Object uvm_top added 1 objection(s) to its total (raised from source object test.c1, comp is busy): count = 0 total = 1
+trace mode of my_objection = 1
+trace mode of early_objection = 1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [OBJTN_TRC] Object test raised 1 objection(s)  count = 1 total = 2
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [OBJTN_TRC] Object uvm_top added 1 objection(s) to its total (raised from source object test): count = 0 total = 2
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [OBJTN_TRC] Object test.c1 dropped 1 objection(s)  (comp is done) count = 0 total = 0
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [OBJTN_TRC] Object test.c1 all_dropped 1 objection(s)  (comp is done) count = 0 total = 0
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [OBJTN_TRC] Object test subtracted 1 objection(s) from its total (dropped from source object test.c1, comp is done): count = 1 total = 1
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [OBJTN_TRC] Object uvm_top subtracted 1 objection(s) from its total (dropped from source object test.c1, comp is done): count = 0 total = 1
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [OBJTN_TRC] Object test dropped 1 objection(s)  count = 0 total = 0
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [OBJTN_TRC] Object test all_dropped 1 objection(s)  count = 0 total = 0
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [OBJTN_TRC] Object uvm_top subtracted 1 objection(s) from its total (dropped from source object test): count = 0 total = 0
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [OBJTN_TRC] Object uvm_top subtracted 1 objection(s) from its total (all_dropped from source object test): count = 0 total = 0
+simulation ended at 20 ns
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :  14
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[OBJTN_TRC]            13
+[RNTST]                 1
+UVM_INFO @ 20 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
