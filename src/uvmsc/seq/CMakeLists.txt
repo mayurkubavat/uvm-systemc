@@ -2,6 +2,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_sequence_base.cpp
   uvm_sequence_item.cpp
   uvm_sequencer_base.cpp
+  uvm_push_sequencer.h
   uvm_seq.h
   uvm_sequence.h
   uvm_sequence_base.h
@@ -13,6 +14,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_sequencer_param_base.h)
 
 install_headers (
+  uvm_push_sequencer.h
   uvm_seq.h
   uvm_sequence.h
   uvm_sequence_base.h
