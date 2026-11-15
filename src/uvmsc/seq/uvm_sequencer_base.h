@@ -140,7 +140,7 @@ public:
   void m_kill_sequence( uvm_sequence_base* sequence_ptr );
   virtual void do_print( const uvm_printer& printer ) const;
 
-  virtual void analysis_write(uvm_sequence_item t);
+  virtual void analysis_write( const uvm_sequence_item& t );
 
   void m_lock_req( uvm_sequence_base* sequence_ptr, bool lock );
   void m_unlock_req( uvm_sequence_base* sequence_ptr );
