@@ -46,12 +46,12 @@
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_object_globals.h"
 #include "uvmsc/base/uvm_root.h"
+#include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/conf/uvm_config_db.h"
 #include "uvmsc/conf/uvm_config_db_options.h"
 #include "uvmsc/conf/uvm_resource_db_options.h"
 #include "uvmsc/factory/uvm_factory.h"
 #include "uvmsc/factory/uvm_object_wrapper.h"
-#include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/report/uvm_report_server.h"
 
 namespace uvm {
