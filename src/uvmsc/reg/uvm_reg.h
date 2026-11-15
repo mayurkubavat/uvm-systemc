@@ -304,6 +304,14 @@ class uvm_reg : public uvm_object
  public:
   virtual void sample_values();
 
+  //--------------------------------------------------------------------------
+  // Group: Randomization
+  //--------------------------------------------------------------------------
+
+  virtual bool randomize();
+
+  virtual void pre_randomize();
+  virtual void post_randomize();
 
   //--------------------------------------------------------------------------
   // Group: Callbacks
