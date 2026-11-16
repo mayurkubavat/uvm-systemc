@@ -187,6 +187,16 @@ class test : public uvm_test
     late_hb->stop();
     std::cout << "waiting for the event after start and stop: "
               << late_event->get_num_waiters() << std::endl;
+    sc_core::wait(sc_core::SC_ZERO_TIME);
+    std::cout << "and a delta later: " << late_event->get_num_waiters() << std::endl;
+
+    // a heartbeat which is deleted right after it is started
+    uvm_heartbeat* gone = new uvm_heartbeat("gone", this);
+    gone->start(late_event);
+    delete gone;
+    sc_core::wait(sc_core::SC_ZERO_TIME);
+    std::cout << "waiting after a heartbeat was started and deleted: "
+              << late_event->get_num_waiters() << std::endl;
 
     // this one is still started when the simulation ends
     late_hb->start(late_event);

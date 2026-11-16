@@ -298,12 +298,20 @@ void uvm_heartbeat::stop()
 {
   m_started = false;
 
+  if (m_run)
+    *m_run = false;
+  m_run.reset();
+
   // A process can only be killed while the simulation runs. Before and
   // after it there is nothing to kill: the process does not run.
   const bool running =
     (sc_core::sc_get_status() & (sc_core::SC_RUNNING | sc_core::SC_PAUSED)) != 0;
 
-  if (running && m_process.valid() && !m_process.terminated())
+  // The heartbeat process itself may stop the heartbeat, from a report
+  // catcher of its HBFAIL for instance; it ends by itself then, as it
+  // finds its run flag cleared.
+  if (running && m_process.valid() && !m_process.terminated() &&
+      m_process != sc_core::sc_get_current_process_handle())
   {
     m_process.kill();
 
@@ -329,8 +337,9 @@ void uvm_heartbeat::m_start_hb_process()
     return;
 
   m_started = true;
+  m_run = std::make_shared<bool>(true);
 
-  m_process = sc_core::sc_spawn(sc_bind(&uvm_heartbeat::m_hb_process, this),
+  m_process = sc_core::sc_spawn(sc_bind(&uvm_heartbeat::m_run_hb_process, this, m_run),
     sc_core::sc_gen_unique_name("uvm_heartbeat_process"));
 }
 
@@ -372,17 +381,27 @@ void uvm_heartbeat::m_disable_cb()
 // event, from the second trigger on.
 //----------------------------------------------------------------------
 
-void uvm_heartbeat::m_hb_process()
+void uvm_heartbeat::m_run_hb_process( uvm_heartbeat* hb, std::shared_ptr<bool> run )
+{
+  if (*run)
+    hb->m_hb_process(run);
+}
+
+void uvm_heartbeat::m_hb_process( std::shared_ptr<bool> run )
 {
   bool triggered = false;
   sc_core::sc_time last_trigger = sc_core::SC_ZERO_TIME;
   const std::string objection_name =
     (m_objection != nullptr) ? m_objection->get_name() : std::string("");
 
-  while (true)
+  while (*run)
   {
     m_waiting = true;
     m_event->wait_trigger();
+
+    if (!*run)
+      return; // stopped, perhaps deleted, while this process waited
+
     m_waiting = false;
 
     if (triggered)
@@ -403,6 +422,8 @@ void uvm_heartbeat::m_hb_process()
                   << " since last event trigger at time " << last_trigger
                   << " : last update time was " << entries[i].last_trigger;
               m_cntxt->uvm_report_fatal("HBFAIL", str.str(), UVM_NONE);
+              if (!*run)
+                return; // stopped, perhaps deleted, by a catcher of the report
             }
           }
           break;
@@ -419,6 +440,8 @@ void uvm_heartbeat::m_hb_process()
             for (unsigned int i = 0; i < entries.size(); i++)
               str << "\n  " << entries[i].obj->get_full_name();
             m_cntxt->uvm_report_fatal("HBFAIL", str.str(), UVM_NONE);
+            if (!*run)
+              return; // stopped, perhaps deleted, by a catcher of the report
           }
           break;
         }
@@ -436,6 +459,8 @@ void uvm_heartbeat::m_hb_process()
                 str << "\n  " << entries[i].obj->get_full_name()
                     << " (updated: " << entries[i].last_trigger << ")";
             m_cntxt->uvm_report_fatal("HBFAIL", str.str(), UVM_NONE);
+            if (!*run)
+              return; // stopped, perhaps deleted, by a catcher of the report
           }
 
           if (!entries.empty() && m_cb->objects_triggered() == 0)
@@ -447,6 +472,8 @@ void uvm_heartbeat::m_hb_process()
             for (unsigned int i = 0; i < entries.size(); i++)
               str << "\n  " << entries[i].obj->get_full_name();
             m_cntxt->uvm_report_fatal("HBFAIL", str.str(), UVM_NONE);
+            if (!*run)
+              return; // stopped, perhaps deleted, by a catcher of the report
           }
           break;
         }

@@ -51,6 +51,8 @@ UVM_ERROR @ 190 ns: test [ILHBVNT] start() was called for: hb with trigger other
   failures: 0
 heartbeat failures in total: 8
 waiting for the event after start and stop: 1
+and a delta later: 1
+waiting after a heartbeat was started and deleted: 1
 UVM_INFO <removed by verify-uvm.pl> @ 212 ns: reporter [UVM/REPORT/CATCHER]
 --- UVM Report catcher Summary ---
 Number of demoted UVM_FATAL reports  :    8

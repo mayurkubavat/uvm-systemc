@@ -24,6 +24,7 @@
 #define UVM_HEARTBEAT_H_
 
 #include <systemc>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -157,7 +158,8 @@ class uvm_heartbeat : public uvm_object
   void m_start_hb_process();
   void m_enable_cb();
   void m_disable_cb();
-  void m_hb_process();
+  void m_hb_process( std::shared_ptr<bool> run );
+  static void m_run_hb_process( uvm_heartbeat* hb, std::shared_ptr<bool> run );
 
   uvm_objection*          m_objection;
   uvm_heartbeat_callback* m_cb;
@@ -169,6 +171,11 @@ class uvm_heartbeat : public uvm_object
   bool                    m_waiting; // the process waits for the event
 
   sc_core::sc_process_handle m_process;
+
+  // true while the process may run; set to false by stop(). A process
+  // which is killed before it ran still starts, so it checks this first,
+  // without touching the heartbeat, which may be deleted by then.
+  std::shared_ptr<bool> m_run;
 
 }; // class uvm_heartbeat
 
