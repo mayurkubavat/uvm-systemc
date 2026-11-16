@@ -25,6 +25,7 @@
 #include "uvmsc/comps/uvm_agent.h"
 #include "uvmsc/base/uvm_component_name.h"
 #include "uvmsc/conf/uvm_config_db.h"
+#include "uvmsc/base/uvm_enum_wrapper.h"
 
 namespace uvm {
 
@@ -130,20 +131,11 @@ void uvm_agent::build_phase( uvm_phase& phase )
               rs = dynamic_cast<uvm_resource<std::string>* >(rsrc);
               if (rs != nullptr )
               {
-                // as for uvm_enum_wrapper::from_name in UVM-SV, only the
-                // name of an enumerator is a valid setting; otherwise
-                // continue with the next setting
-                std::string val = rs->read(baseobj);
-                if (val == "UVM_ACTIVE")
-                {
-                  is_active = UVM_ACTIVE;
+                // only the name of an enumerator is a valid setting;
+                // otherwise continue with the next setting
+                if (uvm_enum_wrapper<uvm_active_passive_enum>::from_name(
+                      rs->read(baseobj), is_active))
                   break;
-                }
-                if (val == "UVM_PASSIVE")
-                {
-                  is_active = UVM_PASSIVE;
-                  break;
-                }
               }
             } // else: !if(riu != nullptr )
           } // else: !if( ri != nullptr )
