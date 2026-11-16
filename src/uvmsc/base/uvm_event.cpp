@@ -493,11 +493,8 @@ const std::string uvm_event::get_type_name() const
 void uvm_event::do_print( const uvm_printer& printer ) const
 {
   printer.print_field_int("num_waiters", m_num_waiters, 32, UVM_DEC, ".", "int");
-  printer.print_field_int("on", on, 1, UVM_DEC, ".", "bit");
+  printer.print_field_int("on", on, 1, UVM_BIN, ".", "bit");
   printer.print_time("trigger_time", trigger_time);
-
-  if (trigger_data != nullptr)
-    printer.print_object("trigger_data", *trigger_data);
 
   printer.print_array_header("callbacks", (int)callbacks.size(), "queue");
   for (unsigned int i = 0; i < callbacks.size(); i++)
@@ -507,14 +504,21 @@ void uvm_event::do_print( const uvm_printer& printer ) const
     printer.print_object(idx.str(), *callbacks[i], "[");
   }
   printer.print_array_footer((int)callbacks.size());
+
+  if (trigger_data != nullptr)
+    printer.print_object("trigger_data", *trigger_data);
+  else
+    printer.print_generic("trigger_data", "object", -1, "<null>");
 }
 
 //----------------------------------------------------------------------
 // Member function: do_copy (virtual)
 //
 //! Copy the state of the event \p rhs: the on/off state, the trigger
-//! time, the trigger data and the callbacks. As for the copy
-//! constructor, the processes waiting on \p rhs are not taken over.
+//! time and the trigger data. As for the copy constructor, the
+//! processes waiting on \p rhs are not taken over. The callbacks are
+//! not copied either: an event owns the callbacks registered with it
+//! and deletes them in #delete_callback, so they cannot be shared.
 //----------------------------------------------------------------------
 
 void uvm_event::do_copy( const uvm_object& rhs )
@@ -529,7 +533,6 @@ void uvm_event::do_copy( const uvm_object& rhs )
   m_event_val = e->m_event_val;
   trigger_time = e->trigger_time;
   trigger_data = e->trigger_data;
-  callbacks = e->callbacks;
 }
 
 } // namespace uvm

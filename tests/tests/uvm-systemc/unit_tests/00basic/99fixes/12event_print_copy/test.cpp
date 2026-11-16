@@ -19,9 +19,14 @@
 
 // Regression test for uvm_event::do_print() and do_copy(). Printing an
 // event must show its state, and copy() must take over the on/off
-// state, the trigger time and the trigger data.
+// state, the trigger time and the trigger data, but not the
+// callbacks: the event owns its callbacks and deletes them in
+// delete_callback(), so a copy must not hold them.
 
 #include <systemc>
+// included first so that uvm_event::add_callback() takes a
+// uvm::uvm_event_callback with every set of global declarations
+#include "uvmsc/base/uvm_event_callback.h"
 #include <uvm>
 
 #include <iostream>
@@ -33,6 +38,16 @@ class data_obj : public uvm::uvm_object
  public:
   UVM_OBJECT_UTILS(data_obj);
   data_obj( const std::string& name = "data_obj" ) : uvm::uvm_object(name) {}
+};
+
+class count_cb : public uvm::uvm_event_callback
+{
+ public:
+  int* count;
+  count_cb( const std::string& name, int* cnt ) : uvm::uvm_event_callback(name), count(cnt) {}
+  virtual const std::string get_type_name() const { return "count_cb"; }
+  virtual void post_trigger( const uvm::uvm_event* e, const uvm::uvm_object* data = nullptr ) const
+  { (*count)++; }
 };
 
 class test : public uvm_test
@@ -80,6 +95,28 @@ class test : public uvm_test
     ev.reset();
     cp.copy(ev);
     check(cp.is_off(), "copy of a reset event is off");
+
+    // callbacks stay with the event they are registered with
+    int kept_cnt = 0, deleted_cnt = 0;
+    uvm_event src("src");
+    count_cb* kept = new count_cb("kept", &kept_cnt);
+    count_cb* deleted = new count_cb("deleted", &deleted_cnt);
+    src.add_callback(kept);
+    src.add_callback(deleted);
+
+    uvm_event cb_copy("cb_copy");
+    cb_copy.copy(src);
+    src.delete_callback(deleted); // deletes the callback object
+
+    std::cout << "--- event with callbacks" << std::endl;
+    src.print();
+    std::cout << "--- copy of an event with callbacks" << std::endl;
+    cb_copy.print();
+
+    cb_copy.trigger();
+    check(kept_cnt == 0, "copy does not call the callbacks of the original");
+    src.trigger();
+    check(kept_cnt == 1, "original calls its callback");
 
     phase.drop_objection(this);
   }
