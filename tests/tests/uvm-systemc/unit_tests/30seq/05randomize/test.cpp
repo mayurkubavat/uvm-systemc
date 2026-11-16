@@ -25,7 +25,10 @@
 //   do_not_randomize is set,
 // - the default sequence of a phase, before the sequencer starts it,
 //   unless do_not_randomize is set.
-// A failed randomization is reported with a warning.
+// A failed randomization is reported with a warning. The constraints
+// of UVM_DO_WITH are not applied, which is reported once per use.
+// Classes whose randomize() returns nothing, or is not accessible, still
+// compile and are not randomized.
 
 #include <systemc>
 #include <uvm>
@@ -63,6 +66,28 @@ class item : public uvm_sequence_item
               << " to " << value << std::endl;
     return true;
   }
+};
+
+// compiles, and is not randomized
+class void_item : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(void_item);
+
+  void_item( const std::string& name = "void_item" ) : uvm_sequence_item(name) {}
+
+  void randomize() {}
+};
+
+class private_item : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(private_item);
+
+  private_item( const std::string& name = "private_item" ) : uvm_sequence_item(name) {}
+
+ private:
+  bool randomize() { return false; }
 };
 
 class driver : public uvm_driver<item>
@@ -192,6 +217,18 @@ class do_seq : public uvm_sequence<item>
 
     fixed_count_seq* fixed_sub = nullptr;
     UVM_DO(fixed_sub);
+
+    for (int i = 0; i < 2; i++)
+    {
+      item* req_with = nullptr;
+      UVM_DO_WITH(req_with, req_with->value == 5);
+    }
+
+    void_item v;
+    private_item p;
+    std::cout << sc_core::sc_time_stamp() << ": randomize void_item "
+              << v.m_uvm_randomize() << ", private_item "
+              << p.m_uvm_randomize() << std::endl;
   }
 };
 
