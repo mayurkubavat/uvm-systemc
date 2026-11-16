@@ -196,6 +196,7 @@
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_domain.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_objection.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_phase.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\phasing\uvm_phase_cb.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_process_phase.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_runtime_phases.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_topdown_phase.cpp" />
@@ -311,6 +312,7 @@
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_domain.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_objection.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase.h" />
+    <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase_cb.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase_queue.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phasing.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_process.h" />

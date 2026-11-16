@@ -1,0 +1,64 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+0 s: all_cb build UVM_PHASE_DORMANT -> UVM_PHASE_STARTED
+0 s: all_cb build UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
+0 s: all_cb build UVM_PHASE_EXECUTING -> UVM_PHASE_ENDED
+0 s: all_cb build UVM_PHASE_ENDED -> UVM_PHASE_CLEANUP
+0 s: all_cb build UVM_PHASE_CLEANUP -> UVM_PHASE_DONE
+0 s: all_cb run UVM_PHASE_DORMANT -> UVM_PHASE_SCHEDULED
+0 s: all_cb run UVM_PHASE_SCHEDULED -> UVM_PHASE_STARTED
+0 s: all_cb run UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
+0 s: all_cb reset UVM_PHASE_DORMANT -> UVM_PHASE_SCHEDULED
+0 s: all_cb reset UVM_PHASE_SCHEDULED -> UVM_PHASE_STARTED
+0 s: all_cb reset UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
+0 s: all_cb reset UVM_PHASE_EXECUTING -> UVM_PHASE_READY_TO_END
+0 s: all_cb reset UVM_PHASE_READY_TO_END -> UVM_PHASE_ENDED
+0 s: all_cb reset UVM_PHASE_ENDED -> UVM_PHASE_CLEANUP
+0 s: all_cb reset UVM_PHASE_CLEANUP -> UVM_PHASE_DONE
+0 s: all_cb pre_main UVM_PHASE_DORMANT -> UVM_PHASE_SCHEDULED
+0 s: all_cb pre_main UVM_PHASE_SCHEDULED -> UVM_PHASE_STARTED
+0 s: all_cb pre_main UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
+0 s: jumping back to reset
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [PH_JUMP] phase pre_main (schedule uvm_sched, domain uvm) is jumping to phase reset
+0 s: all_cb pre_main UVM_PHASE_EXECUTING -> UVM_PHASE_ENDED (jump to reset)
+0 s: all_cb pre_main UVM_PHASE_ENDED -> UVM_PHASE_JUMPING (jump to reset)
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [OBJTN_CLEAR] Object 'uvm_top' cleared objection counts for pre_main_objection
+0 s: all_cb reset UVM_PHASE_DONE -> UVM_PHASE_DORMANT
+0 s: all_cb pre_main UVM_PHASE_JUMPING -> UVM_PHASE_DORMANT (jump to reset)
+0 s: all_cb reset UVM_PHASE_DORMANT -> UVM_PHASE_STARTED
+0 s: all_cb reset UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
+0 s: all_cb reset UVM_PHASE_EXECUTING -> UVM_PHASE_READY_TO_END
+0 s: all_cb reset UVM_PHASE_READY_TO_END -> UVM_PHASE_ENDED
+0 s: all_cb reset UVM_PHASE_ENDED -> UVM_PHASE_CLEANUP
+0 s: all_cb reset UVM_PHASE_CLEANUP -> UVM_PHASE_DONE
+0 s: all_cb pre_main UVM_PHASE_DORMANT -> UVM_PHASE_SCHEDULED
+0 s: all_cb pre_main UVM_PHASE_SCHEDULED -> UVM_PHASE_STARTED
+0 s: all_cb pre_main UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
+0 s: all_cb pre_main UVM_PHASE_EXECUTING -> UVM_PHASE_READY_TO_END
+0 s: all_cb pre_main UVM_PHASE_READY_TO_END -> UVM_PHASE_ENDED
+0 s: all_cb pre_main UVM_PHASE_ENDED -> UVM_PHASE_CLEANUP
+0 s: all_cb pre_main UVM_PHASE_CLEANUP -> UVM_PHASE_DONE
+0 s: main_cb main UVM_PHASE_DORMANT -> UVM_PHASE_SCHEDULED
+0 s: main_cb main UVM_PHASE_SCHEDULED -> UVM_PHASE_STARTED
+0 s: main_cb main UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
+10 ns: main_cb main UVM_PHASE_EXECUTING -> UVM_PHASE_READY_TO_END
+10 ns: main_cb main UVM_PHASE_READY_TO_END -> UVM_PHASE_ENDED
+10 ns: main_cb main UVM_PHASE_ENDED -> UVM_PHASE_CLEANUP
+10 ns: main_cb main UVM_PHASE_CLEANUP -> UVM_PHASE_DONE
+10 ns: main_cb deleted
+10 ns: all_cb run UVM_PHASE_EXECUTING -> UVM_PHASE_READY_TO_END
+10 ns: all_cb run UVM_PHASE_READY_TO_END -> UVM_PHASE_ENDED
+10 ns: all_cb run UVM_PHASE_ENDED -> UVM_PHASE_CLEANUP
+10 ns: all_cb run UVM_PHASE_CLEANUP -> UVM_PHASE_DONE
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   2
+UVM_WARNING   :   1
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[OBJTN_CLEAR]           1
+[PH_JUMP]               1
+[RNTST]                 1
+UVM_INFO @ 10 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
