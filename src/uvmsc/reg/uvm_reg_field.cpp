@@ -26,6 +26,7 @@
 //----------------------------------------------------------------------
 
 #include <iomanip>
+#include <map>
 
 #include "uvmsc/reg/uvm_reg_field.h"
 #include "uvmsc/reg/uvm_reg_model.h"
@@ -80,6 +81,7 @@ uvm_reg_field::uvm_reg_field( const std::string& name ) : uvm_object(name)
   m_rng_state = 0;
   m_rng_seeded = false;
   m_rng_global_seed = 0;
+  m_rng_instance = 0;
 }
 
 //----------------------------------------------------------------------
@@ -1844,6 +1846,20 @@ void uvm_reg_field::do_predict( uvm_reg_item* rw,
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
+// member function: m_rng_next_instance
+//
+// Implementation defined
+//
+// Returns how many fields with full name \p name were seeded before.
+//----------------------------------------------------------------------
+
+unsigned int uvm_reg_field::m_rng_next_instance( const std::string& name )
+{
+  static std::map<std::string, unsigned int> count;
+  return count[name]++;
+}
+
+//----------------------------------------------------------------------
 // member function: randomize
 //
 //! Sets the desired value of the field to a random value which fits the
@@ -1857,7 +1873,10 @@ void uvm_reg_field::do_predict( uvm_reg_item* rw,
 //! it is randomized for the first time, or for the first time after
 //! the global seed has been changed. They do not depend on the order
 //! in which the fields of a model are randomized. Fields with the same
-//! full name, as in two instances of one model, get the same values.
+//! full name, as in two models which are both named "regmodel", get
+//! different values: like the seeds of uvm_create_random_seed, they are
+//! told apart by the order in which they are randomized for the first
+//! time. Only the order among fields with the same full name matters.
 //!
 //! In UVM-SystemVerilog the field is randomized with the built-in
 //! method randomize of the language.
@@ -1871,10 +1890,15 @@ bool uvm_reg_field::randomize()
   {
     if (!m_rng_seeded || m_rng_global_seed != uvm_get_random_seed())
     {
-      // 64 bit FNV-1a hash of the global seed and the full name. The
-      // seed table of uvm_create_random_seed is not used: it would need
-      // an entry for each field of the model.
+      // 64 bit FNV-1a hash of the global seed, the full name and the
+      // number of fields with this full name which were randomized
+      // before this one. The seed table of uvm_create_random_seed is
+      // not used: it is cleared when the global seed changes, so the
+      // number would depend on the order in which fields are reseeded.
       const std::string name = get_full_name();
+
+      if (!m_rng_seeded)
+        m_rng_instance = m_rng_next_instance(name);
 
       m_rng_global_seed = uvm_get_random_seed();
       m_rng_state = 0xcbf29ce484222325ULL ^ m_rng_global_seed;
@@ -1882,6 +1906,13 @@ bool uvm_reg_field::randomize()
       for (std::string::size_type i = 0; i < name.size(); i++)
       {
         m_rng_state ^= static_cast<unsigned char>(name[i]);
+        m_rng_state *= 0x100000001b3ULL;
+      }
+      // the first field with a name keeps the values it had before
+      // fields with the same name were told apart
+      for (unsigned int n = m_rng_instance; n != 0; n >>= 8)
+      {
+        m_rng_state ^= n & 0xff;
         m_rng_state *= 0x100000001b3ULL;
       }
       m_rng_seeded = true;

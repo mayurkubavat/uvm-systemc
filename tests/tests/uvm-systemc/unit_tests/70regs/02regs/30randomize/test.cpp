@@ -261,29 +261,39 @@ int sc_main(int, char*[])
   CHECK(!lower->get_rand_mode());
 
   // The values of a field depend on the global seed and on its name:
-  // the same seed gives the same values, in a new register and in the
-  // same register after the seed has been set again.
+  // the same seed gives the same values in the same register after the
+  // seed has been set again, and another seed gives other values.
   uvm_set_random_seed(11);
   reg_ctrl* rg_a = new_reg("rg");
   std::vector<uvm_reg_data_t> v1 = data_values(rg_a);
   uvm_set_random_seed(12);
   std::vector<uvm_reg_data_t> v3 = data_values(rg_a);
   uvm_set_random_seed(11);
-  std::vector<uvm_reg_data_t> v2 = data_values(new_reg("rg"));
   std::vector<uvm_reg_data_t> v4 = data_values(rg_a);
-  CHECK(v1 == v2);
   CHECK(v1 == v4);
   CHECK(v1 != v3);
 
-  // The values do not depend on the order in which registers are
-  // randomized, and registers with different names get different values.
-  uvm_set_random_seed(11);
-  reg_ctrl* rg_x = new_reg("rg");
+  // Registers with the same name, as in two models which have the same
+  // name, get different values, and so do registers with other names.
+  reg_ctrl* rg_b = new_reg("rg");
+  reg_ctrl* rg_c = new_reg("rg");
   reg_ctrl* rg_y = new_reg("other");
+  std::vector<uvm_reg_data_t> vb = data_values(rg_b);
+  std::vector<uvm_reg_data_t> vc = data_values(rg_c);
   std::vector<uvm_reg_data_t> vy = data_values(rg_y);
-  std::vector<uvm_reg_data_t> vx = data_values(rg_x);
-  CHECK(vx == v1);
+  CHECK(vb != v1);
+  CHECK(vc != v1);
+  CHECK(vc != vb);
   CHECK(vy != v1);
+
+  // A register keeps its own values after it has been randomized with
+  // another seed and the seed has been set back.
+  uvm_set_random_seed(12);
+  CHECK(data_values(rg_b) != vb);
+  data_values(rg_a);
+  uvm_set_random_seed(11);
+  CHECK(data_values(rg_b) == vb);
+  CHECK(data_values(rg_a) == v1);
 
   if (pass)
     std::cout << "** UVM TEST PASSED **" << std::endl;
