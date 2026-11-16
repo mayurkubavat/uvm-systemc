@@ -20,9 +20,9 @@
 // UVM-SystemC randomizes items and sequences with CRAVE where UVM-SV
 // calls randomize(): the default sequence of a phase before it is
 // started, items sent with UVM_DO and items sent with send_request()
-// and rerandomize set. uvm_randomized_sequence_item and
-// uvm_randomized_sequence implement uvm_sequence_item::randomize() with
-// the solver of CRAVE.
+// and rerandomize set. UVM_OBJECT_UTILS makes UVM-SystemC call the
+// randomize() of the item and of the sequence, which they inherit from
+// crave::crv_sequence_item through the adapters of crave2uvm.
 //
 // CRAVE is seeded from the global seed of UVM, so the values are the
 // same in every run and change with the command line argument
