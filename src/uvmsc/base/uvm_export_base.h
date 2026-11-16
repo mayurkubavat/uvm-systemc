@@ -19,6 +19,7 @@
 #define UVM_EXPORT_BASE_H_
 
 #include <systemc>
+#include <type_traits>
 #include "uvmsc/base/uvm_component.h"
 
 //////////////
@@ -44,6 +45,17 @@ class uvm_export_base : public sc_core::sc_export<IF>
   // exports can only bind to interfaces or other exports, not to ports
   virtual void connect( IF& interface_ );
   virtual void connect( uvm_export_base<IF>& export_ );
+
+  // An imp is both an export and an implementation of IF, for which
+  // the two member functions above are equally good; connect it as an
+  // export.
+  template <typename IMP>
+  typename std::enable_if< std::is_base_of<uvm_export_base<IF>, IMP>::value &&
+                           std::is_base_of<IF, IMP>::value >::type
+  connect( IMP& imp )
+  {
+    connect(static_cast<uvm_export_base<IF>&>(imp));
+  }
 
   virtual const char* kind() const;
 

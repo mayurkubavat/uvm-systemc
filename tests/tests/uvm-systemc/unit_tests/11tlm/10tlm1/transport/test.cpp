@@ -86,9 +86,7 @@ class wrapper : public uvm_component
 
   void connect_phase( uvm_phase& phase )
   {
-    // an imp is both an export and an interface; connect it as interface
-    uvm_tlm_transport_if<int, std::string>& imp_if = t.imp;
-    transport_export.connect(imp_if);
+    transport_export.connect(t.imp);
   }
 };
 

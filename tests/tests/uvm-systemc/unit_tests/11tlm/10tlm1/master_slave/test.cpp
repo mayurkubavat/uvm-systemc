@@ -185,19 +185,12 @@ class wrapper : public uvm_component
 
   void connect_phase( uvm_phase& phase )
   {
-    // an imp is both an export and an interface; connect it as interface
-    tlm::tlm_master_if<int, std::string>& m_if = mt.imp;
-    tlm::tlm_slave_if<int, std::string>& s_if = st.imp;
-    tlm::tlm_blocking_master_if<int, std::string>& bm_if = mt.b_imp;
-    tlm::tlm_nonblocking_master_if<int, std::string>& nbm_if = mt.nb_imp;
-    tlm::tlm_blocking_slave_if<int, std::string>& bs_if = st.b_imp;
-    tlm::tlm_nonblocking_slave_if<int, std::string>& nbs_if = st.nb_imp;
-    master_export.connect(m_if);
-    slave_export.connect(s_if);
-    b_master_export.connect(bm_if);
-    nb_master_export.connect(nbm_if);
-    b_slave_export.connect(bs_if);
-    nb_slave_export.connect(nbs_if);
+    master_export.connect(mt.imp);
+    slave_export.connect(st.imp);
+    b_master_export.connect(mt.b_imp);
+    nb_master_export.connect(mt.nb_imp);
+    b_slave_export.connect(st.b_imp);
+    nb_slave_export.connect(st.nb_imp);
   }
 };
 
