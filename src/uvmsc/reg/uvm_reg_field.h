@@ -263,6 +263,7 @@ class uvm_reg_field : public uvm_object
  private:
 
   static std::map<std::string, bool>& m_policy_names();
+  static unsigned int m_rng_next_instance( const std::string& name );
 
   UVM_REGISTER_CB( uvm_reg_field, uvm_reg_cbs )
 
@@ -276,6 +277,7 @@ class uvm_reg_field : public uvm_object
   sc_dt::uint64 m_rng_state;
   bool m_rng_seeded;
   unsigned int m_rng_global_seed; // global seed m_rng_state was made from
+  unsigned int m_rng_instance;    // fields with the same full name seeded before
 
   uvm_reg_data_t m_mirrored; // What we think is in the HW
   uvm_reg_data_t m_desired;  // Mirrored after set()
