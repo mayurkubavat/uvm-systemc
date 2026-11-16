@@ -23,6 +23,7 @@
 //----------------------------------------------------------------------
 
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "uvmsc/reg/uvm_mem_region.h"
@@ -478,10 +479,10 @@ uvm_mem_region::uvm_mem_region( unsigned long start_offset,
 
 std::string uvm_mem_region::convert2string()
 {
-  // TODO seems incomplete...
-  // $sformat(convert2string, "['h%h:'h%h]",
-  //          this.Xstart_offsetX, this.Xend_offsetX);
-  return "";
+  std::ostringstream str;
+  str << "[0x" << std::hex << m_start_offset
+      << ":0x" << std::hex << m_end_offset << "]";
+  return str.str();
 }
 
 } // namespace uvm
