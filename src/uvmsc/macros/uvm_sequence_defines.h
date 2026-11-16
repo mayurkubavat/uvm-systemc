@@ -32,8 +32,8 @@
 //! In the case of a #sequence, the sub-sequence is started using
 //! uvm_sequence_base::start() with call_pre_post set to false.
 //! The item, or the sequence unless its member do_not_randomize is set,
-//! is randomized with uvm_sequence_item::randomize() before it is sent
-//! or started.
+//! is randomized with its public member function randomize(), if it has
+//! one, before it is sent or started.
 //----------------------------------------------------------------------
 
 #define UVM_DO(SEQ_OR_ITEM) \
@@ -56,7 +56,8 @@
 //! argument is applied to the item or sequence in a randomize with statement
 //! before execution.
 //! In this implementation the constraints are not applied: the item or
-//! sequence is randomized with uvm_sequence_item::randomize() as in #UVM_DO.
+//! sequence is randomized as in #UVM_DO, and a warning RNDCSTR is given
+//! once for each use of the macro with constraints.
 //----------------------------------------------------------------------
 
 #define UVM_DO_WITH(SEQ_OR_ITEM, CONSTRAINTS) \
@@ -121,8 +122,16 @@
   seq__ = dynamic_cast<uvm::uvm_sequence_base*>(SEQ_OR_ITEM); \
   if (seq__ == nullptr) start_item(SEQ_OR_ITEM, PRIORITY); \
   if ((seq__ == nullptr || !seq__->do_not_randomize) && \
-      !static_cast< ::uvm::uvm_sequence_item*>(SEQ_OR_ITEM)->randomize()) \
+      !SEQ_OR_ITEM->m_uvm_randomize()) \
   { UVM_WARNING("RNDFLD", "Randomization failed in uvm_do_with action"); } \
+  { \
+    static bool warned__ = false; \
+    if (!warned__ && std::string(#CONSTRAINTS) != "\"\"") \
+    { \
+      warned__ = true; \
+      UVM_WARNING("RNDCSTR", "The constraints of uvm_do_with are not applied: " #CONSTRAINTS); \
+    } \
+  } \
   if (seq__ == nullptr) finish_item(SEQ_OR_ITEM, PRIORITY); \
   else seq__->start(SEQR, this, PRIORITY, 0); \
   } \

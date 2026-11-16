@@ -248,20 +248,23 @@ bool uvm_sequence_item::is_item() const
 }
 
 //----------------------------------------------------------------------
-// member function: randomize (virtual)
+// member function: m_uvm_randomize (virtual)
 //
-//! Randomizes the item or sequence and returns true if it succeeded.
-//! It is called where UVM in SystemVerilog calls randomize(): by
-//! uvm_sequencer_param_base::send_request if the argument rerandomize is
-//! set, by the macros UVM_DO and its variants, and on the default
-//! sequence of a phase before the sequencer starts it.
-//!
-//! The default implementation does nothing and returns true. A derived
-//! class overrides it to give its members random values, for example
-//! with a constraint solver such as CRAVE.
+// Implementation defined
+//
+// Randomizes the item or sequence where UVM in SystemVerilog calls
+// randomize(): in uvm_sequencer_param_base::send_request if the argument
+// rerandomize is set, in the macros UVM_DO and its variants, and on the
+// default sequence of a phase before the sequencer starts it.
+//
+// The macros UVM_OBJECT_UTILS and UVM_OBJECT_PARAM_UTILS override it to
+// call the public member function randomize() of the class, if it has
+// one which returns a value convertible to bool, for example one which
+// calls a constraint solver such as CRAVE. Otherwise, and in classes
+// without these macros, it does nothing and returns true.
 //----------------------------------------------------------------------
 
-bool uvm_sequence_item::randomize()
+bool uvm_sequence_item::m_uvm_randomize()
 {
   return true;
 }

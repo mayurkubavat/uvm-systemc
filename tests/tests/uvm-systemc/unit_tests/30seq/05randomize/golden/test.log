@@ -36,14 +36,25 @@ UVM_DO
 160 ns: fixed_sub sends 1 items
 160 ns: randomize req to 109
 160 ns: drv got value 109
-UVM_INFO <removed by verify-uvm.pl> @ 170 ns: reporter [UVM/REPORT/SERVER]
+170 ns: pre_do
+170 ns: randomize req_with to 110
+UVM_WARNING <removed by verify-uvm.pl> @ 170 ns: test.sqr@@s2 [RNDCSTR] The constraints of uvm_do_with are not applied: req_with->value == 5
+170 ns: mid_do 110
+170 ns: drv got value 110
+180 ns: pre_do
+180 ns: randomize req_with to 111
+180 ns: mid_do 111
+180 ns: drv got value 111
+190 ns: randomize void_item 1, private_item 1
+UVM_INFO <removed by verify-uvm.pl> @ 190 ns: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---
 ** Report counts by severity
 UVM_INFO      :   1
-UVM_WARNING   :   1
+UVM_WARNING   :   2
 UVM_ERROR     :   0
 UVM_FATAL     :   0
 ** Report counts by id
+[RNDCSTR]               1
 [RNTST]                 1
 [SQRSNDREQ]             1
-UVM_INFO @ 170 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
+UVM_INFO @ 190 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
