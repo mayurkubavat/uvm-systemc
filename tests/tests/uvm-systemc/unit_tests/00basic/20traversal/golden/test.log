@@ -45,14 +45,15 @@ name constraint: /^[][[:alnum:](){}_:-]([][[:alnum:](){} _:-]*[][[:alnum:](){}_:
 UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "bad+name" of the component "test.bad+name" violates the uvm component name constraints
 UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "a1" of the component "test.env.a1" violates the uvm component name constraints
 UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "a2" of the component "test.env.a2" violates the uvm component name constraints
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "bad+name" of the component "test.bad+name" violates the uvm component name constraints
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---
 ** Report counts by severity
 UVM_INFO      :   1
-UVM_WARNING   :   3
+UVM_WARNING   :   4
 UVM_ERROR     :   0
 UVM_FATAL     :   0
 ** Report counts by id
 [RNTST]                 1
-[UVM/COMP/NAME]         3
+[UVM/COMP/NAME]         4
 UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
