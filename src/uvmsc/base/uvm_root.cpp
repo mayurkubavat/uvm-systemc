@@ -178,6 +178,14 @@ void uvm_root::run_test( const std::string& test_name )
 
 void uvm_root::die()
 {
+  // only die once, as for the UVM-SV core states UVM_CORE_PRE_ABORT and
+  // UVM_CORE_ABORTED: a fatal error reported by a pre_abort callback
+  // returns here instead of aborting again
+  static bool m_dying = false;
+  if (m_dying)
+    return;
+  m_dying = true;
+
   uvm_report_server* l_rs = uvm_report_server::get_server();
   // do the pre_abort callbacks
   m_do_pre_abort();
