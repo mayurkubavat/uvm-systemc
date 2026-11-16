@@ -240,7 +240,7 @@ void uvm_sequencer_base::start_phase_sequence( uvm_phase& phase )
   //seq.reseed(); // TODO: randomization
   seq->set_starting_phase(&phase); //NEW!
 
-  if (!seq->do_not_randomize && !seq->randomize())
+  if (!seq->do_not_randomize && !seq->m_uvm_randomize())
   {
     std::ostringstream msg;
     msg << "Randomization failed for default sequence '"

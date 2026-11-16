@@ -216,7 +216,7 @@ void uvm_sequencer_param_base<REQ,RSP>::send_request( uvm_sequence_base* sequenc
   {
     if (rerandomize)
     {
-      if (!seq_item->randomize())
+      if (!seq_item->m_uvm_randomize())
         uvm_report_warning("SQRSNDREQ", "Failed to rerandomize sequence item in send_request");
     }
 

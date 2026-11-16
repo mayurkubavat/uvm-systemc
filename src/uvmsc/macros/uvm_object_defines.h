@@ -24,6 +24,42 @@
 #ifndef UVM_OBJECT_DEFINES_H_
 #define UVM_OBJECT_DEFINES_H_
 
+#include <type_traits>
+#include <utility>
+
+namespace uvm {
+
+// Implementation defined: calls obj->randomize() if T has an accessible
+// and unambiguous member function randomize() whose result converts to
+// bool, and returns true otherwise.
+
+template <typename...>
+struct m_uvm_void_t { typedef void type; };
+
+template <typename T, typename = void>
+struct m_uvm_has_randomize : std::false_type {};
+
+template <typename T>
+struct m_uvm_has_randomize<T, typename m_uvm_void_t<
+  decltype(static_cast<bool>(std::declval<T&>().randomize()))>::type>
+  : std::true_type {};
+
+template <typename T>
+typename std::enable_if<m_uvm_has_randomize<T>::value, bool>::type
+m_uvm_randomize_object( T* obj )
+{
+  return static_cast<bool>(obj->randomize());
+}
+
+template <typename T>
+typename std::enable_if<!m_uvm_has_randomize<T>::value, bool>::type
+m_uvm_randomize_object( T* )
+{
+  return true;
+}
+
+} // namespace uvm
+
 // -------------------------------------------
 // MACRO: UVM_OBJECT_UTILS
 //
@@ -273,6 +309,9 @@
   } \
   virtual const char* kind() const { \
     return #__VA_ARGS__; \
+  } \
+  virtual bool m_uvm_randomize() { \
+    return ::uvm::m_uvm_randomize_object(this); \
   } \
 
 
