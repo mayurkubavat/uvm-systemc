@@ -164,6 +164,20 @@ std::vector<uvm_reg_data_t> data_values( reg_ctrl* rg )
   return values;
 }
 
+// a field in a register of its own, named "fields"
+std::vector<uvm_reg_data_t> field_values( const std::string& name )
+{
+  uvm_reg_field* f = uvm_reg_field::type_id::create(name);
+  f->configure(new reg_wide("fields"), 32, 0, "RW", false, 0, true, true, false);
+  std::vector<uvm_reg_data_t> values;
+  for (int i = 0; i < 5; i++)
+  {
+    f->randomize();
+    values.push_back(f->get());
+  }
+  return values;
+}
+
 reg_ctrl* new_reg( const std::string& name )
 {
   reg_ctrl* rg = new reg_ctrl(name);
@@ -294,6 +308,30 @@ int sc_main(int, char*[])
   uvm_set_random_seed(11);
   CHECK(data_values(rg_b) == vb);
   CHECK(data_values(rg_a) == v1);
+
+  // The values do not depend on the order in which registers with
+  // different names are randomized, also after they have been reseeded.
+  uvm_set_random_seed(13);
+  reg_ctrl* rg_p = new_reg("p");
+  reg_ctrl* rg_q = new_reg("q");
+  std::vector<uvm_reg_data_t> vp = data_values(rg_p);
+  std::vector<uvm_reg_data_t> vq = data_values(rg_q);
+  uvm_set_random_seed(14);
+  data_values(rg_q);
+  data_values(rg_p);
+  uvm_set_random_seed(13);
+  CHECK(data_values(rg_q) == vq);
+  CHECK(data_values(rg_p) == vp);
+
+  // A field whose name is that of another field plus one character
+  // does not get the values of a later field with the shorter name.
+  uvm_set_random_seed(15);
+  std::vector<uvm_reg_data_t> vlong = field_values("g1");
+  bool repeated = false;
+  for (int i = 0; i < 60; i++)
+    if (field_values("g") == vlong)
+      repeated = true;
+  CHECK(!repeated);
 
   if (pass)
     std::cout << "** UVM TEST PASSED **" << std::endl;

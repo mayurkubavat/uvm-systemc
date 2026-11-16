@@ -1908,12 +1908,18 @@ bool uvm_reg_field::randomize()
         m_rng_state ^= static_cast<unsigned char>(name[i]);
         m_rng_state *= 0x100000001b3ULL;
       }
-      // the first field with a name keeps the values it had before
-      // fields with the same name were told apart
-      for (unsigned int n = m_rng_instance; n != 0; n >>= 8)
+      // The first field with a name keeps the values it had before
+      // fields with the same name were told apart. A zero byte, which
+      // a name does not contain, and four bytes of the number follow
+      // the name, so that no other name gives the same state.
+      if (m_rng_instance != 0)
       {
-        m_rng_state ^= n & 0xff;
         m_rng_state *= 0x100000001b3ULL;
+        for (int i = 0; i < 32; i += 8)
+        {
+          m_rng_state ^= (m_rng_instance >> i) & 0xff;
+          m_rng_state *= 0x100000001b3ULL;
+        }
       }
       m_rng_seeded = true;
     }
