@@ -75,6 +75,14 @@ uvm_component::uvm_component( uvm_component_name nm )
 
   set_name(std::string(nm));
 
+  // SystemC generates the module name for an empty name, and corrects a
+  // name with illegal characters; the leaf name is the module name
+  if (get_name() != this->basename())
+  {
+    uvm_object::set_name(this->basename());
+    m_set_full_name();
+  }
+
   start_report_handler(this->name());
 
   if (!top) {
