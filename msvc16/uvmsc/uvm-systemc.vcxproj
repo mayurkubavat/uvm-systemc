@@ -382,12 +382,16 @@
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_analysis_export.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_analysis_imp.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_analysis_port.h" />
+    <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_bidir_exports.h" />
+    <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_bidir_imps.h" />
+    <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_bidir_ports.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_exports.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_imps.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_ports.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_sqr_connections.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm1.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm_req_rsp_channel.h" />
+    <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm_transport_ifs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

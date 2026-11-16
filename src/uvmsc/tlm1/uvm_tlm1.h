@@ -27,6 +27,10 @@
 #include "uvmsc/tlm1/uvm_exports.h"
 #include "uvmsc/tlm1/uvm_imps.h"
 #include "uvmsc/tlm1/uvm_ports.h"
+#include "uvmsc/tlm1/uvm_tlm_transport_ifs.h"
+#include "uvmsc/tlm1/uvm_bidir_exports.h"
+#include "uvmsc/tlm1/uvm_bidir_imps.h"
+#include "uvmsc/tlm1/uvm_bidir_ports.h"
 #include "uvmsc/tlm1/uvm_tlm_req_rsp_channel.h"
 
 #endif /* UVM_TLM1_H_ */
