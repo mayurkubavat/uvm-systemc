@@ -29,6 +29,7 @@
 #include "uvmsc/base/uvm_root.h"
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_component_name.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
@@ -121,6 +122,8 @@ uvm_root::~uvm_root()
 
 void uvm_root::run_test( const std::string& test_name )
 {
+  uvm_run_test_callback::m_do_pre_run_test();
+
   // disable SystemC messages
   // TODO make switch available to enable SystemC messages
   sc_core::sc_report_handler::set_actions("/OSCI/SystemC", sc_core::SC_DO_NOTHING);
@@ -178,6 +181,8 @@ void uvm_root::die()
   uvm_report_server* l_rs = uvm_report_server::get_server();
   // do the pre_abort callbacks
   m_do_pre_abort();
+
+  uvm_run_test_callback::m_do_pre_abort();
 
   l_rs->report_summarize();
   throw std::runtime_error("Simulation terminated by uvm_root::die()");

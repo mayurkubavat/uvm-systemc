@@ -10,6 +10,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_object.cpp
   uvm_object_globals.cpp
   uvm_root.cpp
+  uvm_run_test_callback.cpp
   uvm_transaction.cpp
   uvm_version.cpp
   uvm_base.h
@@ -26,6 +27,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_object_globals.h
   uvm_port_base.h
   uvm_root.h
+  uvm_run_test_callback.h
   uvm_transaction.h
   uvm_void.h
   uvm_version.h)
@@ -45,6 +47,7 @@ install_headers (
   uvm_object_globals.h
   uvm_port_base.h
   uvm_root.h
+  uvm_run_test_callback.h
   uvm_transaction.h
   uvm_void.h
   uvm_version.h)

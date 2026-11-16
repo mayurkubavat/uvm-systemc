@@ -31,6 +31,7 @@
 
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/phasing/uvm_objection.h"
 #include "uvmsc/phasing/uvm_process_phase.h"
 #include "uvmsc/phasing/uvm_phase.h"
@@ -1955,6 +1956,8 @@ void uvm_phase::m_run_phases()
 
   //TODO clean up after ourselves
   //phase_runner_proc.kill();
+
+  uvm_run_test_callback::m_do_post_run_test();
 
   uvm_report_server* rs = uvm_report_server::get_server();
   rs->report_summarize();

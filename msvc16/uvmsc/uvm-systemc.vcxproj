@@ -174,6 +174,7 @@
     <ClCompile Include="..\..\src\uvmsc\base\uvm_object.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_object_globals.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_root.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\base\uvm_run_test_callback.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_transaction.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_version.cpp" />
     <ClCompile Include="..\..\src\uvmsc\cb\uvm_callback.cpp" />
@@ -255,6 +256,7 @@
     <ClInclude Include="..\..\src\uvmsc\base\uvm_object_globals.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_port_base.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_root.h" />
+    <ClInclude Include="..\..\src\uvmsc\base\uvm_run_test_callback.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_transaction.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_version.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_void.h" />
