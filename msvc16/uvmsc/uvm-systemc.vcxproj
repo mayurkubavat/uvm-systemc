@@ -391,6 +391,7 @@
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_sqr_connections.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm1.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm_req_rsp_channel.h" />
+    <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm_transport_channel.h" />
     <ClInclude Include="..\..\src\uvmsc\tlm1\uvm_tlm_transport_ifs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

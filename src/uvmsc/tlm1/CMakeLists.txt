@@ -10,6 +10,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_ports.h
   uvm_sqr_connections.h
   uvm_tlm_req_rsp_channel.h
+  uvm_tlm_transport_channel.h
   uvm_tlm_transport_ifs.h
   uvm_tlm1.h)
 
@@ -25,5 +26,6 @@ install_headers (
   uvm_ports.h
   uvm_sqr_connections.h
   uvm_tlm_req_rsp_channel.h
+  uvm_tlm_transport_channel.h
   uvm_tlm_transport_ifs.h
   uvm_tlm1.h)
