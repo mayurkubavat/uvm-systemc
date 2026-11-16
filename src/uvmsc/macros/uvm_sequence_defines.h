@@ -31,6 +31,9 @@
 //! the associated sequencer.
 //! In the case of a #sequence, the sub-sequence is started using
 //! uvm_sequence_base::start() with call_pre_post set to false.
+//! The item, or the sequence unless its member do_not_randomize is set,
+//! is randomized with uvm_sequence_item::randomize() before it is sent
+//! or started.
 //----------------------------------------------------------------------
 
 #define UVM_DO(SEQ_OR_ITEM) \
@@ -52,6 +55,8 @@
 //! This is the same as macro #UVM_DO except that the constraint block in the 2nd
 //! argument is applied to the item or sequence in a randomize with statement
 //! before execution.
+//! In this implementation the constraints are not applied: the item or
+//! sequence is randomized with uvm_sequence_item::randomize() as in #UVM_DO.
 //----------------------------------------------------------------------
 
 #define UVM_DO_WITH(SEQ_OR_ITEM, CONSTRAINTS) \
@@ -115,14 +120,12 @@
   UVM_CREATE_ON(SEQ_OR_ITEM, SEQR) \
   seq__ = dynamic_cast<uvm::uvm_sequence_base*>(SEQ_OR_ITEM); \
   if (seq__ == nullptr) start_item(SEQ_OR_ITEM, PRIORITY); \
+  if ((seq__ == nullptr || !seq__->do_not_randomize) && \
+      !static_cast< ::uvm::uvm_sequence_item*>(SEQ_OR_ITEM)->randomize()) \
+  { UVM_WARNING("RNDFLD", "Randomization failed in uvm_do_with action"); } \
   if (seq__ == nullptr) finish_item(SEQ_OR_ITEM, PRIORITY); \
   else seq__->start(SEQR, this, PRIORITY, 0); \
   } \
-
-/* TODO randomization - when ready insert after start_item above
-    if ((seq__ == nullptr || !seq__.do_not_randomize) && !SEQ_OR_ITEM.randomize() with CONSTRAINTS ) \
-    UVM_WARNING("RNDFLD", "Randomization failed in uvm_do_with action"); \
-*/
 
 //----------------------------------------------------------------------
 // MACRO: UVM_CREATE

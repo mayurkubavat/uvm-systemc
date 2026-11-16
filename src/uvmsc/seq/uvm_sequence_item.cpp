@@ -248,6 +248,25 @@ bool uvm_sequence_item::is_item() const
 }
 
 //----------------------------------------------------------------------
+// member function: randomize (virtual)
+//
+//! Randomizes the item or sequence and returns true if it succeeded.
+//! It is called where UVM in SystemVerilog calls randomize(): by
+//! uvm_sequencer_param_base::send_request if the argument rerandomize is
+//! set, by the macros UVM_DO and its variants, and on the default
+//! sequence of a phase before the sequencer starts it.
+//!
+//! The default implementation does nothing and returns true. A derived
+//! class overrides it to give its members random values, for example
+//! with a constraint solver such as CRAVE.
+//----------------------------------------------------------------------
+
+bool uvm_sequence_item::randomize()
+{
+  return true;
+}
+
+//----------------------------------------------------------------------
 // member function: get_root_sequence_name
 //
 //! Provides the name of the root sequence (the top-most parent sequence).
