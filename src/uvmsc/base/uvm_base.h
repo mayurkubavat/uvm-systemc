@@ -23,6 +23,7 @@
 #include "uvmsc/base/uvm_root.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
+#include "uvmsc/base/uvm_enum_wrapper.h"
 #include "uvmsc/base/uvm_component_name.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_component.h"
