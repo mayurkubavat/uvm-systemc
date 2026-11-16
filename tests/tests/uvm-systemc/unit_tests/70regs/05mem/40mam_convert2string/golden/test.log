@@ -3,10 +3,10 @@ UVM_INFO @ 0 s: reporter [RNTST] Running test test...
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x10:0x1f]...
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x200:0x2ff]...
 Allocated memory regions:
-   [0x200:0x2ff]
-   [0x10:0x1f]
+   ['h0000000000000200:'h00000000000002ff]
+   ['h0000000000000010:'h000000000000001f]
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x18:0x1b]...
-UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Cannot reserve [0x18:0x1b] because it overlaps with [0x10:0x1f].
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Cannot reserve [0x18:0x1b] because it overlaps with ['h0000000000000010:'h000000000000001f].
 ** UVM TEST PASSED **
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---

@@ -18,9 +18,9 @@
 //----------------------------------------------------------------------
 
 // Regression test for uvm_mem_region::convert2string(). The image of a
-// region shows its offset range, and is used by
-// uvm_mem_mam::convert2string() and in the error message for an
-// overlapping reservation.
+// region shows its offset range in the UVM-SV format ['h%h:'h%h] on
+// 64-bit offsets, and is used by uvm_mem_mam::convert2string() and in
+// the error message for an overlapping reservation.
 
 #include <systemc>
 #include <uvm>
@@ -58,7 +58,9 @@ class test : public uvm_test
     std::string img = mam->convert2string();
     std::cout << img;
 
-    if (img != "Allocated memory regions:\n   [0x200:0x2ff]\n   [0x10:0x1f]\n")
+    if (img != "Allocated memory regions:\n"
+               "   ['h0000000000000200:'h00000000000002ff]\n"
+               "   ['h0000000000000010:'h000000000000001f]\n")
       UVM_ERROR("MAMSTR", "unexpected image of the allocated regions");
 
     // an overlapping reservation names the region it overlaps with
