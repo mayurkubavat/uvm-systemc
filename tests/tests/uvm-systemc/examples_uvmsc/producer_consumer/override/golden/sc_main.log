@@ -1,7 +1,6 @@
 SystemC Simulation
 UVM_INFO @ 0 s: reporter [RNTST] Running test ...
 in producer ctor, in_file is ./override/stimulus.txt
-UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "fifo_consumer<packet>" of the component "topenv.fifo_consumer<packet>" violates the uvm component name constraints
 UVM_INFO <removed by verify-uvm.pl> @ 10 ns: topenv.parent_component.producer [topenv.parent_component.producer] Producer sending 16
 UVM_INFO <removed by verify-uvm.pl> @ 10 ns: topenv.parent_component.consumer [topenv.parent_component.consumer] fifo_consumer received: 16
 UVM_INFO <removed by verify-uvm.pl> @ 15 ns: topenv.parent_component.consumer [topenv.parent_component.consumer] fifo_consumer putting to fifo: 16
@@ -87,12 +86,11 @@ UVM_INFO <removed by verify-uvm.pl> @ 205 ns: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---
 ** Report counts by severity
 UVM_INFO      :  31
-UVM_WARNING   :   1
+UVM_WARNING   :   0
 UVM_ERROR     :   0
 UVM_FATAL     :   0
 ** Report counts by id
 [RNTST]                 1
-[UVM/COMP/NAME]         1
 [UVM/FACTORY/DUMP]      1
 [topenv.parent_component.consumer]                                     21
 [topenv.parent_component.producer]                                      8

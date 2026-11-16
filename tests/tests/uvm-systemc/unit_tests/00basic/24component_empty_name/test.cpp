@@ -20,7 +20,9 @@
 // Test of the name of a component created with an empty name: the leaf
 // name is the name SystemC generates for the module, so that get_name,
 // get_full_name and the child lookup of the parent agree, and two such
-// children do not collide.
+// children do not collide. Other names are kept as given: a duplicate
+// name is rejected by the parent, and a name with an inner space is
+// found by lookup.
 
 #include <systemc>
 #include <uvm>
@@ -42,7 +44,7 @@ class test : public uvm_test
  public:
   UVM_COMPONENT_UTILS(test);
 
-  uvm_component* c[3];
+  uvm_component* c[4];
 
   test( uvm_component_name name ) : uvm_test(name) {}
 
@@ -52,11 +54,13 @@ class test : public uvm_test
     c[0] = leaf::type_id::create("", this);
     c[1] = leaf::type_id::create("", this);
     c[2] = leaf::type_id::create("named", this);
+    c[3] = leaf::type_id::create("a b", this);
+    leaf::type_id::create("named", this); // duplicate
   }
 
   virtual void end_of_elaboration_phase( uvm_phase& phase )
   {
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 4; i++)
       std::cout << "get_name '" << c[i]->get_name() << "' get_full_name '"
                 << c[i]->get_full_name() << "' lookup "
                 << (lookup(c[i]->get_name()) == c[i] ? "ok" : "failed") << std::endl;

@@ -1,16 +1,25 @@
 SystemC Simulation
 UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+Warning: (W506) illegal characters: a b substituted by a_b
+In file: <removed by verify-uvm.pl>
+Warning: (W505) object already exists: test.named. Latter declaration will be renamed to test.named_0
+In file: <removed by verify-uvm.pl>
+UVM_WARNING @ 0 s: test [BDCHLD] A child with the name 'named' (type=leaf) already exists.
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.named_0 [NOPARENT] Unable to add child 'named' to parent 'test'.
 get_name 'object_0' get_full_name 'test.object_0' lookup ok
 get_name 'object_1' get_full_name 'test.object_1' lookup ok
 get_name 'named' get_full_name 'test.named' lookup ok
-children: 3
+get_name 'a b' get_full_name 'test.a_b' lookup ok
+children: 4
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---
 ** Report counts by severity
 UVM_INFO      :   1
-UVM_WARNING   :   0
+UVM_WARNING   :   2
 UVM_ERROR     :   0
 UVM_FATAL     :   0
 ** Report counts by id
+[BDCHLD]                1
+[NOPARENT]              1
 [RNTST]                 1
 UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
