@@ -1,0 +1,50 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+--- untriggered event
+-------------------------------------------
+Name            Type            Size  Value
+-------------------------------------------
+ev              uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     0
+  trigger_time  time            64    0 s
+  callbacks     queue           0     -
+-------------------------------------------
+--- triggered event
+-------------------------------------------
+Name            Type            Size  Value
+-------------------------------------------
+ev              uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     1
+  trigger_time  time            64    10 ns
+  trigger_data  data_obj        -     @<removed by verify-uvm.pl>
+  callbacks     queue           0     -
+-------------------------------------------
+--- copy
+-------------------------------------------
+Name            Type            Size  Value
+-------------------------------------------
+cp              uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     1
+  trigger_time  time            64    10 ns
+  trigger_data  data_obj        -     @<removed by verify-uvm.pl>
+  callbacks     queue           0     -
+-------------------------------------------
+copy is on: ok
+copy trigger time: ok
+copy trigger data: ok
+copy keeps its name: ok
+copy of a reset event is off: ok
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 10 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

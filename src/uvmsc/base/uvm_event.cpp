@@ -26,6 +26,7 @@
 #include "uvmsc/base/uvm_event_callback.h"
 #include "uvmsc/base/uvm_event.h"
 #include "uvmsc/base/uvm_globals.h"
+#include "uvmsc/print/uvm_printer.h"
 
 using namespace sc_core;
 
@@ -491,36 +492,44 @@ const std::string uvm_event::get_type_name() const
 
 void uvm_event::do_print( const uvm_printer& printer ) const
 {
-  /* TODO print events
-  printer.print_int("m_num_waiters", m_num_waiters, $bits(m_num_waiters), UVM_DEC, ".", "int");
-  printer.print_int("on", on, $bits(on), UVM_BIN, ".", "bit");
+  printer.print_field_int("num_waiters", m_num_waiters, 32, UVM_DEC, ".", "int");
+  printer.print_field_int("on", on, 1, UVM_DEC, ".", "bit");
   printer.print_time("trigger_time", trigger_time);
-  printer.print_object("trigger_data", trigger_data);
-  printer.m_scope.down("callbacks");
-  foreach(callbacks[e]) begin
-    printer.print_object($sformatf("[%0d]",e), callbacks[e], "[");
-  end
-  printer.m_scope.up();
-  */
+
+  if (trigger_data != nullptr)
+    printer.print_object("trigger_data", *trigger_data);
+
+  printer.print_array_header("callbacks", (int)callbacks.size(), "queue");
+  for (unsigned int i = 0; i < callbacks.size(); i++)
+  {
+    std::ostringstream idx;
+    idx << "[" << i << "]";
+    printer.print_object(idx.str(), *callbacks[i], "[");
+  }
+  printer.print_array_footer((int)callbacks.size());
 }
+
+//----------------------------------------------------------------------
+// Member function: do_copy (virtual)
+//
+//! Copy the state of the event \p rhs: the on/off state, the trigger
+//! time, the trigger data and the callbacks. As for the copy
+//! constructor, the processes waiting on \p rhs are not taken over.
+//----------------------------------------------------------------------
 
 void uvm_event::do_copy( const uvm_object& rhs )
 {
-  /* TODO copy
-  uvm_event* e;
   uvm_object::do_copy(rhs);
-  e = dynamic_cast<uvm_event*>(rhs);
 
-  if(e==nullptr) return;
+  const uvm_event* e = dynamic_cast<const uvm_event*>(&rhs);
+  if (e == nullptr)
+    return;
 
-  m_event = e->m_event;
-  m_num_waiters = e->m_num_waiters;
   on = e->on;
+  m_event_val = e->m_event_val;
   trigger_time = e->trigger_time;
   trigger_data = e->trigger_data;
-  callbacks.clear();// TODO clear memory
   callbacks = e->callbacks;
-  */
 }
 
 } // namespace uvm
