@@ -45,16 +45,37 @@ UVM_WARNING <removed by verify-uvm.pl> @ 170 ns: test.sqr@@s2 [RNDCSTR] The cons
 180 ns: randomize req_with to 111
 180 ns: mid_do 111
 180 ns: drv got value 111
-190 ns: randomize void_item 1, private_item 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class void_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize void_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class private_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize private_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class protected_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize protected_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class pointer_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize pointer_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class argument_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize argument_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class ambiguous_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize ambiguous_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The class of object no_utils_item is derived from base_item without UVM_OBJECT_UTILS or UVM_OBJECT_PARAM_UTILS, so it is randomized with the randomize() of base_item. A randomize() which it declares is only called if it overrides a virtual one.
+190 ns: randomize no_utils_item returns 1
+190 ns: randomize void_item returns 1
+190 ns: randomize private_item returns 1
+190 ns: randomize protected_item returns 1
+190 ns: randomize pointer_item returns 1
+190 ns: randomize argument_item returns 1
+190 ns: randomize ambiguous_item returns 1
+190 ns: randomize no_utils_item returns 1
 UVM_INFO <removed by verify-uvm.pl> @ 190 ns: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---
 ** Report counts by severity
 UVM_INFO      :   1
-UVM_WARNING   :   2
+UVM_WARNING   :   9
 UVM_ERROR     :   0
 UVM_FATAL     :   0
 ** Report counts by id
 [RNDCSTR]               1
+[RNDNOTCALLED]          7
 [RNTST]                 1
 [SQRSNDREQ]             1
 UVM_INFO @ 190 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

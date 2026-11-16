@@ -27,8 +27,11 @@
 //   unless do_not_randomize is set.
 // A failed randomization is reported with a warning. The constraints
 // of UVM_DO_WITH are not applied, which is reported once per use.
-// Classes whose randomize() returns nothing, or is not accessible, still
-// compile and are not randomized.
+// Classes with a member randomize which cannot be called without
+// arguments, returns no integral value, is not public or is ambiguous
+// still compile and are not randomized, which is warned once for each
+// class. So is a class without UVM_OBJECT_UTILS, which is randomized as
+// its base.
 
 #include <systemc>
 #include <uvm>
@@ -68,14 +71,12 @@ class item : public uvm_sequence_item
   }
 };
 
-// compiles, and is not randomized
+// The classes below compile and are not randomized.
 class void_item : public uvm_sequence_item
 {
  public:
   UVM_OBJECT_UTILS(void_item);
-
   void_item( const std::string& name = "void_item" ) : uvm_sequence_item(name) {}
-
   void randomize() {}
 };
 
@@ -83,10 +84,62 @@ class private_item : public uvm_sequence_item
 {
  public:
   UVM_OBJECT_UTILS(private_item);
-
   private_item( const std::string& name = "private_item" ) : uvm_sequence_item(name) {}
-
  private:
+  bool randomize() { return false; }
+};
+
+class protected_item : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(protected_item);
+  protected_item( const std::string& name = "protected_item" ) : uvm_sequence_item(name) {}
+ protected:
+  bool randomize() { return false; }
+};
+
+class pointer_item : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(pointer_item);
+  pointer_item( const std::string& name = "pointer_item" ) : uvm_sequence_item(name) {}
+  int* randomize() { return nullptr; }
+};
+
+class base_item : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(base_item);
+  base_item( const std::string& name = "base_item" ) : uvm_sequence_item(name) {}
+  bool randomize() { return true; }
+};
+
+// hides base_item::randomize()
+class argument_item : public base_item
+{
+ public:
+  UVM_OBJECT_UTILS(argument_item);
+  argument_item( const std::string& name = "argument_item" ) : base_item(name) {}
+  bool randomize( int ) { return false; }
+};
+
+struct randomizer_a { bool randomize() { return false; } };
+struct randomizer_b { bool randomize() { return false; } };
+
+class ambiguous_item : public uvm_sequence_item, public randomizer_a,
+                       public randomizer_b
+{
+ public:
+  UVM_OBJECT_UTILS(ambiguous_item);
+  ambiguous_item( const std::string& name = "ambiguous_item" ) : uvm_sequence_item(name) {}
+};
+
+// randomized with base_item::randomize(), as its own does not override
+// a virtual one
+class no_utils_item : public base_item
+{
+ public:
+  no_utils_item( const std::string& name = "no_utils_item" ) : base_item(name) {}
   bool randomize() { return false; }
 };
 
@@ -225,10 +278,20 @@ class do_seq : public uvm_sequence<item>
     }
 
     void_item v;
-    private_item p;
-    std::cout << sc_core::sc_time_stamp() << ": randomize void_item "
-              << v.m_uvm_randomize() << ", private_item "
-              << p.m_uvm_randomize() << std::endl;
+    private_item pv;
+    protected_item pt;
+    pointer_item ptr;
+    argument_item arg;
+    ambiguous_item amb;
+    no_utils_item nu;
+    uvm_sequence_item* others[] = { &v, &pv, &pt, &ptr, &arg, &amb, &nu };
+    for (int i = 0; i < 2; i++) // warned once
+      for (uvm_sequence_item* other : others)
+      {
+        bool result = other->m_uvm_randomize();
+        std::cout << sc_core::sc_time_stamp() << ": randomize "
+                  << other->get_name() << " returns " << result << std::endl;
+      }
   }
 };
 
