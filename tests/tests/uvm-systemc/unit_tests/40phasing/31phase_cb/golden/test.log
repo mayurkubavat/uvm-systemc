@@ -24,7 +24,7 @@ UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [PH_JUMP] phase pre_main (sc
 0 s: all_cb pre_main UVM_PHASE_ENDED -> UVM_PHASE_JUMPING (jump to reset)
 UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [OBJTN_CLEAR] Object 'uvm_top' cleared objection counts for pre_main_objection
 0 s: all_cb reset UVM_PHASE_DONE -> UVM_PHASE_DORMANT
-0 s: all_cb pre_main UVM_PHASE_JUMPING -> UVM_PHASE_DORMANT (jump to reset)
+0 s: all_cb pre_main UVM_PHASE_JUMPING -> UVM_PHASE_DORMANT
 0 s: all_cb reset UVM_PHASE_DORMANT -> UVM_PHASE_STARTED
 0 s: all_cb reset UVM_PHASE_STARTED -> UVM_PHASE_EXECUTING
 0 s: all_cb reset UVM_PHASE_EXECUTING -> UVM_PHASE_READY_TO_END

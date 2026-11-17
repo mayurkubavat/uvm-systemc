@@ -186,7 +186,9 @@ void uvm_phase::m_set_state( uvm_phase_state state )
   uvm_phase_state_change state_chg(get_name());
   state_chg.m_phase = this;
   state_chg.m_prev_state = prev_state;
-  state_chg.m_jump_to = m_jump_phase;
+  // the jump target is only reported for the states caused by the jump
+  if (state == UVM_PHASE_ENDED || state == UVM_PHASE_JUMPING)
+    state_chg.m_jump_to = m_jump_phase;
 
   while (cb != nullptr)
   {
