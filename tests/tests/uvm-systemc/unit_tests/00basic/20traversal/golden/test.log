@@ -2,6 +2,9 @@ SystemC Simulation
 node top_down:  r a a1 a2 b b1
 node bottom_up: a1 a2 a b1 b r
 node by_level:  r a b a1 a2 b1
+node assigned top_down:  r a a1 a2 b b1
+node assigned bottom_up: a1 a2 a b1 b r
+node assigned by_level:  r a b a1 a2 b1
 UVM_INFO @ 0 s: reporter [RNTST] Running test test...
 top_down: begin_v
 top_down: test.env

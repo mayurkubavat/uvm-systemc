@@ -100,6 +100,19 @@ class node_proxy : public uvm_structure_proxy<node>
   }
 };
 
+// a proxy which assigns the children instead of appending them, as a
+// port of a UVM-SV proxy may do
+class node_assign_proxy : public uvm_structure_proxy<node>
+{
+ public:
+  node_assign_proxy() : uvm_structure_proxy<node>("node_assign_proxy") {}
+
+  virtual void get_immediate_children( node* s, std::vector<node*>& children )
+  {
+    children = s->kids;
+  }
+};
+
 class node_visitor : public uvm_visitor<node>
 {
  public:
@@ -188,6 +201,15 @@ int sc_main(int, char*[])
   std::cout << "node top_down:  " << v1.order << std::endl;
   std::cout << "node bottom_up: " << v2.order << std::endl;
   std::cout << "node by_level:  " << v3.order << std::endl;
+
+  node_assign_proxy nap;
+  node_visitor w1, w2, w3;
+  td.accept(&r, &w1, &nap);
+  bu.accept(&r, &w2, &nap);
+  bl.accept(&r, &w3, &nap);
+  std::cout << "node assigned top_down:  " << w1.order << std::endl;
+  std::cout << "node assigned bottom_up: " << w2.order << std::endl;
+  std::cout << "node assigned by_level:  " << w3.order << std::endl;
 
   run_test("test");
   return 0;

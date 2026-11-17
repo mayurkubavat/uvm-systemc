@@ -244,7 +244,11 @@ class uvm_by_level_visitor_adapter
            it != c.end(); ++it)
       {
         v->visit(*it);
-        p->get_immediate_children(*it, q);
+        // a fresh vector for each node, as in UVM-SV, so that a proxy
+        // which assigns the children instead of appending them works
+        std::vector<STRUCTURE*> t;
+        p->get_immediate_children(*it, t);
+        q.insert(q.end(), t.begin(), t.end());
       }
       c.swap(q);
     }
