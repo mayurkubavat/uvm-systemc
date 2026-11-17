@@ -26,9 +26,18 @@
 //
 // CRAVE is seeded from the global seed of UVM, so the values are the
 // same in every run and change with the command line argument
-// +UVM_SEED. Without arguments the seed is 4711.
+// +UVM_SEED. Without arguments the seed is 4711. The generated values
+// depend on the solver and the platform, so the example does not print
+// them: it checks that they meet the constraints, that the number of
+// items is within its constraint, that the items are randomized, and
+// that the same seed generates the same values and another seed other
+// values, and prints the results of these checks.
 
 #include <iostream>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include <systemc>
 #include <uvm>
@@ -77,12 +86,15 @@ class item : public uvm_randomized_sequence_item
   }
 };
 
+typedef std::pair<unsigned int, unsigned int> item_values;
+
 class driver : public uvm::uvm_driver<item>
 {
  public:
   UVM_COMPONENT_UTILS(driver);
 
   unsigned int violations;
+  std::vector<item_values> received;
 
   driver( uvm::uvm_component_name name )
   : uvm::uvm_driver<item>(name), violations(0)
@@ -95,9 +107,7 @@ class driver : public uvm::uvm_driver<item>
     while (true)
     {
       seq_item_port->get_next_item(req);
-      std::cout << sc_core::sc_time_stamp() << ": addr 0x" << std::hex
-                << req.addr << " data 0x" << req.data << std::dec
-                << std::endl;
+      received.push_back(item_values(req.addr, req.data));
       if (!req.valid())
         violations++;
       sc_core::wait(10, sc_core::SC_NS);
@@ -112,6 +122,9 @@ class sequence : public uvm_randomized_sequence<item>
   crave::crv_variable<unsigned int> num_items;
 
   crave::crv_constraint c_num_items { num_items() >= 2u, num_items() <= 5u };
+
+  // the number of items of the last sequence started
+  static unsigned int last_num_items;
 
   UVM_OBJECT_UTILS(sequence);
 
@@ -133,16 +146,16 @@ class sequence : public uvm_randomized_sequence<item>
 
   void body()
   {
-    std::cout << sc_core::sc_time_stamp() << ": " << num_items
-              << " items with UVM_DO" << std::endl;
+    last_num_items = num_items;
+
+    std::cout << "items with UVM_DO" << std::endl;
     for (unsigned int i = 0; i < num_items; i++)
     {
       item* req = nullptr;
       UVM_DO(req);
     }
 
-    std::cout << sc_core::sc_time_stamp() << ": " << num_items
-              << " items with send_request" << std::endl;
+    std::cout << "items with send_request" << std::endl;
     item* req = item::type_id::create("req");
     for (unsigned int i = 0; i < num_items; i++)
     {
@@ -153,6 +166,32 @@ class sequence : public uvm_randomized_sequence<item>
     item::type_id::destroy(req);
   }
 };
+
+unsigned int sequence::last_num_items = 0;
+
+// the values of count items randomized after CRAVE is seeded with seed;
+// called outside of a SystemC process, where CRAVE uses the generator
+// which set_global_seed seeds
+static std::vector<item_values> generate( unsigned int seed, int count )
+{
+  crave::set_global_seed(seed);
+  item it("generated");
+  std::vector<item_values> values;
+  for (int i = 0; i < count; i++)
+  {
+    if (!it.randomize())
+      break;
+    values.push_back(item_values(it.addr, it.data));
+  }
+  return values;
+}
+
+static void check( bool ok, const std::string& what )
+{
+  std::cout << what << ": " << (ok ? "ok" : "FAILED") << std::endl;
+  if (!ok)
+    UVM_ERROR("CHECK", what);
+}
 
 class test : public uvm::uvm_test
 {
@@ -187,7 +226,22 @@ class test : public uvm::uvm_test
 
   void report_phase( uvm::uvm_phase& phase )
   {
-    std::cout << "constraint violations: " << drv->violations << std::endl;
+    const unsigned int n = sequence::last_num_items;
+    const std::vector<item_values>& received = drv->received;
+    std::set<item_values> distinct(received.begin(), received.end());
+
+    check(drv->violations == 0, "items meet their constraints");
+    check(n >= 2 && n <= 5, "number of items meets its constraint");
+    check(received.size() == 2 * n, "items received with UVM_DO and send_request");
+    check(distinct.size() > 1, "items are randomized");
+  }
+
+  // the end of the test does not depend on the number of items
+  void main_phase( uvm::uvm_phase& phase )
+  {
+    phase.raise_objection(this);
+    sc_core::wait(200, sc_core::SC_NS);
+    phase.drop_objection(this);
   }
 };
 
@@ -197,6 +251,15 @@ int sc_main( int, char*[] )
   crave::init("crave.cfg");
 
   uvm::run_test("test");
+
+  // the same seed generates the same values, another seed other values
+  // (crave::set_global_seed ignores the seed 0)
+  const unsigned int seed = uvm::uvm_get_random_seed() != 0 ? uvm::uvm_get_random_seed() : 1;
+  const unsigned int other_seed = seed + 1 != 0 ? seed + 1 : 1;
+  const std::vector<item_values> first = generate(seed, 8);
+  check(first.size() == 8, "randomization succeeds");
+  check(generate(seed, 8) == first, "the same seed generates the same values");
+  check(generate(other_seed, 8) != first, "another seed generates other values");
 
   return 0;
 }
