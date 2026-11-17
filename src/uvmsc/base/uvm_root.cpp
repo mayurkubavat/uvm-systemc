@@ -180,11 +180,19 @@ void uvm_root::die()
 {
   // only die once, as for the UVM-SV core states UVM_CORE_PRE_ABORT and
   // UVM_CORE_ABORTED: a fatal error reported by a pre_abort callback
-  // returns here instead of aborting again
+  // returns here instead of aborting again. The guard is cleared when
+  // die() is left by its exception, which the caller may catch, so that
+  // a later fatal error terminates again.
   static bool m_dying = false;
   if (m_dying)
     return;
-  m_dying = true;
+
+  struct dying_guard
+  {
+    explicit dying_guard( bool& flag ) : m_flag(flag) { m_flag = true; }
+    ~dying_guard() { m_flag = false; }
+    bool& m_flag;
+  } guard(m_dying);
 
   uvm_report_server* l_rs = uvm_report_server::get_server();
   // do the pre_abort callbacks
