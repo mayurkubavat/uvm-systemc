@@ -21,7 +21,8 @@
 // event must show its state, and copy() must take over the on/off
 // state, the trigger time and the trigger data, but not the
 // callbacks: the event owns its callbacks and deletes them in
-// delete_callback(), so a copy must not hold them.
+// delete_callback(), so a copy must not hold them. copy() reports no
+// DOCPY warning.
 
 #include <systemc>
 // included first so that uvm_event::add_callback() takes a
@@ -117,6 +118,16 @@ class test : public uvm_test
     check(kept_cnt == 0, "copy does not call the callbacks of the original");
     src.trigger();
     check(kept_cnt == 1, "original calls its callback");
+
+    // copy() is implemented: no DOCPY warning of uvm_object::do_copy
+    set_report_verbosity_level(UVM_HIGH);
+    uvm_root::get()->set_report_verbosity_level(UVM_HIGH);
+    uvm_event quiet("quiet");
+    quiet.copy(src);
+    uvm_report_server* svr = uvm_coreservice_t::get()->get_report_server();
+    check(svr->get_id_count("DOCPY") == 0, "copy reports no DOCPY warning");
+    set_report_verbosity_level(UVM_MEDIUM);
+    uvm_root::get()->set_report_verbosity_level(UVM_MEDIUM);
 
     phase.drop_objection(this);
   }

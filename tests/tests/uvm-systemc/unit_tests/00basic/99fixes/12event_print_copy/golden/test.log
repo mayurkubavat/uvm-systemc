@@ -63,6 +63,7 @@ cb_copy         uvm::uvm_event  -     @<removed by verify-uvm.pl>
 --------------------------------------------------------
 copy does not call the callbacks of the original: ok
 original calls its callback: ok
+copy reports no DOCPY warning: ok
 ** UVM TEST PASSED **
 UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---

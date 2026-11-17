@@ -523,8 +523,8 @@ void uvm_event::do_print( const uvm_printer& printer ) const
 
 void uvm_event::do_copy( const uvm_object& rhs )
 {
-  uvm_object::do_copy(rhs);
-
+  // uvm_object::do_copy is not called: it only warns that do_copy is
+  // not implemented
   const uvm_event* e = dynamic_cast<const uvm_event*>(&rhs);
   if (e == nullptr)
     return;
