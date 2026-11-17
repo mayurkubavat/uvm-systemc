@@ -22,7 +22,8 @@
 // state, the trigger time and the trigger data, but not the
 // callbacks: the event owns its callbacks and deletes them in
 // delete_callback(), so a copy must not hold them. copy() reports no
-// DOCPY warning.
+// DOCPY warning, and a copy which turns the event on or off resumes the
+// processes waiting in wait_on() or wait_off(), as in UVM-SV.
 
 #include <systemc>
 // included first so that uvm_event::add_callback() takes a
@@ -59,7 +60,15 @@ class test : public uvm_test
   uvm_event ev;
   data_obj data;
 
-  test( uvm_component_name name ) : uvm_test(name), ev("ev"), data("data") {}
+  test( uvm_component_name name )
+  : uvm_test(name), ev("ev"), data("data"), on_waited("on_waited"),
+    off_waited("off_waited"), on_woke(false), off_woke(false) {}
+
+  uvm_event on_waited, off_waited;
+  bool on_woke, off_woke;
+
+  void wait_on_proc() { on_waited.wait_on(); on_woke = true; }
+  void wait_off_proc() { off_waited.wait_off(); off_woke = true; }
 
   void check( bool cond, const std::string& what )
   {
@@ -128,6 +137,18 @@ class test : public uvm_test
     check(svr->get_id_count("DOCPY") == 0, "copy reports no DOCPY warning");
     set_report_verbosity_level(UVM_MEDIUM);
     uvm_root::get()->set_report_verbosity_level(UVM_MEDIUM);
+
+    // the processes waiting for the state taken over by copy() resume
+    uvm_event off_ev("off_ev");
+    off_waited.trigger();
+    sc_core::sc_spawn(sc_bind(&test::wait_on_proc, this));
+    sc_core::sc_spawn(sc_bind(&test::wait_off_proc, this));
+    sc_core::wait(sc_core::SC_ZERO_TIME);
+    on_waited.copy(src);
+    off_waited.copy(off_ev);
+    sc_core::wait(sc_core::SC_ZERO_TIME);
+    check(on_woke, "copy which turns the event on resumes wait_on()");
+    check(off_woke, "copy which turns the event off resumes wait_off()");
 
     phase.drop_objection(this);
   }

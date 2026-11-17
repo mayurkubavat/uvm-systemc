@@ -515,8 +515,9 @@ void uvm_event::do_print( const uvm_printer& printer ) const
 // Member function: do_copy (virtual)
 //
 //! Copy the state of the event \p rhs: the on/off state, the trigger
-//! time and the trigger data. As for the copy constructor, the
-//! processes waiting on \p rhs are not taken over. The callbacks are
+//! time and the trigger data. If the on/off state changes, the processes
+//! waiting in #wait_on or #wait_off of this event resume. As for the copy
+//! constructor, the processes waiting on \p rhs are not taken over. The callbacks are
 //! not copied either: an event owns the callbacks registered with it
 //! and deletes them in #delete_callback, so they cannot be shared.
 //----------------------------------------------------------------------
@@ -529,7 +530,13 @@ void uvm_event::do_copy( const uvm_object& rhs )
   if (e == nullptr)
     return;
 
-  on = e->on;
+  // as the assignment of on in UVM-SV, a change of the on/off state
+  // resumes the processes in wait_on() or wait_off()
+  if (on != e->on)
+  {
+    on = e->on;
+    m_on_ev->notify();
+  }
   m_event_val = e->m_event_val;
   trigger_time = e->trigger_time;
   trigger_data = e->trigger_data;
