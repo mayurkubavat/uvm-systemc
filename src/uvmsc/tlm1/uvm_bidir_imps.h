@@ -28,8 +28,10 @@
 #include <tlm>
 
 #include <string>
+#include <type_traits>
 
 #include "uvmsc/base/uvm_export_base.h"
+#include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 #include "uvmsc/tlm1/uvm_imps.h"
 #include "uvmsc/tlm1/uvm_tlm_transport_ifs.h"
@@ -93,21 +95,38 @@ namespace uvm {
 //---------------------------------------------------------------------------
 // Implementation defined: returns the request or response implementation
 // of a master or slave imp, if none is given: the implementation imp
-// itself, if it is of the same type, or else imp converted with
-// dynamic_cast.
+// itself, if it is of that type or derived from it, imp converted with
+// dynamic_cast if its class is polymorphic, or else nullptr. A null
+// result is a fatal error at the construction of the imp, as the $cast
+// of UVM-SV is at run time.
 //---------------------------------------------------------------------------
 
 template <typename TO, typename FROM>
 struct uvm_bidir_imp_cast
 {
-  static TO* cast( FROM* imp ) { return dynamic_cast<TO*>(imp); }
+  static TO* cast( FROM* imp )
+  {
+    return cast(imp, std::integral_constant<int,
+      std::is_convertible<FROM*, TO*>::value ? 0 :
+      std::is_polymorphic<FROM>::value ? 1 : 2>());
+  }
+
+ private:
+  static TO* cast( FROM* imp, std::integral_constant<int, 0> ) { return imp; }
+  static TO* cast( FROM* imp, std::integral_constant<int, 1> ) { return dynamic_cast<TO*>(imp); }
+  static TO* cast( FROM*, std::integral_constant<int, 2> ) { return nullptr; }
 };
 
-template <typename T>
-struct uvm_bidir_imp_cast<T, T>
+inline void m_uvm_bidir_imp_check( const std::string& name,
+                                   const void* req_imp, const void* rsp_imp )
 {
-  static T* cast( T* imp ) { return imp; }
-};
+  if (req_imp == nullptr || rsp_imp == nullptr)
+    uvm_report_fatal("BIDIRIMP", "The " +
+      std::string(req_imp == nullptr ? "request" : "response") +
+      " implementation of " + name + " is not given and the implementation"
+      " imp is not of its type. Pass req_imp and rsp_imp to the"
+      " constructor.");
+}
 
 //---------------------------------------------------------------------------
 // TLM1 transport implementation ports (imps)
@@ -259,6 +278,7 @@ class uvm_blocking_master_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   uvm_blocking_master_imp( const std::string& name, IMP* imp,
@@ -268,6 +288,7 @@ class uvm_blocking_master_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   UVM_BIDIR_BLOCKING_PUT_IMP_METHODS(REQ, m_req_imp)
@@ -308,6 +329,7 @@ class uvm_nonblocking_master_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   uvm_nonblocking_master_imp( const std::string& name, IMP* imp,
@@ -317,6 +339,7 @@ class uvm_nonblocking_master_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   UVM_BIDIR_NONBLOCKING_PUT_IMP_METHODS(REQ, m_req_imp)
@@ -358,6 +381,7 @@ class uvm_master_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   uvm_master_imp( const std::string& name, IMP* imp,
@@ -367,6 +391,7 @@ class uvm_master_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   UVM_BIDIR_NONBLOCKING_PUT_IMP_METHODS(REQ, m_req_imp)
@@ -414,6 +439,7 @@ class uvm_blocking_slave_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   uvm_blocking_slave_imp( const std::string& name, IMP* imp,
@@ -423,6 +449,7 @@ class uvm_blocking_slave_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   UVM_BIDIR_BLOCKING_PUT_IMP_METHODS(RSP, m_rsp_imp)
@@ -463,6 +490,7 @@ class uvm_nonblocking_slave_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   uvm_nonblocking_slave_imp( const std::string& name, IMP* imp,
@@ -472,6 +500,7 @@ class uvm_nonblocking_slave_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   UVM_BIDIR_NONBLOCKING_PUT_IMP_METHODS(RSP, m_rsp_imp)
@@ -513,6 +542,7 @@ class uvm_slave_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   uvm_slave_imp( const std::string& name, IMP* imp,
@@ -522,6 +552,7 @@ class uvm_slave_imp
     m_rsp_imp(rsp_imp != nullptr ? rsp_imp : uvm_bidir_imp_cast<RSP_IMP, IMP>::cast(imp))
   {
     UVM_BIND_TO_INTERFACE(m_if_type)
+    m_uvm_bidir_imp_check(this->get_full_name(), m_req_imp, m_rsp_imp);
   }
 
   UVM_BIDIR_NONBLOCKING_PUT_IMP_METHODS(RSP, m_rsp_imp)
