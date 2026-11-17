@@ -32,15 +32,19 @@ namespace uvm {
 
 class uvm_object;
 
-// Implementation defined: m_uvm_randomize_object(obj) calls
+// Implementation defined: m_uvm_randomize_object(obj, named) calls
 // obj->randomize() of the class T if it is public, unambiguous, takes no
 // arguments and returns bool or an integral type, and returns its result.
-// If T has a member named randomize which is not such a member function,
-// it warns once for the type and returns true; if it has none, it returns
-// true. If the object is of a class derived from T, that class does not
-// use UVM_OBJECT_UTILS or UVM_OBJECT_PARAM_UTILS, so a randomize() it
-// declares is only called if it overrides a virtual randomize() of T;
-// this is warned once for the type as well.
+// Otherwise, if named is true (T has a single member named randomize of
+// any kind which T can access, detected in the scope of T by
+// UVM_OBJECT_UTILS), it warns once for the type and returns true;
+// else it returns true. The detection does not derive from T, so final
+// classes and classes with a final destructor compile; an overloaded or
+// ambiguous randomize which cannot be called is not warned. If the object
+// is of a class derived from T, that class does not use UVM_OBJECT_UTILS
+// or UVM_OBJECT_PARAM_UTILS, so a randomize() it declares is only called
+// if it overrides a virtual randomize() of T; this is warned once for the
+// type as well.
 
 struct m_uvm_randomize_none {};
 
@@ -58,29 +62,6 @@ struct m_uvm_randomize_usable
   : std::integral_constant<bool, std::is_integral<typename std::decay<
       decltype(m_uvm_randomize_result<T>(0))>::type>::value> {};
 
-// true if T has a member of any kind and access named randomize: the name
-// is then ambiguous in a class derived from T and from a class with a
-// data member randomize
-struct m_uvm_randomize_name { int randomize; };
-
-template <typename T>
-struct m_uvm_randomize_name_probe : T, m_uvm_randomize_name {};
-
-template <typename T>
-std::false_type m_uvm_randomize_named_test(
-  decltype(&m_uvm_randomize_name_probe<T>::randomize) );
-
-template <typename T>
-std::true_type m_uvm_randomize_named_test( ... );
-
-template <typename T>
-struct m_uvm_randomize_named
-  : std::integral_constant<bool,
-#if __cplusplus >= 201402L
-      !std::is_final<T>::value &&
-#endif
-      decltype(m_uvm_randomize_named_test<T>(nullptr))::value> {};
-
 enum m_uvm_randomize_issue
 {
   M_UVM_RANDOMIZE_NOT_USABLE,
@@ -93,26 +74,26 @@ void m_uvm_randomize_warning( const uvm_object* obj,
                               m_uvm_randomize_issue issue );
 
 template <typename T>
-bool m_uvm_randomize_call( T* obj, std::true_type )
+bool m_uvm_randomize_call( T* obj, std::false_type, bool named )
 {
-  return static_cast<bool>(obj->randomize());
-}
-
-template <typename T>
-bool m_uvm_randomize_call( T* obj, std::false_type )
-{
-  if (m_uvm_randomize_named<T>::value)
+  if (named)
     m_uvm_randomize_warning(obj, typeid(T), M_UVM_RANDOMIZE_NOT_USABLE);
   return true;
 }
 
 template <typename T>
-bool m_uvm_randomize_object( T* obj )
+bool m_uvm_randomize_call( T* obj, std::true_type, bool )
+{
+  return static_cast<bool>(obj->randomize());
+}
+
+template <typename T, bool NAMED>
+bool m_uvm_randomize_object( T* obj, std::integral_constant<bool, NAMED> )
 {
   if (typeid(*obj) != typeid(T))
     m_uvm_randomize_warning(obj, typeid(*obj), M_UVM_RANDOMIZE_NO_UTILS);
   return m_uvm_randomize_call(obj,
-    std::integral_constant<bool, m_uvm_randomize_usable<T>::value>());
+    std::integral_constant<bool, m_uvm_randomize_usable<T>::value>(), NAMED);
 }
 
 } // namespace uvm
@@ -367,8 +348,15 @@ bool m_uvm_randomize_object( T* obj )
   virtual const char* kind() const { \
     return #__VA_ARGS__; \
   } \
+  template <typename M_UVM_T> \
+  static auto m_uvm_randomize_named( int ) \
+    -> decltype((void)&M_UVM_T::randomize, std::true_type()); \
+  template <typename M_UVM_T> \
+  static std::false_type m_uvm_randomize_named( ... ); \
   virtual bool m_uvm_randomize() { \
-    return ::uvm::m_uvm_randomize_object(this); \
+    typedef typename std::remove_pointer<decltype(this)>::type m_uvm_this_t; \
+    return ::uvm::m_uvm_randomize_object(this, \
+      decltype(m_uvm_randomize_named<m_uvm_this_t>(0))()); \
   } \
 
 

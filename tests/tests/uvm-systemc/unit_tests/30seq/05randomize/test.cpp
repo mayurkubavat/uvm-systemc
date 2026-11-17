@@ -30,8 +30,9 @@
 // Classes with a member randomize which cannot be called without
 // arguments, returns no integral value, is not public or is ambiguous
 // still compile and are not randomized, which is warned once for each
-// class. So is a class without UVM_OBJECT_UTILS, which is randomized as
-// its base.
+// class (except for an ambiguous one). So is a class without
+// UVM_OBJECT_UTILS, which is randomized as its base. Final classes and
+// classes with a final destructor compile.
 
 #include <systemc>
 #include <uvm>
@@ -123,6 +124,7 @@ class argument_item : public base_item
   bool randomize( int ) { return false; }
 };
 
+// not warned: the name cannot be detected without deriving from the class
 struct randomizer_a { bool randomize() { return false; } };
 struct randomizer_b { bool randomize() { return false; } };
 
@@ -141,6 +143,36 @@ class no_utils_item : public base_item
  public:
   no_utils_item( const std::string& name = "no_utils_item" ) : base_item(name) {}
   bool randomize() { return false; }
+};
+
+// final classes compile; a usable randomize() is called
+class final_item final : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(final_item);
+  final_item( const std::string& name = "final_item" ) : uvm_sequence_item(name) {}
+  bool randomize()
+  {
+    std::cout << sc_core::sc_time_stamp() << ": randomize final_item" << std::endl;
+    return true;
+  }
+};
+
+class final_private_item final : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(final_private_item);
+  final_private_item( const std::string& name = "final_private_item" ) : uvm_sequence_item(name) {}
+ private:
+  bool randomize() { return false; }
+};
+
+class final_dtor_item : public uvm_sequence_item
+{
+ public:
+  UVM_OBJECT_UTILS(final_dtor_item);
+  final_dtor_item( const std::string& name = "final_dtor_item" ) : uvm_sequence_item(name) {}
+  virtual ~final_dtor_item() final {}
 };
 
 class driver : public uvm_driver<item>
@@ -284,7 +316,11 @@ class do_seq : public uvm_sequence<item>
     argument_item arg;
     ambiguous_item amb;
     no_utils_item nu;
-    uvm_sequence_item* others[] = { &v, &pv, &pt, &ptr, &arg, &amb, &nu };
+    final_item fi;
+    final_private_item fp;
+    final_dtor_item fd;
+    uvm_sequence_item* others[] = { &v, &pv, &pt, &ptr, &arg, &amb, &nu,
+                                    &fi, &fp, &fd };
     for (int i = 0; i < 2; i++) // warned once
       for (uvm_sequence_item* other : others)
       {
