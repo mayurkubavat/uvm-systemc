@@ -97,28 +97,36 @@ uvm_run_test_callback::~uvm_run_test_callback()
 //! Implementation defined
 //! Execute pre_run_test, post_run_test or pre_abort of all registered
 //! callbacks, in the order of registration. A callback may add or
-//! delete callbacks; the callbacks registered at the start are called.
+//! delete callbacks: the callbacks registered at the start are called,
+//! except those which are no longer registered when it is their turn, so
+//! that a callback which is deleted may also be destroyed.
 //----------------------------------------------------------------------
 
 void uvm_run_test_callback::m_do_pre_run_test()
 {
-  std::vector<uvm_run_test_callback*> cbs = m_registered_cbs();
+  const std::vector<uvm_run_test_callback*>& registered = m_registered_cbs();
+  std::vector<uvm_run_test_callback*> cbs = registered;
   for (std::size_t i = 0; i < cbs.size(); i++)
-    cbs[i]->pre_run_test();
+    if (std::find(registered.begin(), registered.end(), cbs[i]) != registered.end())
+      cbs[i]->pre_run_test();
 }
 
 void uvm_run_test_callback::m_do_post_run_test()
 {
-  std::vector<uvm_run_test_callback*> cbs = m_registered_cbs();
+  const std::vector<uvm_run_test_callback*>& registered = m_registered_cbs();
+  std::vector<uvm_run_test_callback*> cbs = registered;
   for (std::size_t i = 0; i < cbs.size(); i++)
-    cbs[i]->post_run_test();
+    if (std::find(registered.begin(), registered.end(), cbs[i]) != registered.end())
+      cbs[i]->post_run_test();
 }
 
 void uvm_run_test_callback::m_do_pre_abort()
 {
-  std::vector<uvm_run_test_callback*> cbs = m_registered_cbs();
+  const std::vector<uvm_run_test_callback*>& registered = m_registered_cbs();
+  std::vector<uvm_run_test_callback*> cbs = registered;
   for (std::size_t i = 0; i < cbs.size(); i++)
-    cbs[i]->pre_abort();
+    if (std::find(registered.begin(), registered.end(), cbs[i]) != registered.end())
+      cbs[i]->pre_abort();
 }
 
 //----------------------------------------------------------------------
