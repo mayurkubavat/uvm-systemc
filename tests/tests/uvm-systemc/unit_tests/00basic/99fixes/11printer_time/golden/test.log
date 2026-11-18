@@ -1,0 +1,16 @@
+SystemC Simulation
+----------------------------------
+Name      Type       Size  Value
+----------------------------------
+obj       timed_obj  -     @<removed by verify-uvm.pl>
+  t_zero  time       64    0 s
+  t_ns    time       64    10 ns
+  t_us    time       64    2500 ns
+----------------------------------
+obj: (timed_obj@<removed by verify-uvm.pl>) {
+  t_zero: 0 s
+  t_ns: 10 ns
+  t_us: 2500 ns
+}
+obj: (timed_obj@<removed by verify-uvm.pl>) { t_zero: 0 s  t_ns: 10 ns  t_us: 2500 ns  }
+** UVM TEST PASSED **
