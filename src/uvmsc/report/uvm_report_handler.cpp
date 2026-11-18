@@ -40,6 +40,34 @@
 
 namespace uvm {
 
+//----------------------------------------------------------------------------
+// Local function: m_file_handle_str
+//
+// Implementation defined
+//
+// UVM_FILE is a stream pointer, not a file descriptor as in UVM-SV.
+// Print a null file as "<null>" (reports go to the standard output),
+// the standard streams by name, and any other stream by its address.
+//----------------------------------------------------------------------------
+
+static const int m_file_handle_bits = static_cast<int>(8 * sizeof(UVM_FILE));
+
+static std::string m_file_handle_str( UVM_FILE file )
+{
+  if (file == nullptr)
+    return "<null>";
+  if (file == &std::cout)
+    return "stdout";
+  if (file == &std::cerr)
+    return "stderr";
+  if (file == &std::clog)
+    return "clog";
+
+  std::ostringstream str;
+  str << "@" << static_cast<const void*>(file);
+  return str.str();
+}
+
 
 //----------------------------------------------------------------------------
 // Constructor
@@ -277,9 +305,8 @@ void uvm_report_handler::do_print( const uvm_printer& printer ) const
   }
 
   // print default file handle
-  int def_file_handle = 0x1; // TODO no file handle when using ostream. Orig: default_file_handle;
-  printer.print_field_int("default_file_handle", def_file_handle, 32, UVM_HEX,
-      ".", "int");
+  printer.print_generic("default_file_handle", "UVM_FILE", m_file_handle_bits,
+      m_file_handle_str(default_file_handle));
 
   // print id files
   if(id_file_handles.size()!=0)
@@ -291,9 +318,8 @@ void uvm_report_handler::do_print( const uvm_printer& printer ) const
         it != id_file_handles.end(); ++it)
     {
       idx = it->first;
-      int file_handle = 0x1; // TODO no file handle when using ostream. Orig: id_file_handles[idx];
-      printer.print_field_int("[" + idx + "]", file_handle, 32,
-          UVM_HEX, ".", "UVM_FILE");
+      printer.print_generic("[" + idx + "]", "UVM_FILE", m_file_handle_bits,
+          m_file_handle_str(it->second));
     }
 
     printer.print_array_footer();
@@ -310,8 +336,8 @@ void uvm_report_handler::do_print( const uvm_printer& printer ) const
       l_severity = it->first;
       std::ostringstream str;
       str << "[" << uvm_severity_name[l_severity] << "]";
-      int file_handle = 0x1; // TODO no file handle when using ostream. Orig: severity_file_handles[l_severity];
-      printer.print_field_int(str.str(), file_handle, 32, UVM_HEX, ".", "UVM_FILE");
+      printer.print_generic(str.str(), "UVM_FILE", m_file_handle_bits,
+          m_file_handle_str(it->second));
     }
 
     printer.print_array_footer();
@@ -342,9 +368,8 @@ void uvm_report_handler::do_print( const uvm_printer& printer ) const
         idx = it2->first;
         std::ostringstream str;
         str << "[" << uvm_severity_name[l_severity] << ":" << idx << "]";
-        int file_handle = 0x1; // TODO no file handle when using ostream. Orig: id_f_ary[idx];
-        printer.print_field_int(str.str(),
-            file_handle, 32, UVM_HEX, ".", "UVM_FILE"); // check cast UVM_FILE
+        printer.print_generic(str.str(), "UVM_FILE", m_file_handle_bits,
+            m_file_handle_str(it2->second));
       }
     }
     printer.print_array_footer();
