@@ -48,6 +48,32 @@ using namespace sc_core;
 namespace uvm {
 
 //----------------------------------------------------------------------
+// Local functions for the UVM_STRING and UVM_TIME radixes
+//----------------------------------------------------------------------
+
+// Format "%0s": each group of 8 bits, starting from the most significant
+// one, is a character; leading null characters are not printed
+static std::string m_uvm_bits_to_ascii( const sc_dt::sc_unsigned& value, int size )
+{
+  std::string str;
+  for( int i = (size + 7) / 8 - 1; i >= 0; i-- )
+  {
+    int hi = std::min(8 * i + 7, size - 1);
+    char c = static_cast<char>(value.range(hi, 8 * i).to_uint());
+    if (c == 0 && str.empty())
+      continue;
+    str += c;
+  }
+  return str;
+}
+
+// Format "%0t": the value is a number of time resolution units
+static std::string m_uvm_value_to_time( sc_dt::uint64 value )
+{
+  return sc_core::sc_time::from_value(value).to_string();
+}
+
+//----------------------------------------------------------------------
 // Global function: uvm_vector_to_string
 //
 //! Implementation defined
@@ -80,12 +106,14 @@ std::string uvm_vector_to_string(const uvm_integral_t& val,
     }
     case UVM_STRING:  // format "%0s%0s"
     {
-      rstr << radix_str << (char)value;
+      sc_dt::sc_unsigned uvalue(size);
+      uvalue = reduced_value.to_uint64();
+      rstr << radix_str << m_uvm_bits_to_ascii(uvalue, size);
       return rstr.str();
     }
-    case UVM_TIME:    // format "%0s%0t" ??
+    case UVM_TIME:    // format "%0s%0t"
     {
-      rstr << radix_str << value; // TODO what should be the time format?
+      rstr << radix_str << m_uvm_value_to_time(reduced_value.to_uint64());
       return rstr.str();
     }
     case UVM_DEC:    // format "%0s%0d"
@@ -137,12 +165,12 @@ std::string uvm_vector_to_string( const uvm_bitstream_t& val,
     }
     case UVM_STRING:  // format "%0s%0s"
     {
-      rstr << radix_str << (char)value.to_int();
+      rstr << radix_str << m_uvm_bits_to_ascii(value, size);
       return rstr.str();
     }
-    case UVM_TIME:    // format "%0s%0t" ??
+    case UVM_TIME:    // format "%0s%0t"
     {
-      rstr << radix_str << value; // TODO what should be the time format?
+      rstr << radix_str << m_uvm_value_to_time(value.to_uint64());
       return rstr.str();
     }
     case UVM_DEC:    // format "%0s%0d"

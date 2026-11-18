@@ -132,16 +132,11 @@ bool uvm_comparer::compare_field( const std::string& name,
             << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
         break;
       }
-      case UVM_TIME: // TODO how to deal with time/sc_time?
+      case UVM_TIME:
+      case UVM_STRING:
       {
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      case UVM_STRING: // TODO printed as binary ??
-      {
-        msg << "lhs = 0b" << lhs_masked.to_string(sc_dt::SC_BIN_US, true)
-            << " : rhs = 0b" << rhs_masked.to_string(sc_dt::SC_BIN_US, true);
+        msg << "lhs = " << uvm_vector_to_string(uvm_bitstream_t(lhs & mask), size, radix)
+            << " : rhs = " << uvm_vector_to_string(uvm_bitstream_t(rhs & mask), size, radix);
         break;
       }
       case UVM_ENUM: // printed in decimal
@@ -214,16 +209,11 @@ bool uvm_comparer::compare_field_int( const std::string& name,
             << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
         break;
       }
-      case UVM_TIME: // TODO how to deal with time/sc_time?
+      case UVM_TIME:
+      case UVM_STRING:
       {
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      case UVM_STRING: // show as bit string
-      {
-        msg << "lhs = 0b" << lhs_masked.to_string(sc_dt::SC_BIN_US, true)
-            << " : rhs = 0b" << rhs_masked.to_string(sc_dt::SC_BIN_US, true);
+        msg << "lhs = " << uvm_vector_to_string(lhs, size, radix)
+            << " : rhs = " << uvm_vector_to_string(rhs, size, radix);
         break;
       }
       case UVM_ENUM:
