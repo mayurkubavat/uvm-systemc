@@ -610,7 +610,7 @@ void uvm_default_report_server::report_summarize( UVM_FILE file ) const
   std::vector<std::string> q;
   std::string space= "                                     ";
 
-  uvm_report_catcher::summarize();
+  uvm_report_catcher::summarize(file);
 
   q.push_back("\n--- UVM Report Summary ---\n\n");
 
@@ -664,7 +664,19 @@ void uvm_default_report_server::report_summarize( UVM_FILE file ) const
     }
   }
 
-  UVM_INFO("UVM/REPORT/SERVER", UVM_STRING_QUEUE_STREAMING_PACK(q), UVM_LOW);
+  if (file == 0)
+  {
+    UVM_INFO("UVM/REPORT/SERVER", UVM_STRING_QUEUE_STREAMING_PACK(q), UVM_LOW);
+  }
+  else
+  {
+    // Re-route the message to the file by changing the action, and
+    // restore the original settings after the message is reported
+    uvm_report_handler* rh = uvm_coreservice_t::get()->get_root()->get_report_handler();
+    uvm_report_handler::m_id_route_t saved = rh->m_route_id_to_file("UVM/REPORT/SERVER", file);
+    UVM_INFO("UVM/REPORT/SERVER", UVM_STRING_QUEUE_STREAMING_PACK(q), UVM_LOW);
+    rh->m_restore_id_route("UVM/REPORT/SERVER", saved);
+  }
 }
 
 
