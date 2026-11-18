@@ -247,7 +247,7 @@ bool uvm_vreg::implement( unsigned long n,
 
   region = mem->mam->reserve_region(offset, n*incr*mem->get_n_bytes());
 
-  if (m_region == nullptr)
+  if (region == nullptr)
   {
     UVM_ERROR("RegModel",
         "Could not allocate a memory region for virtual register '" + get_full_name() +
