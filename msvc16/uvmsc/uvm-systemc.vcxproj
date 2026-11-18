@@ -167,6 +167,7 @@
     <ClCompile Include="..\..\src\uvmsc\base\uvm_component_name.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_coreservice_t.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_default_coreservice_t.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\base\uvm_barrier.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_event.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_event_callback.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_globals.cpp" />
@@ -245,6 +246,7 @@
     <ClInclude Include="..\..\src\uvmsc\base\uvm_component_name.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_coreservice_t.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_default_coreservice_t.h" />
+    <ClInclude Include="..\..\src\uvmsc\base\uvm_barrier.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_event.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_event_callback.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_export_base.h" />
@@ -277,6 +279,7 @@
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_config_db.h" />
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_config_db_options.h" />
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_object_string_pool.h" />
+    <ClInclude Include="..\..\src\uvmsc\conf\uvm_pool.h" />
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_queue.h" />
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_resource.h" />
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_resource_base.h" />

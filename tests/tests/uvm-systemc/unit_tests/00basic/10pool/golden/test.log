@@ -1,0 +1,42 @@
+SystemC Simulation
+empty pool: num 0, first 0, key still 7
+num 3, exists(20) 1, exists(25) 0
+get(20) = 'twenty again'
+get(25) = '', num is now 4
+forward: 10 20 25 30
+backward: 30 25 20 10
+a warning for a key which does not exist is expected
+UVM_WARNING @ 0 s: reporter [POOLDEL] delete: pool key doesn't exist. Ignoring delete request
+after delete: num 3
+copy has 3 items, the original 2
+forward: 10 20 30
+backward: 30 20 10
+---------------------------------------------------
+Name           Type              Size  Value
+---------------------------------------------------
+copy           uvm_pool          -     @<removed by verify-uvm.pl>
+  pool         aa_object_string  3     -
+    [-key0--]                    -1    ten
+    [-key1--]                    -1    twenty again
+    [-key2--]                    -1    thirty
+---------------------------------------------------
+global get(1) = 'global one'
+event names: a, b; num 2
+second get returns the same event: 1
+added event found: 1
+names: a b own
+a warning for a name which does not exist is expected
+UVM_WARNING @ 0 s: reporter [POOLDEL] delete: key 'z' doesn't exist
+events left: 2
+global event: shared, same again: 1
+plain item: 1, printed: 1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   0
+UVM_WARNING   :   2
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[POOLDEL]               2
+** UVM TEST PASSED **

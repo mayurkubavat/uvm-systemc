@@ -3,6 +3,7 @@ H_FILES += \
 	conf/uvm_config_db.h \
 	conf/uvm_config_db_options.h \
 	conf/uvm_object_string_pool.h \
+	conf/uvm_pool.h \
 	conf/uvm_queue.h \
 	conf/uvm_resource.h \
 	conf/uvm_resource_base.h \
