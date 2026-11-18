@@ -67,6 +67,15 @@ static std::string m_uvm_bits_to_ascii( const sc_dt::sc_unsigned& value, int siz
   return str;
 }
 
+// Format "%0b": the binary digits without leading zeros
+static std::string m_uvm_strip_leading_zeros( const std::string& digits )
+{
+  std::string::size_type first = digits.find_first_not_of('0');
+  if (first == std::string::npos)
+    return "0";
+  return digits.substr(first);
+}
+
 // Format "%0t": the value is a number of time resolution units
 static std::string m_uvm_value_to_time( sc_dt::uint64 value )
 {
@@ -91,7 +100,8 @@ std::string uvm_vector_to_string(const uvm_integral_t& val,
   switch(radix) {
     case UVM_BIN:      // format "%0s%0b"
     {
-      rstr << radix_str << std::bitset<16>(value);
+      rstr << radix_str
+           << m_uvm_strip_leading_zeros(std::bitset<64>(reduced_value.to_uint64()).to_string());
       return rstr.str();
     }
     case UVM_OCT:      // format "%0s%0o"
@@ -150,7 +160,7 @@ std::string uvm_vector_to_string( const uvm_bitstream_t& val,
   switch(radix) {
     case UVM_BIN:      // format "%0s%0b"
     {
-      rstr << radix_str << value.to_string(sc_dt::SC_BIN_US, false); // TODO no prefix?
+      rstr << radix_str << m_uvm_strip_leading_zeros(value.to_string(sc_dt::SC_BIN_US, false));
       return rstr.str();
     }
     case UVM_OCT:      // format "%0s%0o"

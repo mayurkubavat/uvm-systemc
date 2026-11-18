@@ -20,7 +20,8 @@
 // Integral values printed or compared with the UVM_TIME radix are shown
 // as a time (the value is a number of time resolution units, as %t in
 // UVM-SV), and with the UVM_STRING radix as a string of 8-bit
-// characters (as %s in UVM-SV).
+// characters (as %s in UVM-SV). With the UVM_BIN radix they are shown
+// with all significant bits and no leading zeros (as %0b in UVM-SV).
 
 #include <systemc>
 #include <uvm>
@@ -36,6 +37,7 @@ class item : public uvm::uvm_object
 public:
   sc_dt::uint64 t{0};
   sc_dt::uint64 s{0};
+  bool on{false};
 
   item( const std::string& name = "item" ) : uvm::uvm_object(name) {}
 
@@ -47,6 +49,9 @@ public:
     printer.print_field_int("s", s, 32, UVM_STRING);
     printer.print_field("wide_t", uvm_bitstream_t(t), 100, UVM_TIME);
     printer.print_field("wide_s", uvm_bitstream_t(s), 100, UVM_STRING);
+    printer.print_field_int("on", on, 1, UVM_BIN);
+    printer.print_field_int("b", s, 32, UVM_BIN);
+    printer.print_field("wide_b", uvm_bitstream_t(s), 100, UVM_BIN);
   }
 
   virtual bool do_compare( const uvm::uvm_object& rhs, const uvm::uvm_comparer* comparer ) const

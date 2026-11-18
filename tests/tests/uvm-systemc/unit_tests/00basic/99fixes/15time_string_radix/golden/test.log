@@ -1,14 +1,17 @@
 SystemC Simulation
 UVM_INFO @ 0 s: reporter [RNTST] Running test test...
------------------------------
+-------------------------------------------------
 Name      Type    Size  Value
------------------------------
+-------------------------------------------------
 a         item    -     @<removed by verify-uvm.pl>
   t       time    64    10 ns
   s       string  32    ABC
   wide_t  time    100   10 ns
   wide_s  string  100   ABC
------------------------------
+  on      int     1     'b0
+  b       int     32    'b10000010100001001000011
+  wide_b  int     100   'b10000010100001001000011
+-------------------------------------------------
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for t: lhs = 10 ns : rhs = 25 us
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for s: lhs = ABC : rhs = ABD
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for wide_t: lhs = 10 ns : rhs = 25 us
