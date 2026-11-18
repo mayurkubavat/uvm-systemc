@@ -265,7 +265,7 @@ class uvm_vreg : public uvm_object
   bool           m_is_static;
 
   uvm_mem_region* m_region;    // Not nullptr if implemented via MAM
-  sc_core::sc_mutex m_atomic;  // Semaphore - Field RMW operations must be atomic
+  sc_core::sc_semaphore m_atomic{1};  // Field RMW operations must be atomic
 
   std::string m_fname;
   int m_lineno;

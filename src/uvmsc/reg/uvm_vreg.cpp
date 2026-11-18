@@ -1298,9 +1298,8 @@ void uvm_vreg::reset( const std::string& kind )
    // Put back a key in the semaphore if it is checked out
    // in case a thread was killed during an operation
 
-   // TODO
-   //void'(this.atomic.try_get(1));
-   //this.atomic.put(1);
+   m_atomic.trywait();
+   m_atomic.post();
 }
 
 //----------------------------------------------------------------------
@@ -1536,16 +1535,14 @@ void uvm_vreg::add_field( uvm_vreg_field* field )
 
 void uvm_vreg::m_atomic_check( bool on )
 {
-  /*
   if (on)
-     m_atomic.lock(); // get
+     m_atomic.wait(); // get
   else
   {
     // Maybe a key was put back in by a spurious call to reset()
-    m_atomic.trylock();
-    m_atomic.unlock(); // put
+    m_atomic.trywait(); // try_get
+    m_atomic.post(); // put
   }
-  */
 }
 
 //----------------------------------------------------------------------
