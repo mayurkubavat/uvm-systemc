@@ -67,7 +67,7 @@ static std::string m_uvm_bits_to_ascii( const sc_dt::sc_unsigned& value, int siz
   return str;
 }
 
-// Format "%0b": the binary digits without leading zeros
+// Formats "%0b", "%0o" and "%0x": the digits without leading zeros
 static std::string m_uvm_strip_leading_zeros( const std::string& digits )
 {
   std::string::size_type first = digits.find_first_not_of('0');
@@ -76,9 +76,18 @@ static std::string m_uvm_strip_leading_zeros( const std::string& digits )
   return digits.substr(first);
 }
 
-// Format "%0t": the value is a number of time resolution units
+// Format "%0t": the value is a number of time resolution units.
+// Building or printing an sc_time fixes the time resolution, which may
+// still be set while the simulation is not running; print the plain
+// number of time resolution units then, as %0t does by default.
 static std::string m_uvm_value_to_time( sc_dt::uint64 value )
 {
+  if (!sc_core::sc_is_running())
+  {
+    std::ostringstream str;
+    str << value;
+    return str.str();
+  }
   return sc_core::sc_time::from_value(value).to_string();
 }
 
@@ -111,7 +120,7 @@ std::string uvm_vector_to_string(const uvm_integral_t& val,
     }
     case UVM_UNSIGNED: // format "%0s%0d"
     {
-      rstr << radix_str << std::dec << value;
+      rstr << radix_str << std::dec << reduced_value.to_uint64();
       return rstr.str();
     }
     case UVM_STRING:  // format "%0s%0s"
@@ -165,12 +174,12 @@ std::string uvm_vector_to_string( const uvm_bitstream_t& val,
     }
     case UVM_OCT:      // format "%0s%0o"
     {
-      rstr << radix_str << value.to_string(sc_dt::SC_OCT_US, false);
+      rstr << radix_str << m_uvm_strip_leading_zeros(value.to_string(sc_dt::SC_OCT_US, false));
       return rstr.str();
     }
     case UVM_UNSIGNED: // format "%0s%0d"
     {
-      rstr << radix_str << std::dec << value.to_uint();
+      rstr << radix_str << value.to_string(sc_dt::SC_DEC, false);
       return rstr.str();
     }
     case UVM_STRING:  // format "%0s%0s"
@@ -180,7 +189,11 @@ std::string uvm_vector_to_string( const uvm_bitstream_t& val,
     }
     case UVM_TIME:    // format "%0s%0t"
     {
-      rstr << radix_str << m_uvm_value_to_time(value.to_uint64());
+      // saturate a value that does not fit in sc_time
+      sc_dt::uint64 t = ~sc_dt::UINT64_ZERO;
+      if (size <= 64 || (value >> 64) == 0)
+        t = value.to_uint64();
+      rstr << radix_str << m_uvm_value_to_time(t);
       return rstr.str();
     }
     case UVM_DEC:    // format "%0s%0d"
@@ -190,7 +203,7 @@ std::string uvm_vector_to_string( const uvm_bitstream_t& val,
     }
     default:         //  format "%0s%0x"
     {
-      rstr << radix_str << value.to_string(sc_dt::SC_HEX_US, false);
+      rstr << radix_str << m_uvm_strip_leading_zeros(value.to_string(sc_dt::SC_HEX_US, false));
       return rstr.str();
     }
   }
