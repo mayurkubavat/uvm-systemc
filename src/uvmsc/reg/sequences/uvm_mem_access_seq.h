@@ -90,6 +90,11 @@ class uvm_mem_single_access_seq
 
   virtual void body()
   {
+    // The values depend on the global seed and on this sequence only,
+    // unless the user has set a seed.
+    if (!rand_reg_val.has_seed())
+      rand_reg_val.set_seed(uvm_create_random_seed(get_type_name(), get_full_name()));
+
     std::string mode;
     std::vector<uvm_reg_map*> maps;
     uvm_reg_data_t mask;
