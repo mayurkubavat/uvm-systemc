@@ -1923,7 +1923,7 @@ void uvm_phase::m_run_phases()
 void uvm_phase::wait_for_self_and_siblings_to_drop()
 {
   bool need_to_check_all = true;
-  std::map<uvm_phase*, bool> siblings;
+  m_schedulemapT siblings;
 
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
   uvm_root* top = cs->get_root();
@@ -2011,11 +2011,11 @@ void uvm_phase::clear_successors( uvm_phase_state state,
 //----------------------------------------------------------------------
 
 void uvm_phase::get_predecessors_for_successors(
-  std::map<uvm_phase*, bool>& pred_of_succ )
+  m_schedulemapT& pred_of_succ )
 {
   bool done = false;
 
-  std::map<uvm_phase*, bool> successors;
+  m_schedulemapT successors;
 
   // get all successors
   for( m_schedulemapItT it = m_successors.begin();
@@ -2105,7 +2105,7 @@ void uvm_phase::m_wait_for_pred()
 {
   if(!(m_jump_fwd || m_jump_bkwd))
   {
-    std::map<uvm_phase*, bool> pred_of_succ;
+    m_schedulemapT pred_of_succ;
 
     get_predecessors_for_successors(pred_of_succ);
 
@@ -2197,9 +2197,9 @@ bool uvm_phase::m_is_domain()
 //! Implementation defined
 //----------------------------------------------------------------------
 
-std::map<uvm_phase*, bool>& uvm_phase::m_executing_phases()
+uvm_phase::m_schedulemapT& uvm_phase::m_executing_phases()
 {
-  static std::map<uvm_phase*, bool> executing_phases;
+  static m_schedulemapT executing_phases;
   return executing_phases;
 }
 
