@@ -33,6 +33,20 @@ include $(srcdir)/simple/tlm1/producer_consumer/test.am
 include $(srcdir)/simple/trivial/test.am
 include $(srcdir)/integrated/ubus/test.am
 
+# The CRAVE example needs an installation of CRAVE and is only built with
+# CMake (UVM_SYSTEMC_ENABLE_CRAVE), so it is distributed without a test.
+examples_DIRS += \
+				 simple/crave/constrained_random \
+				 simple/crave
+
+examples_FILES += \
+	simple/crave/constrained_random/packet.h \
+	simple/crave/constrained_random/packet_driver.h \
+	simple/crave/constrained_random/packet_sequence.h \
+	simple/crave/constrained_random/packet_sequencer.h \
+	simple/crave/constrained_random/sc_main.cpp \
+	simple/crave/constrained_random/testbench.h
+
 examples_DIRS += \
 				 simple/callbacks \
 				 simple/configuration \
