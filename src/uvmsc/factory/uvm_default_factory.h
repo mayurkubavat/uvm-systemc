@@ -25,7 +25,9 @@
 
 #include <map>
 #include <list>
+#include <set>
 #include <string>
+#include <vector>
 #include <iostream>
 
 #include "uvmsc/factory/uvm_factory.h"
@@ -78,6 +80,24 @@ public:
   virtual void set_type_override_by_name( const std::string& original_type_name,
                                           const std::string& override_type_name,
                                           bool replace = true );
+
+  //--------------------------------------------------------------------------
+  // Group: Type & Instance Aliases
+  //--------------------------------------------------------------------------
+
+  virtual void set_type_alias( const std::string& alias_type_name,
+                               uvm_object_wrapper* original_type );
+
+  virtual void set_inst_alias( const std::string& alias_type_name,
+                               uvm_object_wrapper* original_type,
+                               const std::string& full_inst_path );
+
+  virtual void set_type_alias( const std::string& alias_type_name,
+                               const std::string& original_type_name );
+
+  virtual void set_inst_alias( const std::string& alias_type_name,
+                               const std::string& original_type_name,
+                               const std::string& full_inst_path );
 
   //--------------------------------------------------------------------------
   // Group: Creation
@@ -164,6 +184,54 @@ public:
 
   static void cleanup();
 
+  uvm_object_wrapper* m_resolve_type_alias( const std::string& type_name ) const;
+
+  uvm_object_wrapper* m_resolve_type_name( const std::string& type_name,
+                                           const std::string& full_inst_path ) const;
+
+  uvm_object_wrapper* m_resolve_type_name_impl( const std::string& type_name,
+                                                const std::string& full_inst_path,
+                                                std::set<std::string>& visited,
+                                                std::vector<std::string>* req_chain = nullptr ) const;
+
+  void m_resolve_pending_aliases();
+
+  void m_bind_pending_type_overrides( const std::string& match_name,
+                                      uvm_object_wrapper* resolved );
+
+  void m_migrate_inst_override_name_queue( const std::string& match_name,
+                                           uvm_object_wrapper* default_target );
+
+  void m_set_inst_override_by_name_impl( const std::string& original_type_name,
+                                         const std::string& override_type_name,
+                                         const std::string& full_inst_path,
+                                         unsigned long long seq );
+
+  void m_propagate_inst_alias_overrides( const std::string& alias_type_name,
+                                         uvm_object_wrapper* original_type,
+                                         const std::string& full_inst_path );
+
+  uvm_factory_override* m_find_inst_override( uvm_object_wrapper* original_type,
+                                              uvm_object_wrapper* override_type,
+                                              const std::string& full_inst_path ) const;
+
+  void m_register_inst_override_req_name( uvm_factory_override* ovr,
+                                          const std::string& req_name );
+
+  void m_transfer_override_metadata( uvm_factory_override* from,
+                                     uvm_factory_override* to );
+
+  void m_delete_override( uvm_factory_override* ovr );
+
+  uvm_object_wrapper* m_find_override_by_type_impl( uvm_object_wrapper* requested_type,
+                                                   const std::string& full_inst_path,
+                                                   std::set<uvm_object_wrapper*>& visited_types );
+
+  void m_update_min_override_seq( uvm_factory_override* ovr,
+                                  unsigned long long seq );
+
+  unsigned long long m_get_override_seq( const uvm_factory_override* ovr ) const;
+
  protected:
 
   // data members
@@ -201,8 +269,31 @@ public:
   m_inst_override_queues_mapT  m_inst_override_queues;
   m_inst_override_name_queues_mapT m_inst_override_name_queues;
 
+  struct m_inst_alias_entry
+  {
+    std::string alias_type_name;
+    uvm_object_wrapper* orig_type;
+    std::string orig_type_name;
+    std::string full_inst_path;
+  };
+
+  typedef std::map<std::string, uvm_object_wrapper*> m_type_aliases_mapT;
+  typedef std::map<std::string, std::string>         m_type_alias_names_mapT;
+  typedef std::list<m_inst_alias_entry>              m_inst_aliases_listT;
+  typedef std::map<std::string, m_inst_aliases_listT> m_inst_aliases_mapT;
+
+  m_type_aliases_mapT      m_type_aliases;
+  m_type_alias_names_mapT  m_type_alias_names;
+  m_inst_aliases_mapT      m_inst_aliases;
+
  private:
   m_overrides_listT m_override_info;
+  std::set<uvm_factory_override*> m_no_replace_overrides;
+  unsigned long long m_next_override_seq;
+  std::map<const uvm_factory_override*, unsigned long long> m_override_seq;
+  std::map<const uvm_factory_override*, std::set<std::string> > m_override_req_names;
+  typedef std::map<std::string, m_overrides_listT> m_inst_override_by_req_name_mapT;
+  m_inst_override_by_req_name_mapT m_inst_override_by_req_name;
 
   static bool m_debug_pass;
 };

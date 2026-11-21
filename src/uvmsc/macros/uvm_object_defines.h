@@ -31,6 +31,7 @@
 namespace uvm {
 
 class uvm_object;
+class uvm_object_wrapper;
 
 // Implementation defined: m_uvm_randomize_object(obj, named) calls
 // obj->randomize() of the class T if it is public, unambiguous, takes no
@@ -109,12 +110,24 @@ bool m_uvm_randomize_object( T* obj, std::integral_constant<bool, NAMED> )
 #define UVM_OBJECT_UTILS(...) \
    M_UVM_REPORT_METHODS_REDIRECTION(__VA_ARGS__) \
    M_UVM_OBJECT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
-   M_UVM_OBJECT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__) \
+   M_UVM_OBJECT_GET_OBJECT_TYPE_FUNC \
+   M_UVM_OBJECT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
 
 #define UVM_OBJECT_PARAM_UTILS(...) \
    M_UVM_REPORT_METHODS_REDIRECTION(__VA_ARGS__) \
    M_UVM_OBJECT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
-   M_UVM_OBJECT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__) \
+   M_UVM_OBJECT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
+
+#define UVM_OBJECT_ABSTRACT_UTILS(...) \
+   M_UVM_REPORT_METHODS_REDIRECTION(__VA_ARGS__) \
+   M_UVM_OBJECT_ABSTRACT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
+   M_UVM_OBJECT_GET_OBJECT_TYPE_FUNC \
+   M_UVM_OBJECT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
+
+#define UVM_OBJECT_PARAM_ABSTRACT_UTILS(...) \
+   M_UVM_REPORT_METHODS_REDIRECTION(__VA_ARGS__) \
+   M_UVM_OBJECT_ABSTRACT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
+   M_UVM_OBJECT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
 
 // -------------------------------------------
 // MACRO: M_UVM_REPORT_METHODS_REDIRECTION
@@ -334,7 +347,18 @@ bool m_uvm_randomize_object( T* obj, std::integral_constant<bool, NAMED> )
   static const std::string m_register_type_name() { \
     return std::string(#__VA_ARGS__); } \
   typedef ::uvm::uvm_object_registry<__VA_ARGS__ > type_id; \
-  static type_id* get_type() { return type_id::get(); } \
+  static type_id* get_type() { return type_id::get(); }
+
+#define M_UVM_OBJECT_ABSTRACT_REGISTRY_INTERNAL_PARAM(...) \
+  static const std::string m_register_type_name() { \
+    return std::string(#__VA_ARGS__); } \
+  typedef ::uvm::uvm_abstract_object_registry<__VA_ARGS__ > type_id; \
+  static type_id* get_type() { return type_id::get(); }
+
+#define M_UVM_OBJECT_GET_OBJECT_TYPE_FUNC \
+  virtual const ::uvm::uvm_object_wrapper* get_object_type() const { \
+    return type_id::get(); \
+  }
 
 // -------------------------------------------
 // MACRO: M_UVM_GET_TYPE_NAME_FUNC

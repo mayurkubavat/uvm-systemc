@@ -28,7 +28,9 @@
 #include <string>
 #include <map>
 #include <list>
+#include <set>
 #include <vector>
+#include <limits>
 #include <algorithm>
 
 #include "uvmsc/base/uvm_globals.h"
@@ -46,6 +48,28 @@
 
 namespace uvm {
 
+namespace {
+
+struct m_candidate_override_t
+{
+  uvm_factory_override* ovr;
+  unsigned long long seq;
+  size_t order;
+};
+
+struct m_candidate_override_cmp
+{
+  bool operator()( const m_candidate_override_t& a,
+                   const m_candidate_override_t& b ) const
+  {
+    if (a.seq != b.seq)
+      return a.seq < b.seq;
+    return a.order < b.order;
+  }
+};
+
+} // anonymous namespace
+
 //----------------------------------------------------------------------------
 // uvm_default_factory implementation
 //----------------------------------------------------------------------------
@@ -61,6 +85,7 @@ bool uvm_default_factory::m_debug_pass = false;
 //----------------------------------------------------------------------------
 
 uvm_default_factory::uvm_default_factory()
+  : m_next_override_seq(0)
 {
   m_types.clear();
   m_type_names.clear();
@@ -71,6 +96,13 @@ uvm_default_factory::uvm_default_factory()
   m_inst_override_queues.clear();
   m_inst_override_name_queues.clear();
   m_override_info.clear();
+  m_no_replace_overrides.clear();
+  m_override_seq.clear();
+  m_override_req_names.clear();
+  m_inst_override_by_req_name.clear();
+  m_type_aliases.clear();
+  m_type_alias_names.clear();
+  m_inst_aliases.clear();
 }
 
 //----------------------------------------------------------------------------
@@ -173,6 +205,31 @@ void uvm_default_factory::do_register( uvm_object_wrapper* obj )
     else
     {
       m_type_names[obj->get_type_name()] = obj;
+
+      m_type_aliases_mapT::iterator ait = m_type_aliases.find(obj->get_type_name());
+      if (ait != m_type_aliases.end())
+      {
+        if (ait->second != obj)
+        {
+          std::ostringstream msg;
+          msg << "Alias type name '" << obj->get_type_name()
+              << "' collides with already registered factory type '"
+              << obj->get_type_name() << "'.";
+          uvm_report_warning("ALSRGD", msg.str(), UVM_NONE);
+        }
+        m_type_aliases.erase(ait);
+      }
+
+      m_type_alias_names_mapT::iterator anit = m_type_alias_names.find(obj->get_type_name());
+      if (anit != m_type_alias_names.end())
+      {
+        std::ostringstream msg;
+        msg << "Alias type name '" << obj->get_type_name()
+            << "' collides with already registered factory type '"
+            << obj->get_type_name() << "'.";
+        uvm_report_warning("ALSRGD", msg.str(), UVM_NONE);
+        m_type_alias_names.erase(anit);
+      }
     }
   }
 
@@ -191,30 +248,44 @@ void uvm_default_factory::do_register( uvm_object_wrapper* obj )
     m_types[obj] = true;
 
     // If a named override happens before the type is registered, need to copy
-    // the override queue.
-    // Note: Registration occurs via static initialization, which occurs ahead of
-    // procedural (e.g. initial) blocks. There should not be any preexisting overrides.
-    if( m_inst_override_name_queues.find(obj->get_type_name()) != m_inst_override_name_queues.end() ) //if exists
+    // the override queue and backfill pending type overrides.
+    if (!obj->get_type_name().empty() && obj->get_type_name() != "<unknown>")
     {
-       m_inst_override_queues[obj] = new uvm_factory_queue_class();
-       m_inst_override_queues[obj]->queue = m_inst_override_name_queues[obj->get_type_name()]->queue;
-       m_inst_override_name_queues.erase(obj->get_type_name());
+      m_type_names_mapItT tnit = m_type_names.find(obj->get_type_name());
+      if (tnit != m_type_names.end() && tnit->second == obj)
+      {
+        m_bind_pending_type_overrides(obj->get_type_name(), obj);
+        m_migrate_inst_override_name_queue(obj->get_type_name(), obj);
+      }
     }
 
     if( m_wildcard_inst_overrides.size() )
     {
-       if( m_inst_override_queues.find(obj) == m_inst_override_queues.end() ) // not found
-            m_inst_override_queues[obj] = new uvm_factory_queue_class();
-       for( m_overrides_listItT
-            it = m_wildcard_inst_overrides.begin();
-            it != m_wildcard_inst_overrides.end();
-            ++it )
-       {
-         if(uvm_is_match( (*it)->orig_type_name, obj->get_type_name()))
-            m_inst_override_queues[obj]->queue.push_back( *it );
-       }
+      for( m_overrides_listItT
+           it = m_wildcard_inst_overrides.begin();
+           it != m_wildcard_inst_overrides.end();
+           ++it )
+      {
+        if(uvm_is_match( (*it)->orig_type_name, obj->get_type_name()))
+        {
+          if (!check_inst_override_exists(obj, (*it)->ovrd_type, (*it)->full_inst_path))
+          {
+            if (m_inst_override_queues.find(obj) == m_inst_override_queues.end())
+              m_inst_override_queues[obj] = new uvm_factory_queue_class();
+            uvm_factory_override* copied =
+              new uvm_factory_override((*it)->full_inst_path,
+                                       obj->get_type_name(),
+                                       obj,
+                                       (*it)->ovrd_type);
+            m_override_seq[copied] = m_get_override_seq(*it);
+            m_inst_override_queues[obj]->queue.push_back(copied);
+          }
+        }
+      }
     }
   }
+
+  m_resolve_pending_aliases();
 }
 
 //----------------------------------------------------------------------------
@@ -254,7 +325,7 @@ void uvm_default_factory::set_type_override_by_type( uvm_object_wrapper* origina
   if ( m_types.find(original_type) == m_types.end() )
     do_register(original_type);
 
-  if ( m_types.find(original_type) == m_types.end() )
+  if ( m_types.find(override_type) == m_types.end() )
     do_register(override_type);
 
   // check for existing type override
@@ -288,6 +359,8 @@ void uvm_default_factory::set_type_override_by_type( uvm_object_wrapper* origina
       (*it)->orig_type_name = original_type->get_type_name();
       (*it)->ovrd_type = override_type;
       (*it)->ovrd_type_name = override_type->get_type_name();
+      m_no_replace_overrides.erase(*it);
+      break;
     }
   }
 
@@ -299,6 +372,8 @@ void uvm_default_factory::set_type_override_by_type( uvm_object_wrapper* origina
                                          original_type,
                                          override_type );
     m_type_overrides.push_back(override);
+    if (!replace)
+      m_no_replace_overrides.insert(override);
   }
 }
 
@@ -328,11 +403,8 @@ void uvm_default_factory::set_type_override_by_name( const std::string& original
   uvm_object_wrapper* original_type = nullptr;
   uvm_object_wrapper* override_type = nullptr;
 
-  if( m_type_names.find(original_type_name) != m_type_names.end() ) // if exists
-    original_type = m_type_names[original_type_name];
-
-  if( m_type_names.find(override_type_name) != m_type_names.end() ) // if exists
-    override_type = m_type_names[override_type_name];
+  original_type = m_resolve_type_alias(original_type_name);
+  override_type = m_resolve_type_alias(override_type_name);
 
   // check that type is registered with the factory
   if (override_type == nullptr)
@@ -346,7 +418,8 @@ void uvm_default_factory::set_type_override_by_name( const std::string& original
   }
 
   // check that old and new are not the same
-  if ( original_type_name == override_type_name )
+  if ( original_type_name == override_type_name ||
+       (original_type != nullptr && original_type == override_type) )
   {
     std::ostringstream msg;
     msg << "Requested and actual type name arguments are identical: "
@@ -360,7 +433,13 @@ void uvm_default_factory::set_type_override_by_name( const std::string& original
         it != m_type_overrides.end();
         it++ )
   {
-    if ( (*it)->orig_type_name == original_type_name)
+    if ( (*it)->orig_type_name == original_type_name ||
+         ( original_type != nullptr &&
+           ( (*it)->orig_type == original_type ||
+             ( (*it)->orig_type == nullptr &&
+               !(*it)->orig_type_name.empty() &&
+               (*it)->orig_type_name != "<unknown>" &&
+               (*it)->orig_type_name == original_type->get_type_name() ) ) ) )
     {
       if (!replace)
       {
@@ -381,6 +460,13 @@ void uvm_default_factory::set_type_override_by_name( const std::string& original
       replaced = true;
       (*it)->ovrd_type = override_type;
       (*it)->ovrd_type_name = override_type_name;
+      if (original_type != nullptr)
+      {
+        (*it)->orig_type = original_type;
+        (*it)->orig_type_name = original_type->get_type_name();
+      }
+      m_no_replace_overrides.erase(*it);
+      break;
     } // if
   } // for
 
@@ -396,6 +482,8 @@ void uvm_default_factory::set_type_override_by_name( const std::string& original
                                          override_type );
 
     m_type_overrides.push_back(override);
+    if (!replace)
+      m_no_replace_overrides.insert(override);
 
     // MB: also commented out in original SV code
     // m_type_names[original_type_name] = override.ovrd_type;
@@ -437,7 +525,7 @@ void uvm_default_factory::set_inst_override_by_type( uvm_object_wrapper* origina
   if ( m_types.find(original_type) == m_types.end() )
     do_register(original_type);
 
-  if ( m_types.find(original_type) == m_types.end() )
+  if ( m_types.find(override_type) == m_types.end() )
     do_register(override_type);
 
   if ( check_inst_override_exists(original_type,override_type,full_inst_path) )
@@ -451,6 +539,7 @@ void uvm_default_factory::set_inst_override_by_type( uvm_object_wrapper* origina
                                        original_type,
                                        override_type);
 
+  m_override_seq[override] = ++m_next_override_seq;
   m_inst_override_queues[original_type]->queue.push_back(override);
 }
 
@@ -485,15 +574,7 @@ void uvm_default_factory::set_inst_override_by_name( const std::string& original
                                              const std::string& override_type_name,
                                              const std::string& full_inst_path )
 {
-  uvm_object_wrapper* original_type = nullptr;
-  uvm_object_wrapper* override_type = nullptr;
-  uvm_factory_override* override = nullptr;
-
-  if( m_type_names.find(original_type_name) != m_type_names.end() ) // if exists
-    original_type = m_type_names[original_type_name];
-
-  if( m_type_names.find(override_type_name) != m_type_names.end() ) // if exists
-    override_type = m_type_names[override_type_name];
+  uvm_object_wrapper* override_type = m_resolve_type_alias(override_type_name);
 
   // check that type is registered with the factory
   if (override_type == nullptr)
@@ -507,6 +588,63 @@ void uvm_default_factory::set_inst_override_by_name( const std::string& original
     return;
   }
 
+  m_set_inst_override_by_name_impl(
+    original_type_name, override_type_name, full_inst_path, ++m_next_override_seq);
+}
+
+void uvm_default_factory::m_set_inst_override_by_name_impl( const std::string& original_type_name,
+                                                            const std::string& override_type_name,
+                                                            const std::string& full_inst_path,
+                                                            unsigned long long seq )
+{
+  uvm_object_wrapper* original_type = nullptr;
+  uvm_object_wrapper* override_type = nullptr;
+  uvm_factory_override* override = nullptr;
+
+  original_type = m_resolve_type_name(original_type_name, full_inst_path);
+  override_type = m_resolve_type_alias(override_type_name);
+
+  if (override_type == nullptr)
+    return;
+
+  // Propagate wider instance overrides to any instance-aliased targets whose
+  // alias path is covered by full_inst_path.
+  m_inst_aliases_mapT::const_iterator iit = m_inst_aliases.find(original_type_name);
+  if (iit != m_inst_aliases.end())
+  {
+    for (m_inst_aliases_listT::const_iterator it = iit->second.begin();
+         it != iit->second.end(); ++it)
+    {
+      if (uvm_is_match(full_inst_path, it->full_inst_path))
+      {
+        uvm_object_wrapper* alt_type = (it->orig_type != nullptr)
+          ? it->orig_type
+          : m_resolve_type_name(it->orig_type_name, it->full_inst_path);
+        if (alt_type != nullptr && alt_type != original_type)
+        {
+          if (!check_inst_override_exists(alt_type, override_type, it->full_inst_path))
+          {
+            if (m_inst_override_queues.find(alt_type) == m_inst_override_queues.end())
+              m_inst_override_queues[alt_type] = new uvm_factory_queue_class();
+            uvm_factory_override* alt_ovr =
+              new uvm_factory_override(it->full_inst_path,
+                                       alt_type->get_type_name(),
+                                       alt_type,
+                                       override_type);
+            m_override_seq[alt_ovr] = seq;
+            m_inst_override_queues[alt_type]->queue.push_back(alt_ovr);
+          }
+          else
+          {
+            uvm_factory_override* existing =
+              m_find_inst_override(alt_type, override_type, it->full_inst_path);
+            m_update_min_override_seq(existing, seq);
+          }
+        }
+      }
+    }
+  }
+
   if (original_type == nullptr)
       m_lookup_strs[original_type_name] = true;
 
@@ -514,28 +652,91 @@ void uvm_default_factory::set_inst_override_by_name( const std::string& original
                                        original_type_name,
                                        original_type,
                                        override_type);
+  m_override_seq[override] = seq;
 
   if (original_type != nullptr)
   {
-    if ( check_inst_override_exists(original_type, override_type, full_inst_path))
+    uvm_factory_override* existing = m_find_inst_override(original_type, override_type, full_inst_path);
+    if (existing != nullptr)
+    {
+      bool already_same_req = (original_type_name == original_type->get_type_name());
+      if (!already_same_req)
+      {
+        std::map<const uvm_factory_override*, std::set<std::string> >::const_iterator rnit =
+          m_override_req_names.find(existing);
+        if (rnit != m_override_req_names.end() &&
+            rnit->second.find(original_type_name) != rnit->second.end())
+          already_same_req = true;
+      }
+
+      if (already_same_req ||
+          (seq <= m_get_override_seq(existing) &&
+           m_override_req_names.find(existing) == m_override_req_names.end()))
+      {
+        check_inst_override_exists(original_type, override_type, full_inst_path);
+        m_register_inst_override_req_name(existing, original_type_name);
+        if (seq < m_get_override_seq(existing) &&
+            m_override_req_names.find(existing) == m_override_req_names.end())
+          m_override_seq[existing] = seq;
+        m_delete_override(override);
+        return;
+      }
+
+      if (m_inst_override_name_queues.find(original_type_name) == m_inst_override_name_queues.end())
+        m_inst_override_name_queues[original_type_name] = new uvm_factory_queue_class();
+      override->orig_type = nullptr;
+      override->orig_type_name = original_type_name;
+      m_inst_override_name_queues[original_type_name]->queue.push_back(override);
+      m_register_inst_override_req_name(override, original_type_name);
       return;
+    }
 
     if( m_inst_override_queues.find(original_type) == m_inst_override_queues.end() )
       m_inst_override_queues[original_type] = new uvm_factory_queue_class();
     m_inst_override_queues[original_type]->queue.push_back(override);
+    m_register_inst_override_req_name(override, original_type_name);
   }
   else
   {
     if (m_has_wildcard(original_type_name))
     {
+      std::vector<std::string> matches;
       for( m_type_names_mapItT
            it = m_type_names.begin();
            it != m_type_names.end();
            it++ )
       {
-        std::string s = (it)->first;
-        if( uvm_is_match( original_type_name, s ))
-          this->set_inst_override_by_name(s, override_type_name, full_inst_path);
+        const std::string& s = it->first;
+        if (!m_has_wildcard(s) && uvm_is_match(original_type_name, s))
+          matches.push_back(s);
+      }
+      for (m_type_aliases_mapT::const_iterator ait = m_type_aliases.begin();
+           ait != m_type_aliases.end(); ++ait)
+      {
+        const std::string& s = ait->first;
+        if (!m_has_wildcard(s) && uvm_is_match(original_type_name, s))
+          matches.push_back(s);
+      }
+      for (m_type_alias_names_mapT::const_iterator anit = m_type_alias_names.begin();
+           anit != m_type_alias_names.end(); ++anit)
+      {
+        const std::string& s = anit->first;
+        if (!m_has_wildcard(s) && uvm_is_match(original_type_name, s))
+          matches.push_back(s);
+      }
+      for (m_inst_aliases_mapT::const_iterator imit = m_inst_aliases.begin();
+           imit != m_inst_aliases.end(); ++imit)
+      {
+        const std::string& s = imit->first;
+        if (!m_has_wildcard(s) && uvm_is_match(original_type_name, s))
+          matches.push_back(s);
+      }
+      std::sort(matches.begin(), matches.end());
+      matches.erase(std::unique(matches.begin(), matches.end()), matches.end());
+      for (std::vector<std::string>::const_iterator mit = matches.begin();
+           mit != matches.end(); ++mit)
+      {
+        m_set_inst_override_by_name_impl(*mit, override_type_name, full_inst_path, seq);
       }
       m_wildcard_inst_overrides.push_back(override);
     }
@@ -544,6 +745,742 @@ void uvm_default_factory::set_inst_override_by_name( const std::string& original
       if( m_inst_override_name_queues.find(original_type_name) == m_inst_override_name_queues.end() )
         m_inst_override_name_queues[original_type_name] = new uvm_factory_queue_class();
       m_inst_override_name_queues[original_type_name]->queue.push_back(override);
+      m_register_inst_override_req_name(override, original_type_name);
+    }
+  }
+}
+
+//----------------------------------------------------------------------------
+// Group: Type & Instance Aliases
+//----------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------
+// member function: set_type_alias
+//----------------------------------------------------------------------------
+
+void uvm_default_factory::set_type_alias( const std::string& alias_type_name,
+                                          uvm_object_wrapper* original_type )
+{
+  if (alias_type_name.empty() || alias_type_name == "<unknown>")
+  {
+    uvm_report_warning("ALSNM",
+      "Cannot register type alias with empty or '<unknown>' alias_type_name.", UVM_NONE);
+    return;
+  }
+
+  if (original_type == nullptr)
+  {
+    uvm_report_error("NULLWR",
+      "Attempting to register type alias '" + alias_type_name + "' for nullptr original_type.", UVM_NONE);
+    return;
+  }
+
+  if (m_types.find(original_type) == m_types.end())
+    do_register(original_type);
+
+  m_type_names_mapItT existing = m_type_names.find(alias_type_name);
+  if (existing != m_type_names.end())
+  {
+    if (existing->second != original_type)
+    {
+      std::ostringstream msg;
+      msg << "Alias type name '" << alias_type_name
+          << "' collides with already registered factory type '"
+          << existing->second->get_type_name() << "'.";
+      uvm_report_warning("ALSRGD", msg.str(), UVM_NONE);
+    }
+    return;
+  }
+
+  m_type_alias_names.erase(alias_type_name);
+  m_type_aliases[alias_type_name] = original_type;
+
+  m_bind_pending_type_overrides(alias_type_name, original_type);
+  m_migrate_inst_override_name_queue(alias_type_name, original_type);
+
+  m_resolve_pending_aliases();
+}
+
+void uvm_default_factory::set_type_alias( const std::string& alias_type_name,
+                                          const std::string& original_type_name )
+{
+  if (alias_type_name.empty() || alias_type_name == "<unknown>" ||
+      original_type_name.empty() || original_type_name == "<unknown>")
+  {
+    uvm_report_warning("ALSNM",
+      "Cannot register type alias with empty or '<unknown>' type name.", UVM_NONE);
+    return;
+  }
+
+  if (alias_type_name == original_type_name)
+  {
+    uvm_report_warning("TYPDUP",
+      "Alias and original type name arguments are identical: " + alias_type_name, UVM_NONE);
+    return;
+  }
+
+  uvm_object_wrapper* orig = m_resolve_type_alias(original_type_name);
+  if (orig != nullptr)
+  {
+    set_type_alias(alias_type_name, orig);
+    return;
+  }
+
+  m_type_names_mapItT existing = m_type_names.find(alias_type_name);
+  if (existing != m_type_names.end())
+  {
+    std::ostringstream msg;
+    msg << "Alias type name '" << alias_type_name
+        << "' collides with already registered factory type '"
+        << existing->second->get_type_name() << "'.";
+    uvm_report_warning("ALSRGD", msg.str(), UVM_NONE);
+    return;
+  }
+
+  m_type_aliases.erase(alias_type_name);
+  m_type_alias_names[alias_type_name] = original_type_name;
+  m_resolve_pending_aliases();
+}
+
+//----------------------------------------------------------------------------
+// member function: set_inst_alias
+//----------------------------------------------------------------------------
+
+void uvm_default_factory::set_inst_alias( const std::string& alias_type_name,
+                                          uvm_object_wrapper* original_type,
+                                          const std::string& full_inst_path )
+{
+  if (alias_type_name.empty() || alias_type_name == "<unknown>")
+  {
+    uvm_report_warning("ALSNM",
+      "Cannot register instance alias with empty or '<unknown>' alias_type_name.", UVM_NONE);
+    return;
+  }
+
+  if (original_type == nullptr)
+  {
+    uvm_report_error("NULLWR",
+      "Attempting to register instance alias '" + alias_type_name + "' for nullptr original_type.", UVM_NONE);
+    return;
+  }
+
+  if (m_types.find(original_type) == m_types.end())
+    do_register(original_type);
+
+  m_inst_aliases_listT& entries = m_inst_aliases[alias_type_name];
+  for (m_inst_aliases_listT::const_iterator it = entries.begin();
+       it != entries.end(); ++it)
+  {
+    if (it->orig_type == original_type && it->full_inst_path == full_inst_path)
+      return;
+  }
+
+  m_inst_alias_entry entry;
+  entry.alias_type_name = alias_type_name;
+  entry.orig_type = original_type;
+  entry.orig_type_name = original_type->get_type_name();
+  entry.full_inst_path = full_inst_path;
+  entries.push_back(entry);
+
+  m_propagate_inst_alias_overrides(alias_type_name, original_type, full_inst_path);
+}
+
+void uvm_default_factory::set_inst_alias( const std::string& alias_type_name,
+                                          const std::string& original_type_name,
+                                          const std::string& full_inst_path )
+{
+  if (alias_type_name.empty() || alias_type_name == "<unknown>" ||
+      original_type_name.empty() || original_type_name == "<unknown>")
+  {
+    uvm_report_warning("ALSNM",
+      "Cannot register instance alias with empty or '<unknown>' type name.", UVM_NONE);
+    return;
+  }
+
+  if (m_inst_aliases.find(original_type_name) == m_inst_aliases.end())
+  {
+    uvm_object_wrapper* orig = m_resolve_type_alias(original_type_name);
+    if (orig != nullptr)
+    {
+      set_inst_alias(alias_type_name, orig, full_inst_path);
+      return;
+    }
+  }
+
+  m_inst_aliases_listT& entries = m_inst_aliases[alias_type_name];
+  for (m_inst_aliases_listT::const_iterator it = entries.begin();
+       it != entries.end(); ++it)
+  {
+    if (it->orig_type == nullptr &&
+        it->orig_type_name == original_type_name &&
+        it->full_inst_path == full_inst_path)
+      return;
+  }
+
+  m_inst_alias_entry entry;
+  entry.alias_type_name = alias_type_name;
+  entry.orig_type = nullptr;
+  entry.orig_type_name = original_type_name;
+  entry.full_inst_path = full_inst_path;
+  entries.push_back(entry);
+}
+
+//----------------------------------------------------------------------------
+// member function: m_resolve_type_alias
+//----------------------------------------------------------------------------
+
+uvm_object_wrapper* uvm_default_factory::m_resolve_type_alias( const std::string& type_name ) const
+{
+  m_type_names_mapT::const_iterator nit = m_type_names.find(type_name);
+  if (nit != m_type_names.end())
+    return nit->second;
+
+  m_type_aliases_mapT::const_iterator ait = m_type_aliases.find(type_name);
+  if (ait != m_type_aliases.end())
+    return ait->second;
+
+  std::set<std::string> visited;
+  std::string cur = type_name;
+  while (visited.insert(cur).second)
+  {
+    m_type_names_mapT::const_iterator cn = m_type_names.find(cur);
+    if (cn != m_type_names.end())
+      return cn->second;
+
+    m_type_aliases_mapT::const_iterator ca = m_type_aliases.find(cur);
+    if (ca != m_type_aliases.end())
+      return ca->second;
+
+    m_type_alias_names_mapT::const_iterator next = m_type_alias_names.find(cur);
+    if (next == m_type_alias_names.end())
+      break;
+    cur = next->second;
+  }
+
+  return nullptr;
+}
+
+//----------------------------------------------------------------------------
+// member function: m_resolve_type_name
+//----------------------------------------------------------------------------
+
+uvm_object_wrapper* uvm_default_factory::m_resolve_type_name( const std::string& type_name,
+                                                              const std::string& full_inst_path ) const
+{
+  std::set<std::string> visited;
+  return m_resolve_type_name_impl(type_name, full_inst_path, visited);
+}
+
+uvm_object_wrapper* uvm_default_factory::m_resolve_type_name_impl( const std::string& type_name,
+                                                                   const std::string& full_inst_path,
+                                                                   std::set<std::string>& visited,
+                                                                   std::vector<std::string>* req_chain ) const
+{
+  if (!visited.insert(type_name).second)
+    return nullptr;
+
+  if (req_chain != nullptr)
+    req_chain->push_back(type_name);
+
+  m_inst_aliases_mapT::const_iterator iit = m_inst_aliases.find(type_name);
+  if (iit != m_inst_aliases.end())
+  {
+    for (m_inst_aliases_listT::const_iterator it = iit->second.begin();
+         it != iit->second.end(); ++it)
+    {
+      if (uvm_is_match(it->full_inst_path, full_inst_path))
+      {
+        if (it->orig_type != nullptr)
+          return it->orig_type;
+        size_t saved_size = (req_chain != nullptr) ? req_chain->size() : 0;
+        uvm_object_wrapper* resolved =
+          m_resolve_type_name_impl(it->orig_type_name, full_inst_path, visited, req_chain);
+        if (resolved != nullptr)
+          return resolved;
+        if (req_chain != nullptr)
+          req_chain->resize(saved_size);
+      }
+    }
+  }
+
+  return m_resolve_type_alias(type_name);
+}
+
+//----------------------------------------------------------------------------
+// member function: m_bind_pending_type_overrides
+//----------------------------------------------------------------------------
+
+void uvm_default_factory::m_bind_pending_type_overrides( const std::string& match_name,
+                                                         uvm_object_wrapper* resolved )
+{
+  if (resolved == nullptr || match_name.empty() || match_name == "<unknown>")
+    return;
+
+  const std::string resolved_name = resolved->get_type_name();
+  const bool has_resolved_name = (!resolved_name.empty() && resolved_name != "<unknown>");
+
+  uvm_factory_override* canonical = nullptr;
+  for (m_overrides_listItT it = m_type_overrides.begin();
+       it != m_type_overrides.end(); )
+  {
+    if ((*it)->orig_type == nullptr && (*it)->orig_type_name == match_name)
+    {
+      if ((*it)->ovrd_type == resolved)
+      {
+        std::ostringstream msg;
+        msg << "Requested and actual type arguments are identical: "
+            << resolved_name << ". Ignoring this override.";
+        uvm_report_warning("TYPDUP", msg.str(), UVM_NONE);
+        uvm_factory_override* self_ovr = *it;
+        it = m_type_overrides.erase(it);
+        m_delete_override(self_ovr);
+        continue;
+      }
+      (*it)->orig_type = resolved;
+      (*it)->orig_type_name = resolved_name;
+    }
+
+    const bool matches_resolved =
+      ((*it)->orig_type == resolved) ||
+      ((*it)->orig_type == nullptr && has_resolved_name && (*it)->orig_type_name == resolved_name);
+
+    if (matches_resolved)
+    {
+      if (canonical == nullptr)
+      {
+        canonical = *it;
+        canonical->orig_type = resolved;
+        canonical->orig_type_name = resolved_name;
+        ++it;
+      }
+      else
+      {
+        uvm_factory_override* dup = *it;
+        if (m_no_replace_overrides.find(dup) == m_no_replace_overrides.end())
+        {
+          canonical->ovrd_type = dup->ovrd_type;
+          canonical->ovrd_type_name = dup->ovrd_type_name;
+          m_no_replace_overrides.erase(canonical);
+        }
+        it = m_type_overrides.erase(it);
+        m_delete_override(dup);
+      }
+    }
+    else
+    {
+      ++it;
+    }
+  }
+}
+
+//----------------------------------------------------------------------------
+// member function: m_migrate_inst_override_name_queue
+//----------------------------------------------------------------------------
+
+void uvm_default_factory::m_migrate_inst_override_name_queue( const std::string& match_name,
+                                                              uvm_object_wrapper* default_target )
+{
+  if (default_target == nullptr || match_name.empty() || match_name == "<unknown>")
+    return;
+
+  m_inst_override_name_queues_mapItT nit = m_inst_override_name_queues.find(match_name);
+  if (nit == m_inst_override_name_queues.end())
+    return;
+
+  m_inst_aliases_mapT::const_iterator iit = m_inst_aliases.find(match_name);
+
+  for (m_overrides_listItT qit = nit->second->queue.begin();
+       qit != nit->second->queue.end(); )
+  {
+    uvm_factory_override* ovr = *qit;
+    uvm_object_wrapper* target = m_resolve_type_name(match_name, ovr->full_inst_path);
+
+    bool covered_by_unresolved_inst_alias = false;
+    if (iit != m_inst_aliases.end())
+    {
+      for (m_inst_aliases_listT::const_iterator ait = iit->second.begin();
+           ait != iit->second.end(); ++ait)
+      {
+        if (uvm_is_match(ait->full_inst_path, ovr->full_inst_path))
+        {
+          uvm_object_wrapper* resolved_ait = (ait->orig_type != nullptr)
+            ? ait->orig_type
+            : m_resolve_type_name(ait->orig_type_name, ovr->full_inst_path);
+          if (resolved_ait == nullptr)
+          {
+            covered_by_unresolved_inst_alias = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (covered_by_unresolved_inst_alias)
+    {
+      ++qit;
+      continue;
+    }
+
+    if (target == nullptr)
+      target = default_target;
+
+    if (iit != m_inst_aliases.end())
+    {
+      for (m_inst_aliases_listT::const_iterator ait = iit->second.begin();
+           ait != iit->second.end(); ++ait)
+      {
+        if (uvm_is_match(ovr->full_inst_path, ait->full_inst_path))
+        {
+          uvm_object_wrapper* alt_type = (ait->orig_type != nullptr)
+            ? ait->orig_type
+            : m_resolve_type_name(ait->orig_type_name, ait->full_inst_path);
+          if (alt_type != nullptr && alt_type != target)
+          {
+            uvm_factory_override* existing =
+              m_find_inst_override(alt_type, ovr->ovrd_type, ait->full_inst_path);
+            if (existing == nullptr)
+            {
+              if (m_inst_override_queues.find(alt_type) == m_inst_override_queues.end())
+                m_inst_override_queues[alt_type] = new uvm_factory_queue_class();
+              uvm_factory_override* alt_ovr =
+                new uvm_factory_override(ait->full_inst_path,
+                                         alt_type->get_type_name(),
+                                         alt_type,
+                                         ovr->ovrd_type);
+              m_override_seq[alt_ovr] = m_get_override_seq(ovr);
+              m_inst_override_queues[alt_type]->queue.push_back(alt_ovr);
+            }
+            else
+            {
+              m_update_min_override_seq(existing, m_get_override_seq(ovr));
+            }
+          }
+        }
+      }
+    }
+
+    qit = nit->second->queue.erase(qit);
+    ovr->orig_type = target;
+    ovr->orig_type_name = target->get_type_name();
+    uvm_factory_override* existing = m_find_inst_override(target, ovr->ovrd_type, ovr->full_inst_path);
+    if (existing != nullptr)
+    {
+      if (m_get_override_seq(ovr) <= m_get_override_seq(existing) &&
+          m_override_req_names.find(existing) == m_override_req_names.end())
+      {
+        check_inst_override_exists(target, ovr->ovrd_type, ovr->full_inst_path);
+        m_transfer_override_metadata(ovr, existing);
+        m_delete_override(ovr);
+      }
+      else
+      {
+        if (m_inst_override_queues.find(target) == m_inst_override_queues.end())
+          m_inst_override_queues[target] = new uvm_factory_queue_class();
+        m_inst_override_queues[target]->queue.push_back(ovr);
+      }
+    }
+    else
+    {
+      if (m_inst_override_queues.find(target) == m_inst_override_queues.end())
+        m_inst_override_queues[target] = new uvm_factory_queue_class();
+      m_inst_override_queues[target]->queue.push_back(ovr);
+    }
+  }
+
+  if (nit->second->queue.empty())
+  {
+    delete nit->second;
+    m_inst_override_name_queues.erase(nit);
+  }
+}
+
+//----------------------------------------------------------------------------
+// member function: m_propagate_inst_alias_overrides
+//----------------------------------------------------------------------------
+
+void uvm_default_factory::m_propagate_inst_alias_overrides( const std::string& alias_type_name,
+                                                            uvm_object_wrapper* original_type,
+                                                            const std::string& full_inst_path )
+{
+  if (original_type == nullptr || alias_type_name.empty() || alias_type_name == "<unknown>")
+    return;
+
+  m_inst_override_name_queues_mapItT nit = m_inst_override_name_queues.find(alias_type_name);
+  if (nit != m_inst_override_name_queues.end())
+  {
+    for (m_overrides_listItT qit = nit->second->queue.begin();
+         qit != nit->second->queue.end(); )
+    {
+      if (uvm_is_match(full_inst_path, (*qit)->full_inst_path))
+      {
+        uvm_factory_override* ovr = *qit;
+        uvm_factory_override* existing =
+          m_find_inst_override(original_type, ovr->ovrd_type, ovr->full_inst_path);
+        if (existing != nullptr)
+        {
+          if (m_get_override_seq(ovr) <= m_get_override_seq(existing) &&
+              m_override_req_names.find(existing) == m_override_req_names.end())
+          {
+            qit = nit->second->queue.erase(qit);
+            check_inst_override_exists(original_type, ovr->ovrd_type, ovr->full_inst_path);
+            m_transfer_override_metadata(ovr, existing);
+            m_delete_override(ovr);
+          }
+          else
+          {
+            ++qit;
+          }
+        }
+        else
+        {
+          qit = nit->second->queue.erase(qit);
+          ovr->orig_type = original_type;
+          ovr->orig_type_name = original_type->get_type_name();
+          if (m_inst_override_queues.find(original_type) == m_inst_override_queues.end())
+            m_inst_override_queues[original_type] = new uvm_factory_queue_class();
+          m_inst_override_queues[original_type]->queue.push_back(ovr);
+        }
+      }
+      else
+      {
+        if (uvm_is_match((*qit)->full_inst_path, full_inst_path))
+        {
+          uvm_factory_override* existing =
+            m_find_inst_override(original_type, (*qit)->ovrd_type, full_inst_path);
+          if (existing == nullptr)
+          {
+            if (m_inst_override_queues.find(original_type) == m_inst_override_queues.end())
+              m_inst_override_queues[original_type] = new uvm_factory_queue_class();
+            uvm_factory_override* alt_ovr =
+              new uvm_factory_override(full_inst_path,
+                                       original_type->get_type_name(),
+                                       original_type,
+                                       (*qit)->ovrd_type);
+            m_override_seq[alt_ovr] = m_get_override_seq(*qit);
+            m_inst_override_queues[original_type]->queue.push_back(alt_ovr);
+          }
+          else
+          {
+            m_update_min_override_seq(existing, m_get_override_seq(*qit));
+          }
+        }
+        ++qit;
+      }
+    }
+    if (nit->second->queue.empty())
+    {
+      delete nit->second;
+      m_inst_override_name_queues.erase(nit);
+    }
+  }
+
+  m_inst_override_by_req_name_mapT::const_iterator bit =
+    m_inst_override_by_req_name.find(alias_type_name);
+  if (bit != m_inst_override_by_req_name.end())
+  {
+    for (m_overrides_listT::const_iterator rit = bit->second.begin();
+         rit != bit->second.end(); ++rit)
+    {
+      uvm_factory_override* ovr = *rit;
+      if (ovr->orig_type == original_type)
+        continue;
+
+      std::string target_path;
+      if (uvm_is_match(full_inst_path, ovr->full_inst_path))
+        target_path = ovr->full_inst_path;
+      else if (uvm_is_match(ovr->full_inst_path, full_inst_path))
+        target_path = full_inst_path;
+
+      if (!target_path.empty())
+      {
+        uvm_factory_override* existing =
+          m_find_inst_override(original_type, ovr->ovrd_type, target_path);
+        if (existing == nullptr)
+        {
+          if (m_inst_override_queues.find(original_type) == m_inst_override_queues.end())
+            m_inst_override_queues[original_type] = new uvm_factory_queue_class();
+          uvm_factory_override* alt_ovr =
+            new uvm_factory_override(target_path,
+                                     original_type->get_type_name(),
+                                     original_type,
+                                     ovr->ovrd_type);
+          m_override_seq[alt_ovr] = m_get_override_seq(ovr);
+          m_inst_override_queues[original_type]->queue.push_back(alt_ovr);
+        }
+        else
+        {
+          m_update_min_override_seq(existing, m_get_override_seq(ovr));
+        }
+      }
+    }
+  }
+}
+
+uvm_factory_override* uvm_default_factory::m_find_inst_override( uvm_object_wrapper* original_type,
+                                                                   uvm_object_wrapper* override_type,
+                                                                   const std::string& full_inst_path ) const
+{
+  if (original_type == nullptr)
+    return nullptr;
+
+  m_inst_override_queues_mapT::const_iterator qit = m_inst_override_queues.find(original_type);
+  if (qit == m_inst_override_queues.end())
+    return nullptr;
+
+  const std::string orig_name = original_type->get_type_name();
+  for (m_overrides_listT::const_iterator it = qit->second->queue.begin();
+       it != qit->second->queue.end(); ++it)
+  {
+    uvm_factory_override* ovr = *it;
+    if (ovr->full_inst_path == full_inst_path &&
+        ovr->orig_type == original_type &&
+        ovr->ovrd_type == override_type &&
+        ovr->orig_type_name == orig_name)
+      return ovr;
+  }
+  return nullptr;
+}
+
+void uvm_default_factory::m_register_inst_override_req_name( uvm_factory_override* ovr,
+                                                             const std::string& req_name )
+{
+  if (ovr == nullptr || req_name.empty() || req_name == "<unknown>")
+    return;
+
+  if (m_override_req_names[ovr].insert(req_name).second)
+    m_inst_override_by_req_name[req_name].push_back(ovr);
+}
+
+void uvm_default_factory::m_transfer_override_metadata( uvm_factory_override* from,
+                                                        uvm_factory_override* to )
+{
+  if (from == nullptr || to == nullptr || from == to)
+    return;
+
+  unsigned long long from_seq = m_get_override_seq(from);
+  unsigned long long to_seq = m_get_override_seq(to);
+  if (from_seq < to_seq)
+    m_override_seq[to] = from_seq;
+
+  std::map<const uvm_factory_override*, std::set<std::string> >::const_iterator rnit =
+    m_override_req_names.find(from);
+  if (rnit != m_override_req_names.end())
+  {
+    for (std::set<std::string>::const_iterator sit = rnit->second.begin();
+         sit != rnit->second.end(); ++sit)
+      m_register_inst_override_req_name(to, *sit);
+  }
+}
+
+void uvm_default_factory::m_delete_override( uvm_factory_override* ovr )
+{
+  if (ovr == nullptr)
+    return;
+
+  std::map<const uvm_factory_override*, std::set<std::string> >::iterator rnit =
+    m_override_req_names.find(ovr);
+  if (rnit != m_override_req_names.end())
+  {
+    for (std::set<std::string>::const_iterator sit = rnit->second.begin();
+         sit != rnit->second.end(); ++sit)
+    {
+      m_inst_override_by_req_name_mapT::iterator bit = m_inst_override_by_req_name.find(*sit);
+      if (bit != m_inst_override_by_req_name.end())
+      {
+        bit->second.remove(ovr);
+        if (bit->second.empty())
+          m_inst_override_by_req_name.erase(bit);
+      }
+    }
+    m_override_req_names.erase(rnit);
+  }
+  m_override_seq.erase(ovr);
+  m_no_replace_overrides.erase(ovr);
+  delete ovr;
+}
+
+void uvm_default_factory::m_update_min_override_seq( uvm_factory_override* ovr,
+                                                      unsigned long long seq )
+{
+  if (ovr == nullptr)
+    return;
+  if (m_override_req_names.find(ovr) != m_override_req_names.end())
+    return;
+  if (seq < m_get_override_seq(ovr))
+    m_override_seq[ovr] = seq;
+}
+
+unsigned long long uvm_default_factory::m_get_override_seq( const uvm_factory_override* ovr ) const
+{
+  std::map<const uvm_factory_override*, unsigned long long>::const_iterator it =
+    m_override_seq.find(ovr);
+  if (it != m_override_seq.end())
+    return it->second;
+  return std::numeric_limits<unsigned long long>::max();
+}
+
+//----------------------------------------------------------------------------
+// member function: m_resolve_pending_aliases
+//----------------------------------------------------------------------------
+
+void uvm_default_factory::m_resolve_pending_aliases()
+{
+  bool changed = true;
+  while (changed && !m_type_alias_names.empty())
+  {
+    changed = false;
+    for (m_type_alias_names_mapT::iterator it = m_type_alias_names.begin();
+         it != m_type_alias_names.end(); )
+    {
+      uvm_object_wrapper* resolved = m_resolve_type_alias(it->second);
+      if (resolved != nullptr)
+      {
+        std::string alias_name = it->first;
+        m_type_alias_names.erase(it++);
+
+        m_type_names_mapItT existing = m_type_names.find(alias_name);
+        if (existing != m_type_names.end())
+        {
+          if (existing->second != resolved)
+          {
+            std::ostringstream msg;
+            msg << "Alias type name '" << alias_name
+                << "' collides with already registered factory type '"
+                << existing->second->get_type_name() << "'.";
+            uvm_report_warning("ALSRGD", msg.str(), UVM_NONE);
+          }
+          continue;
+        }
+
+        m_type_aliases[alias_name] = resolved;
+        m_bind_pending_type_overrides(alias_name, resolved);
+        m_migrate_inst_override_name_queue(alias_name, resolved);
+
+        changed = true;
+      }
+      else
+      {
+        ++it;
+      }
+    }
+  }
+
+  for (m_inst_aliases_mapT::iterator mit = m_inst_aliases.begin();
+       mit != m_inst_aliases.end(); ++mit)
+  {
+    for (m_inst_aliases_listT::iterator lit = mit->second.begin();
+         lit != mit->second.end(); ++lit)
+    {
+      if (lit->orig_type == nullptr &&
+          m_inst_aliases.find(lit->orig_type_name) == m_inst_aliases.end())
+      {
+        uvm_object_wrapper* resolved = m_resolve_type_alias(lit->orig_type_name);
+        if (resolved != nullptr)
+        {
+          lit->orig_type = resolved;
+          m_propagate_inst_alias_overrides(lit->alias_type_name, resolved, lit->full_inst_path);
+        }
+      }
     }
   }
 }
@@ -575,7 +1512,8 @@ uvm_object* uvm_default_factory::create_object_by_type( uvm_object_wrapper* requ
 
   uvm_object* obj = requested_type->create_object(name);
 
-  m_obj_list.push_back(obj); // register object so we can delete after use
+  if (obj != nullptr)
+    m_obj_list.push_back(obj); // register object so we can delete after use
 
   return obj;
 }
@@ -604,7 +1542,8 @@ uvm_component* uvm_default_factory::create_component_by_type( uvm_object_wrapper
   
   uvm_component* comp = requested_type->create_component(name, parent);
 
-  m_comp_list.push_back(comp); // register comp so we can delete after use
+  if (comp != nullptr)
+    m_comp_list.push_back(comp); // register comp so we can delete after use
 
   return comp; 
 }
@@ -634,7 +1573,8 @@ uvm_object* uvm_default_factory::create_object_by_name( const std::string& reque
   // if no override exists, try to use requested_type_name directly
   if (wrapper == nullptr)
   {
-    if(m_type_names.find(requested_type_name) == m_type_names.end())
+    wrapper = m_resolve_type_name(requested_type_name, inst_path);
+    if (wrapper == nullptr)
     {
       std::ostringstream msg;
       msg << "Cannot create an object of type '" << requested_type_name
@@ -642,12 +1582,12 @@ uvm_object* uvm_default_factory::create_object_by_name( const std::string& reque
       uvm_report_warning("BDTYP", msg.str(), UVM_NONE);
       return nullptr;
     }
-    wrapper = m_type_names[requested_type_name];
   }
 
   uvm_object* obj = wrapper->create_object(name);
 
-  m_obj_list.push_back(obj); // register object so we can delete after use
+  if (obj != nullptr)
+    m_obj_list.push_back(obj); // register object so we can delete after use
 
   return obj;
 }
@@ -679,7 +1619,8 @@ uvm_component* uvm_default_factory::create_component_by_name( const std::string&
   // if no override exists, try to use requested_type_name directly
   if (wrapper == nullptr)
   {
-    if( m_type_names.find(requested_type_name) == m_type_names.end() ) // not exist
+    wrapper = m_resolve_type_name(requested_type_name, inst_path);
+    if (wrapper == nullptr) // not exist
     {
       std::ostringstream msg;
       msg << "Cannot create a component of type '" << requested_type_name
@@ -687,11 +1628,11 @@ uvm_component* uvm_default_factory::create_component_by_name( const std::string&
       uvm_report_warning("BDTYP", msg.str(), UVM_NONE);
       return nullptr;
     }
-    wrapper = m_type_names[requested_type_name];
   }
   uvm_component* comp = wrapper->create_component(name, parent);
 
-  m_comp_list.push_back(comp); // register comp so we can delete after use
+  if (comp != nullptr)
+    m_comp_list.push_back(comp); // register comp so we can delete after use
 
   return comp;
 }
@@ -705,7 +1646,7 @@ uvm_component* uvm_default_factory::create_component_by_name( const std::string&
 
 bool uvm_default_factory::is_type_name_registered( const std::string& type_name ) const
 {
-  return(m_type_names.find(type_name) != m_type_names.end()); // exists
+  return (m_resolve_type_alias(type_name) != nullptr); // exists
 }
 
 //----------------------------------------------------------------------------
@@ -772,9 +1713,11 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_name( const std::strin
   uvm_object_wrapper* rtype = nullptr;
   uvm_factory_queue_class* qc = nullptr;
   uvm_object_wrapper* override = nullptr;
+  bool stop_at_selected = false;
+  std::vector<std::string> req_chain;
+  std::set<std::string> visited;
 
-  if ( m_type_names.find(requested_type_name) != m_type_names.end() )
-    rtype = m_type_names[requested_type_name];
+  rtype = m_resolve_type_name_impl(requested_type_name, full_inst_path, visited, &req_chain);
 
 /*** TODO - was already commented out in UVM-SV implementation
   if(rtype == null) begin
@@ -790,17 +1733,37 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_name( const std::strin
 
   if (!full_inst_path.empty())
   {
-    if(rtype == nullptr)
+    std::vector<m_candidate_override_t> candidates;
+    std::set<uvm_factory_override*> seen;
+
+    for (std::vector<std::string>::const_iterator nit = req_chain.begin();
+         nit != req_chain.end(); ++nit)
     {
-      if( m_inst_override_name_queues.find(requested_type_name) !=
-          m_inst_override_name_queues.end() ) // if exists
-        qc = m_inst_override_name_queues[requested_type_name];
+      if ( m_inst_override_name_queues.find(*nit) !=
+           m_inst_override_name_queues.end() )
+      {
+        uvm_factory_queue_class* nqc = m_inst_override_name_queues[*nit];
+        for( m_overrides_listItT
+             qit = nqc->queue.begin();
+             qit != nqc->queue.end();
+             ++qit )
+        {
+          if ( (*nit != requested_type_name ||
+                uvm_is_match( (*qit)->orig_type_name, requested_type_name)) &&
+               uvm_is_match( (*qit)->full_inst_path, full_inst_path) &&
+               seen.insert(*qit).second )
+          {
+            m_candidate_override_t c = { *qit, m_get_override_seq(*qit), candidates.size() };
+            candidates.push_back(c);
+          }
+        }
+      }
     }
-    else
-    {
-      if( m_inst_override_queues.find(rtype) != m_inst_override_queues.end() ) // if exists
-        qc = m_inst_override_queues[rtype];
-    }
+
+    if (rtype != nullptr &&
+        m_inst_override_queues.find(rtype) != m_inst_override_queues.end() ) // if exists
+      qc = m_inst_override_queues[rtype];
+
     if (qc != nullptr)
     {
       for( m_overrides_listItT
@@ -808,43 +1771,117 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_name( const std::strin
            qit != qc->queue.end();
            ++qit )
       {
-        if ( uvm_is_match( (*qit)->orig_type_name, requested_type_name) &&
-             uvm_is_match( (*qit)->full_inst_path, full_inst_path) )
+        if ( ( (*qit)->orig_type == rtype ||
+               uvm_is_match( (*qit)->orig_type_name, requested_type_name) ) &&
+             uvm_is_match( (*qit)->full_inst_path, full_inst_path) &&
+             seen.insert(*qit).second )
         {
-          m_override_info.push_back(*qit);
+          m_candidate_override_t c = { *qit, m_get_override_seq(*qit), candidates.size() };
+          candidates.push_back(c);
+        }
+      }
+    }
 
-          if (m_debug_pass)
+    for (std::vector<std::string>::const_iterator nit = req_chain.begin();
+         nit != req_chain.end(); ++nit)
+    {
+      m_inst_override_by_req_name_mapT::iterator rit = m_inst_override_by_req_name.find(*nit);
+      if (rit != m_inst_override_by_req_name.end())
+      {
+        for (m_overrides_listItT qit = rit->second.begin();
+             qit != rit->second.end(); ++qit)
+        {
+          if ( uvm_is_match( (*qit)->full_inst_path, full_inst_path) &&
+               seen.insert(*qit).second )
           {
-            if (override == nullptr)
-            {
-              override = (*qit)->ovrd_type;
-              (*qit)->selected = true;
-            }
-          }
-          else
-          {
-            if ( (*qit)->ovrd_type->get_type_name() == requested_type_name)
-              return (*qit)->ovrd_type;
-            else
-              return find_override_by_type( (*qit)->ovrd_type,full_inst_path);
+            m_candidate_override_t c = { *qit, m_get_override_seq(*qit), candidates.size() };
+            candidates.push_back(c);
           }
         }
       }
     }
-  }
 
-  if( rtype != nullptr &&
-      (m_inst_override_queues.find(rtype) == m_inst_override_queues.end()) &&
-      m_wildcard_inst_overrides.size() )
-  {
-    m_inst_override_queues[rtype] = new uvm_factory_queue_class();
     for( m_overrides_listItT
-         it = m_wildcard_inst_overrides.begin();
-         it != m_wildcard_inst_overrides.end();
-         ++it )
+         wit = m_wildcard_inst_overrides.begin();
+         wit != m_wildcard_inst_overrides.end();
+         ++wit )
     {
-      if(uvm_is_match( (*it)->orig_type_name, requested_type_name))
-        m_inst_override_queues[rtype]->queue.push_back(*it);
+      if (!uvm_is_match((*wit)->full_inst_path, full_inst_path))
+        continue;
+
+      bool name_match = false;
+      for (std::vector<std::string>::const_iterator nit = req_chain.begin();
+           nit != req_chain.end(); ++nit)
+      {
+        if (uvm_is_match((*wit)->orig_type_name, *nit))
+        {
+          name_match = true;
+          break;
+        }
+      }
+      if (!name_match && rtype != nullptr)
+      {
+        const std::string& rname = rtype->get_type_name();
+        if (!rname.empty() && rname != "<unknown>" &&
+            uvm_is_match((*wit)->orig_type_name, rname))
+          name_match = true;
+        if (!name_match)
+        {
+          for (m_type_aliases_mapT::const_iterator ait = m_type_aliases.begin();
+               ait != m_type_aliases.end(); ++ait)
+          {
+            if (ait->second == rtype &&
+                uvm_is_match((*wit)->orig_type_name, ait->first))
+            {
+              name_match = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (name_match && seen.insert(*wit).second)
+      {
+        m_candidate_override_t c = { *wit, m_get_override_seq(*wit), candidates.size() };
+        candidates.push_back(c);
+      }
+    }
+
+    if (!candidates.empty())
+    {
+      std::sort(candidates.begin(), candidates.end(), m_candidate_override_cmp());
+      for (size_t i = 0; i < candidates.size(); ++i)
+      {
+        uvm_factory_override* cand = candidates[i].ovr;
+        bool is_self = (cand->ovrd_type == rtype) ||
+                       (!requested_type_name.empty() &&
+                        requested_type_name != "<unknown>" &&
+                        cand->ovrd_type->get_type_name() == requested_type_name);
+        cand->selected = false;
+        m_override_info.push_back(cand);
+
+        if (m_debug_pass)
+        {
+          if (override == nullptr)
+          {
+            override = cand->ovrd_type;
+            cand->selected = true;
+            stop_at_selected = is_self;
+          }
+        }
+        else
+        {
+          if (is_self)
+            return cand->ovrd_type;
+          else
+          {
+            std::set<uvm_object_wrapper*> visited_types;
+            if (rtype != nullptr)
+              visited_types.insert(rtype);
+            return m_find_override_by_type_impl( cand->ovrd_type, full_inst_path, visited_types );
+          }
+        }
+      }
     }
   }
 
@@ -853,8 +1890,21 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_name( const std::strin
         it = m_type_overrides.begin();
         it != m_type_overrides.end();
         it++ )
-    if ( (*it)->orig_type_name == requested_type_name)
+  {
+    bool match = false;
+    if (rtype == nullptr)
+      match = ((*it)->orig_type == nullptr && (*it)->orig_type_name == requested_type_name);
+    else
+      match = ((*it)->orig_type == rtype ||
+               ((*it)->orig_type == nullptr &&
+                !(*it)->orig_type_name.empty() &&
+                (*it)->orig_type_name != "<unknown>" &&
+                (*it)->orig_type_name == rtype->get_type_name()));
+
+    if (match)
     {
+      bool is_self = (rtype != nullptr && (*it)->ovrd_type == rtype);
+      (*it)->selected = false;
       m_override_info.push_back(*it);
 
       if (m_debug_pass)
@@ -863,14 +1913,33 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_name( const std::strin
         {
           override = (*it)->ovrd_type;
           (*it)->selected = true;
+          stop_at_selected = is_self;
         }
       }
       else
-        return find_override_by_type( (*it)->ovrd_type, full_inst_path);
+      {
+        if (is_self)
+          return rtype;
+        else
+        {
+          std::set<uvm_object_wrapper*> visited_types;
+          if (rtype != nullptr)
+            visited_types.insert(rtype);
+          return m_find_override_by_type_impl( (*it)->ovrd_type, full_inst_path, visited_types );
+        }
+      }
     }
+  }
 
   if ( m_debug_pass && override != nullptr )
-    return find_override_by_type(override, full_inst_path);
+  {
+    if (stop_at_selected)
+      return override;
+    std::set<uvm_object_wrapper*> visited_types;
+    if (rtype != nullptr)
+      visited_types.insert(rtype);
+    return m_find_override_by_type_impl(override, full_inst_path, visited_types);
+  }
 
   // No override found
   return nullptr;
@@ -883,57 +1952,159 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_name( const std::strin
 uvm_object_wrapper* uvm_default_factory::find_override_by_type( uvm_object_wrapper* requested_type,
                                                         const std::string& full_inst_path)
 {
+  std::set<uvm_object_wrapper*> visited_types;
+  return m_find_override_by_type_impl(requested_type, full_inst_path, visited_types);
+}
+
+uvm_object_wrapper* uvm_default_factory::m_find_override_by_type_impl( uvm_object_wrapper* requested_type,
+                                                                       const std::string& full_inst_path,
+                                                                       std::set<uvm_object_wrapper*>& visited_types )
+{
   uvm_object_wrapper* override = nullptr;
   uvm_factory_queue_class* qc = nullptr;
+
+  if (!visited_types.insert(requested_type).second)
+  {
+    uvm_report_error("OVRDLOOP", "Recursive loop detected while finding override.", UVM_NONE);
+
+    if (!m_debug_pass)
+      debug_create_by_type( requested_type, full_inst_path );
+
+    return requested_type;
+  }
 
   if ( m_inst_override_queues.find(requested_type) != m_inst_override_queues.end() )
     qc = m_inst_override_queues[requested_type];
 
-  for( m_overrides_listItT
-       it = m_override_info.begin();
-       it != m_override_info.end();
-       it++ )
-  {
-    if ( //index != m_override_info.size()-1 &&  //TODO was already commented out in SV
-       (*it)->orig_type == requested_type)
-    {
-      uvm_report_error("OVRDLOOP", "Recursive loop detected while finding override.", UVM_NONE);
-
-      if (!m_debug_pass)
-        debug_create_by_type( requested_type, full_inst_path );
-
-      return requested_type;
-    }
-  }
-
   // inst override; return first match; takes precedence over type overrides
-  if ( !full_inst_path.empty() && qc != nullptr )
+  if ( !full_inst_path.empty() )
   {
-    for( m_overrides_listItT
-         it = qc->queue.begin();
-         it != qc->queue.end();
-         it++)
+    std::vector<m_candidate_override_t> candidates;
+    std::set<uvm_factory_override*> seen;
+
+    if ( qc != nullptr )
     {
-      if ( ( (*it)->orig_type == requested_type ||
-           ( (*it)->orig_type_name != "<unknown>" &&
-             !(*it)->orig_type_name.empty() &&
-             (*it)->orig_type_name == requested_type->get_type_name())) &&
-             uvm_is_match( (*it)->full_inst_path, full_inst_path)
-             )
+      for( m_overrides_listItT
+           it = qc->queue.begin();
+           it != qc->queue.end();
+           it++)
       {
-        m_override_info.push_back(*it);
+        if ( ( (*it)->orig_type == requested_type ||
+             ( (*it)->orig_type_name != "<unknown>" &&
+               !(*it)->orig_type_name.empty() &&
+               (*it)->orig_type_name == requested_type->get_type_name())) &&
+               uvm_is_match( (*it)->full_inst_path, full_inst_path) &&
+               seen.insert(*it).second )
+        {
+          m_candidate_override_t c = { *it, m_get_override_seq(*it), candidates.size() };
+          candidates.push_back(c);
+        }
+      }
+    }
+
+    if (!m_inst_aliases.empty() &&
+        (!m_inst_override_name_queues.empty() ||
+         !m_inst_override_by_req_name.empty() ||
+         !m_wildcard_inst_overrides.empty()))
+    {
+      for (m_inst_aliases_mapT::const_iterator mit = m_inst_aliases.begin();
+           mit != m_inst_aliases.end(); ++mit)
+      {
+        std::set<std::string> visited_names;
+        std::vector<std::string> alias_chain;
+        if (m_resolve_type_name_impl(mit->first, full_inst_path, visited_names, &alias_chain) == requested_type)
+        {
+          for (std::vector<std::string>::const_iterator nit = alias_chain.begin();
+               nit != alias_chain.end(); ++nit)
+          {
+            m_inst_override_name_queues_mapItT nqit = m_inst_override_name_queues.find(*nit);
+            if (nqit != m_inst_override_name_queues.end())
+            {
+              for (m_overrides_listItT qit = nqit->second->queue.begin();
+                   qit != nqit->second->queue.end(); ++qit)
+              {
+                if (uvm_is_match((*qit)->full_inst_path, full_inst_path) &&
+                    seen.insert(*qit).second)
+                {
+                  m_candidate_override_t c = { *qit, m_get_override_seq(*qit), candidates.size() };
+                  candidates.push_back(c);
+                }
+              }
+            }
+
+            m_inst_override_by_req_name_mapT::iterator rit = m_inst_override_by_req_name.find(*nit);
+            if (rit != m_inst_override_by_req_name.end())
+            {
+              for (m_overrides_listItT qit = rit->second.begin();
+                   qit != rit->second.end(); ++qit)
+              {
+                if (uvm_is_match((*qit)->full_inst_path, full_inst_path) &&
+                    seen.insert(*qit).second)
+                {
+                  m_candidate_override_t c = { *qit, m_get_override_seq(*qit), candidates.size() };
+                  candidates.push_back(c);
+                }
+              }
+            }
+
+            for (m_overrides_listItT wit = m_wildcard_inst_overrides.begin();
+                 wit != m_wildcard_inst_overrides.end(); ++wit)
+            {
+              if (uvm_is_match((*wit)->orig_type_name, *nit) &&
+                  uvm_is_match((*wit)->full_inst_path, full_inst_path) &&
+                  seen.insert(*wit).second)
+              {
+                m_candidate_override_t c = { *wit, m_get_override_seq(*wit), candidates.size() };
+                candidates.push_back(c);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (!m_wildcard_inst_overrides.empty() && !m_type_aliases.empty())
+    {
+      for (m_overrides_listItT wit = m_wildcard_inst_overrides.begin();
+           wit != m_wildcard_inst_overrides.end(); ++wit)
+      {
+        if (!uvm_is_match((*wit)->full_inst_path, full_inst_path))
+          continue;
+        for (m_type_aliases_mapT::const_iterator ait = m_type_aliases.begin();
+             ait != m_type_aliases.end(); ++ait)
+        {
+          if (ait->second == requested_type &&
+              uvm_is_match((*wit)->orig_type_name, ait->first) &&
+              seen.insert(*wit).second)
+          {
+            m_candidate_override_t c = { *wit, m_get_override_seq(*wit), candidates.size() };
+            candidates.push_back(c);
+            break;
+          }
+        }
+      }
+    }
+
+    if (!candidates.empty())
+    {
+      std::sort(candidates.begin(), candidates.end(), m_candidate_override_cmp());
+      for (size_t i = 0; i < candidates.size(); ++i)
+      {
+        uvm_factory_override* cand = candidates[i].ovr;
+        cand->selected = false;
+        m_override_info.push_back(cand);
 
         if (m_debug_pass) {
           if (override == nullptr) {
-            override = (*it)->ovrd_type;
-            (*it)->selected = true;
+            override = cand->ovrd_type;
+            cand->selected = true;
           }
         }
         else {
-          if ( (*it)->ovrd_type == requested_type)
+          if ( cand->ovrd_type == requested_type)
             return requested_type;
           else
-            return find_override_by_type( (*it)->ovrd_type, full_inst_path);
+            return m_find_override_by_type_impl( cand->ovrd_type, full_inst_path, visited_types );
         }
       }
     }
@@ -951,6 +2122,7 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_type( uvm_object_wrapp
         requested_type != nullptr &&
         (*it)->orig_type_name == requested_type->get_type_name()) )
     {
+      (*it)->selected = false;
       m_override_info.push_back(*it);
 
       if (m_debug_pass) {
@@ -963,7 +2135,7 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_type( uvm_object_wrapp
         if ((*it)->ovrd_type == requested_type)
           return requested_type;
         else
-          return find_override_by_type((*it)->ovrd_type,full_inst_path);
+          return m_find_override_by_type_impl((*it)->ovrd_type, full_inst_path, visited_types);
       }
     }
   }
@@ -981,7 +2153,7 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_type( uvm_object_wrapp
     if (override == requested_type)
       return requested_type;
     else
-      return find_override_by_type(override, full_inst_path);
+      return m_find_override_by_type_impl(override, full_inst_path, visited_types);
   }
 
   return requested_type;
@@ -996,8 +2168,9 @@ uvm_object_wrapper* uvm_default_factory::find_override_by_type( uvm_object_wrapp
 
 uvm_object_wrapper* uvm_default_factory::find_wrapper_by_name( const std::string& type_name )
 {
-  if (m_type_names.find(type_name) != m_type_names.end()) // exists
-    return m_type_names[type_name];
+  uvm_object_wrapper* wrapper = m_resolve_type_alias(type_name);
+  if (wrapper != nullptr)
+    return wrapper;
 
   uvm_report_warning("UnknownTypeName", "find_wrapper_by_name: Type name '" + type_name +
       "' not registered with the factory.", UVM_NONE);
@@ -1164,6 +2337,92 @@ void uvm_default_factory::print( int all_types )
     }
   }
 
+  if (!m_type_aliases.empty() || !m_type_alias_names.empty())
+  {
+    unsigned int col1 = 10;
+    unsigned int col2 = 13;
+    for (m_type_aliases_mapT::const_iterator it = m_type_aliases.begin();
+         it != m_type_aliases.end(); ++it)
+    {
+      if (it->first.length() > col1)
+        col1 = static_cast<unsigned int>(it->first.length());
+      std::string orig_nm = (it->second != nullptr) ? it->second->get_type_name() : "<null>";
+      if (orig_nm.length() > col2)
+        col2 = static_cast<unsigned int>(orig_nm.length());
+    }
+    for (m_type_alias_names_mapT::const_iterator it = m_type_alias_names.begin();
+         it != m_type_alias_names.end(); ++it)
+    {
+      if (it->first.length() > col1)
+        col1 = static_cast<unsigned int>(it->first.length());
+      if (it->second.length() > col2)
+        col2 = static_cast<unsigned int>(it->second.length());
+    }
+
+    qs.push_back("\nType Aliases:\n\n");
+    qs.push_back("  Alias Type" + std::string(col1 - 10, ' ') +
+                 "  Original Type" + std::string(col2 - 13, ' ') + "\n");
+    qs.push_back("  " + std::string(col1, '-') +
+                 "  " + std::string(col2, '-') + "\n");
+
+    for (m_type_aliases_mapT::const_iterator it = m_type_aliases.begin();
+         it != m_type_aliases.end(); ++it)
+    {
+      std::string orig_nm = (it->second != nullptr) ? it->second->get_type_name() : "<null>";
+      qs.push_back("  " + it->first + std::string(col1 - it->first.length(), ' ') +
+                   "  " + orig_nm + "\n");
+    }
+    for (m_type_alias_names_mapT::const_iterator it = m_type_alias_names.begin();
+         it != m_type_alias_names.end(); ++it)
+    {
+      qs.push_back("  " + it->first + std::string(col1 - it->first.length(), ' ') +
+                   "  " + it->second + "\n");
+    }
+  }
+
+  if (!m_inst_aliases.empty())
+  {
+    unsigned int col1 = 10;
+    unsigned int col2 = 13;
+    unsigned int col3 = 13;
+    for (m_inst_aliases_mapT::const_iterator mit = m_inst_aliases.begin();
+         mit != m_inst_aliases.end(); ++mit)
+    {
+      for (m_inst_aliases_listT::const_iterator lit = mit->second.begin();
+           lit != mit->second.end(); ++lit)
+      {
+        if (lit->alias_type_name.length() > col1)
+          col1 = static_cast<unsigned int>(lit->alias_type_name.length());
+        if (lit->full_inst_path.length() > col2)
+          col2 = static_cast<unsigned int>(lit->full_inst_path.length());
+        std::string orig_nm = (lit->orig_type != nullptr) ? lit->orig_type->get_type_name() : lit->orig_type_name;
+        if (orig_nm.length() > col3)
+          col3 = static_cast<unsigned int>(orig_nm.length());
+      }
+    }
+
+    qs.push_back("\nInstance Aliases:\n\n");
+    qs.push_back("  Alias Type" + std::string(col1 - 10, ' ') +
+                 "  Instance Path" + std::string(col2 - 13, ' ') +
+                 "  Original Type" + std::string(col3 - 13, ' ') + "\n");
+    qs.push_back("  " + std::string(col1, '-') +
+                 "  " + std::string(col2, '-') +
+                 "  " + std::string(col3, '-') + "\n");
+
+    for (m_inst_aliases_mapT::const_iterator mit = m_inst_aliases.begin();
+         mit != m_inst_aliases.end(); ++mit)
+    {
+      for (m_inst_aliases_listT::const_iterator lit = mit->second.begin();
+           lit != mit->second.end(); ++lit)
+      {
+        std::string orig_nm = (lit->orig_type != nullptr) ? lit->orig_type->get_type_name() : lit->orig_type_name;
+        qs.push_back("  " + lit->alias_type_name + std::string(col1 - lit->alias_type_name.length(), ' ') +
+                     "  " + lit->full_inst_path + std::string(col2 - lit->full_inst_path.length(), ' ') +
+                     "  " + orig_nm + "\n");
+      }
+    }
+  }
+
   // print all registered types, if all_types >= 1
   if (all_types >= 1 && m_type_names.size() > 0 )
   {
@@ -1291,8 +2550,35 @@ void uvm_default_factory::m_debug_create( const std::string& requested_type_name
 
   if (requested_type == nullptr)
   {
-    if (m_type_names.find(requested_type_name) == m_type_names.end() &&
-        m_lookup_strs.find(requested_type_name) == m_lookup_strs.end())
+    std::set<std::string> visited;
+    std::vector<std::string> req_chain;
+    uvm_object_wrapper* resolved =
+      m_resolve_type_name_impl(requested_type_name, full_inst_path, visited, &req_chain);
+    bool has_matching_wildcard = false;
+    if (resolved == nullptr &&
+        m_lookup_strs.find(requested_type_name) == m_lookup_strs.end() &&
+        !full_inst_path.empty())
+    {
+      for (m_overrides_listItT wit = m_wildcard_inst_overrides.begin();
+           wit != m_wildcard_inst_overrides.end() && !has_matching_wildcard; ++wit)
+      {
+        if (uvm_is_match((*wit)->full_inst_path, full_inst_path))
+        {
+          for (std::vector<std::string>::const_iterator nit = req_chain.begin();
+               nit != req_chain.end(); ++nit)
+          {
+            if (uvm_is_match((*wit)->orig_type_name, *nit))
+            {
+              has_matching_wildcard = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (resolved == nullptr &&
+        m_lookup_strs.find(requested_type_name) == m_lookup_strs.end() &&
+        !has_matching_wildcard)
     {
       uvm_report_warning("Factory Warning", "The factory does not recognize '"
         + requested_type_name + "' as a registered type.", UVM_NONE);
@@ -1301,6 +2587,8 @@ void uvm_default_factory::m_debug_create( const std::string& requested_type_name
     m_debug_pass = true;
 
     result = find_override_by_name(requested_type_name, full_inst_path);
+    if (result == nullptr && resolved != nullptr)
+      result = resolved;
   }
   else
   {

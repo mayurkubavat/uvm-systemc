@@ -106,6 +106,34 @@ class uvm_factory
                                           bool replace = true ) = 0;
 
   //--------------------------------------------------------------------------
+  // Group: Type & Instance Aliases
+  //--------------------------------------------------------------------------
+
+  virtual void set_type_alias( const std::string& alias_type_name,
+                               uvm_object_wrapper* original_type ) = 0;
+
+  virtual void set_inst_alias( const std::string& alias_type_name,
+                               uvm_object_wrapper* original_type,
+                               const std::string& full_inst_path ) = 0;
+
+  virtual void set_type_alias( const std::string& alias_type_name,
+                               const std::string& original_type_name )
+  {
+    uvm_object_wrapper* orig = find_wrapper_by_name(original_type_name);
+    if (orig != nullptr)
+      set_type_alias(alias_type_name, orig);
+  }
+
+  virtual void set_inst_alias( const std::string& alias_type_name,
+                               const std::string& original_type_name,
+                               const std::string& full_inst_path )
+  {
+    uvm_object_wrapper* orig = find_wrapper_by_name(original_type_name);
+    if (orig != nullptr)
+      set_inst_alias(alias_type_name, orig, full_inst_path);
+  }
+
+  //--------------------------------------------------------------------------
   // Group: Creation
   //--------------------------------------------------------------------------
 

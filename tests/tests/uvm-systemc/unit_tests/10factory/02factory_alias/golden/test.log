@@ -1,0 +1,211 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO @ 0 s: reporter [TPREGR] Original object type 'late_type_c' already registered to produce 'pkt_ovr_a'.
+Replacing with override to produce type 'pkt_ovr_b'.
+UVM_INFO @ 0 s: reporter [TPREGR] Original object type 'dual_alias' already registered to produce 'pkt_ovr_a'.  Replacing with override to produce type 'pkt_ovr_a'.
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/FACTORY/DUMP]
+#### Factory Override Information (*)
+Given a request for an object of type 'r3b_drv' with an instance path of 'test.r3b.ag1.r3b_dbg', the factory encountered the following relevant overrides.An 'x' next to a
+ match indicates a match that was ignored.
+  Original Type  Instance Path   Override Type
+  -------------  --------------  -------------
+Result:
+  The factory will produce an object of type 'drv_b'
+(*) Types with no associated type name will be printed as <unknown>
+####
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/FACTORY/DUMP]
+#### Factory Override Information (*)
+Given a request for an object of type 'drv_h_u' with an instance path of 'test.r3c.r3c_dbg', the factory encountered the following relevant overrides.An 'x' next to a
+ match indicates a match that was ignored.
+  Original Type  Instance Path  Override Type
+  -------------  -------------  -------------
+x drv_h_u        *              drv_b          <type override>
+Result:
+  The factory will produce an object of type 'drv_h_u'
+(*) Types with no associated type name will be printed as <unknown>
+####
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/FACTORY/DUMP]
+#### Factory Override Information (*)
+Given a request for an object of type 'r3c_al' with an instance path of 'test.r3c_b.r3c_dbg2', the factory encountered the following relevant overrides.An 'x' next to a
+ match indicates a match that was ignored.
+  Original Type  Instance Path  Override Type
+  -------------  -------------  -------------
+x drv_h_w        *              drv_b          <type override>
+Result:
+  The factory will produce an object of type 'drv_h_w'
+(*) Types with no associated type name will be printed as <unknown>
+####
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/FACTORY/DUMP]
+#### Factory Override Information (*)
+Given a request for an object of type 'r3f_unreg' with an instance path of 'test.r3f.r3f_dbg', the factory encountered the following relevant overrides.An 'x' next to a
+ match indicates a match that was ignored.
+  Original Type  Instance Path  Override Type
+  -------------  -------------  -------------
+Result:
+  The factory will produce an object of type 'drv_b'
+(*) Types with no associated type name will be printed as <unknown>
+####
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/FACTORY/DUMP]
+#### Factory Override Information (*)
+Given a request for an object of type 'alias_orig_a' with an instance path of 'dbg1', the factory encountered the following relevant overrides.An 'x' next to a
+ match indicates a match that was ignored.
+  Original Type  Instance Path  Override Type
+  -------------  -------------  -------------  pkt_orig_a     *              pkt_ovr_a      <type override>
+Result:
+  The factory will produce an object of type 'pkt_ovr_a'
+(*) Types with no associated type name will be printed as <unknown>
+####
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/FACTORY/DUMP]
+#### Factory Override Information (*)
+Given a request for an object of type 'pkt_alias' with an instance path of 'test.special.dbg2', the factory encountered no relevant overrides.
+Result:
+  The factory will produce an object of type 'pkt_b'
+(*) Types with no associated type name will be printed as <unknown>
+####
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/FACTORY/PRINT]
+#### Print Factory Configuration (*)
+Instance Overrides:
+Requested Type     Override Path        Override Type
+  -----------------  -------------------  -------------
+  drv_a              test.ag2.*           drv_a_ovr
+  drv_a              test.mix_ag1.*       drv_a_ovr
+  drv_a              test.mix2.sub.*      drv_a_ovr
+  drv_a              test.mix3.ag1.*      drv_b
+  drv_a              test.r2a.ag1.*       drv_b
+  drv_a              test.r2c.ag1.*       drv_a_ovr
+  drv_a              test.r2c.ag1.*       drv_b
+  drv_a              test.leg2.sub.*      drv_a_ovr
+  drv_a              test.r3d_iso.a.*     drv_c_ovr
+  drv_a              test.r3d_iso.a.*     drv_b
+  drv_c              test.c_ovr           drv_c_ovr
+  drv_c              test.mix3.*          drv_b
+  drv_c              test.r2a.*           drv_b
+  drv_c              test.r2b.*           drv_b
+  drv_c              test.r2c.ag2.*       drv_b
+  drv_c              test.i3_sub.*        abs_h_conc
+  drv_c              test.r3d.*           drv_b
+  drv_h_u            test.r3c.*           drv_h_u
+  drv_h_w            test.r3c_b.*         drv_h_w
+  drv_h_x            test.r3b.ag1.*       drv_h_y
+  drv_h_x            test.r3d.*           drv_h_w
+  drv_h_x            test.r3d.*           drv_b
+  drv_h_x            test.r3d_iso.*       drv_b
+  drv_h_x            test.r3d_iso.a.*     drv_c_ovr
+  drv_h_x            test.r3e_w2.ag1.*    drv_b
+  i3_conc            test.*               drv_h_y
+  late_h3_alias      *.h3_leaf*           drv_b
+  late_h3_target     test.h3.h3_leaf_hit  drv_c
+  late_inst_comp     test.late_g2.sub.*   drv_b
+  pkt_a              test.leg.*           pkt_b
+  r2c_drv            test.r2c.*           drv_b
+  r3a_unreg_deadend  test.r3a.*           drv_b
+  r3d_iso_al         test.r3d_iso.*       drv_b
+  r3e_1              test.r3e.*           drv_b
+  r3e_def2           test.r3e_def.*       drv_b
+  r3e_leg2_drv       test.r3e_w2.*        drv_b
+Type Overrides:
+  Requested Type     Override Type
+  -----------------  -------------------
+  pkt_orig_a         pkt_ovr_a
+  pkt_orig_b         pkt_ovr_b
+  late_type_b        pkt_ovr_a
+  late_type_c        pkt_ovr_b
+  pkt_a              pkt_b
+  drv_h_u            drv_b
+  drv_h_w            drv_b
+Type Aliases:
+  Alias Type       Original Type
+  ---------------  ----------------
+  alias_orig_a     pkt_orig_a
+  alias_orig_b     pkt_orig_b
+  alias_pkta_dup   pkt_a
+  anon_alias       <unknown>
+  delayed_alias    delayed_obj_type
+  drv_c_alias      drv_c
+  drv_mix          drv_c
+  drv_mix2         drv_c
+  drv_mix3         drv_c
+  drv_type_alias   drv_a
+  dual_alias       pkt_orig_a
+  early_b          late_type_b
+  early_c          late_type_c
+  i3_abs_mix       drv_c
+  late_alias_pkta  pkt_a
+  leg2_drv         drv_a
+  legacy_late      pkt_orig_b
+  legacy_pkt       pkt_a
+  param8_alias     param_pkt<W>
+  pkt_alias        pkt_a
+  pkt_chain_1      pkt_b
+  pkt_chain_2      pkt_b
+  pkt_str_alias    pkt_b
+  r2a_drv          drv_c
+  r2b_drv          drv_c
+  r3d_al           drv_c
+  cyc_a            cyc_b
+  cyc_b            cyc_a
+Instance Aliases:
+  Alias Type      Instance Path       Original Type
+  --------------  ------------------  -----------------
+  drv_inst_alias  test.drv_exact      drv_b
+  drv_inst_alias  test.ag?.drv        drv_a
+  drv_mix         test.mix_ag1.*      drv_a
+  drv_mix2        test.mix2.*         drv_a
+  drv_mix3        test.mix3.ag1.*     drv_a
+  drv_ovr_alias   test.ag2.*          drv_a
+  dual_alias      test.dual_inst.*    pkt_b
+  i3_abs_mix      *.i3_ag1.*          abs_h_drv
+  i3_conc         *.i3_n*             drv_h_x
+  inst_base       test.ichain.*       drv_b
+  inst_hop        test.ichain.sub.*   inst_base
+  late_h3_alias   test.h3*            late_h3_target
+  late_inst_a     test.late_g2.*      late_inst_comp
+  pkt_alias       test.special.*      pkt_b
+  pkt_alias       test.qmark_?        pkt_orig_a
+  r2a_drv         test.r2a.ag1.*      drv_a
+  r2b_drv         *.r2b_ag1.*         drv_a
+  r2c_drv         test.r2c.ag1.*      drv_a
+  r2c_drv         test.r2c.ag2.*      drv_c
+  r3a_al          test.r3a.ag1.*      r3a_unreg_deadend
+  r3a_al          test.r3a.*          drv_h_x
+  r3b_drv         test.r3b.ag1.*      drv_h_x
+  r3c_al          test.r3c_b.*        drv_h_w
+  r3d_al          test.r3d.*          drv_h_x
+  r3d_iso_al      test.r3d_iso.a.*    drv_a
+  r3d_iso_al      test.r3d_iso.*      drv_h_x
+  r3e_1           test.r3e.*          r3e_2
+  r3e_2           test.r3e.ag1.*      drv_h_x
+  r3e_def1        test.r3e_def.ag1.*  late_mhop_target
+  r3e_def2        test.r3e_def.*      r3e_def1
+  r3e_hop1        test.r3e_w1.*       r3e_leg_drv
+  r3e_hop2        test.r3e_w2.*       r3e_leg2_drv
+  r3e_leg2_drv    test.r3e_w2.ag1.*   drv_h_x
+  r3e_leg_drv     test.r3e_w1.ag1.*   drv_h_x
+  star_inst_pkt   *                   pkt_b
+(*) Types with no associated type name will be printed as <unknown>
+####
+factory_alias_checks_ok=1
+agent_alias_checks_ok=1
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    0
+Number of caught UVM_WARNING reports :    4
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :  11
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[TPREGR]                2
+[UVM/FACTORY/DUMP]      6
+[UVM/FACTORY/PRINT]     1
+[UVM/REPORT/CATCHER]    1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
