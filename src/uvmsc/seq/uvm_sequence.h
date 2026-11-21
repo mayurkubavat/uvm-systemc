@@ -165,7 +165,7 @@ REQ uvm_sequence<REQ,RSP>::get_current_item() const
 // wait until a response with that transaction_id is received in the response
 // queue.
 //
-// The default size of the response queue is -1, meaning that no limit is set.
+// The default size of the response queue is 8.
 // The get_response member function must be called soon enough to avoid an
 // overflow of the response queue to prevent responses from being dropped.
 //

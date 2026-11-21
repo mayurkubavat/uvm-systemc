@@ -301,14 +301,17 @@ uvm_transaction& uvm_transaction::operator=( const uvm_transaction& rhs )
   if (this != &rhs)
   {
     uvm_object::operator=(rhs);
-    m_transaction_id = rhs.m_transaction_id;
-    initiator = rhs.initiator;
-    begin_time = rhs.begin_time;
-    end_time = rhs.end_time;
-    accept_time = rhs.accept_time;
-    end_event = rhs.end_event;
-    m_stream = rhs.m_stream;
-    // the recorder of this transaction stays with it
+    if (!m_active && m_recorder_handle == 0)
+    {
+      m_transaction_id = rhs.m_transaction_id;
+      initiator = rhs.initiator;
+      begin_time = rhs.begin_time;
+      end_time = rhs.end_time;
+      accept_time = rhs.accept_time;
+      end_event = rhs.end_event;
+      m_stream = rhs.m_stream;
+    }
+    // the recorder and active transaction state of this transaction stay with it
   }
   return *this;
 }
@@ -329,6 +332,12 @@ void uvm_transaction::m_init_transaction()
   end_time = SC_ZERO_TIME;
   accept_time = SC_ZERO_TIME;
   m_stream = nullptr;
+  m_recorder_handle = 0;
+  m_active = false;
+}
+
+void uvm_transaction::m_reset_tr_state()
+{
   m_recorder_handle = 0;
   m_active = false;
 }

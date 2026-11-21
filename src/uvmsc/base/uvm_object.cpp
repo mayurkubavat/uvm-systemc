@@ -91,6 +91,25 @@ uvm_object::uvm_object( uvm_object_name name)
   m_register_cb();
 }
 
+uvm_object::uvm_object( const uvm_object& rhs )
+  : m_leaf_name( rhs.m_leaf_name ),
+    m_full_name( rhs.m_full_name ),
+    m_inst_id( g_inst_count++ )
+{
+  if (uvm_object::__m_uvm_status_container == nullptr)
+    __m_uvm_status_container = new uvm_status_container();
+}
+
+uvm_object& uvm_object::operator=( const uvm_object& rhs )
+{
+  if (this != &rhs)
+  {
+    m_leaf_name = rhs.m_leaf_name;
+    m_full_name = rhs.m_full_name;
+  }
+  return *this;
+}
+
 //----------------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------------

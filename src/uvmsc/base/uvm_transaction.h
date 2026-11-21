@@ -53,6 +53,8 @@ class uvm_transaction : public uvm_object
 {
  public:
   friend class uvm_reg_map;
+  friend class uvm_sequence_base;
+  friend class uvm_sequence_item;
 
   uvm_transaction();
 
@@ -116,6 +118,7 @@ protected:
 private:
 
   void m_init_transaction();
+  void m_reset_tr_state();
 
   // member variables
   int m_transaction_id; /*!< The transaction id data member. */

@@ -77,6 +77,8 @@ public:
 
   uvm_object();
   explicit uvm_object( uvm_object_name name );
+  uvm_object( const uvm_object& rhs );
+  uvm_object& operator=( const uvm_object& rhs );
   virtual ~uvm_object();
 
   //--------------------------------------------------------------------------

@@ -86,6 +86,8 @@ class uvm_component : public sc_core::sc_module,
   friend class uvm_post_shutdown_phase;
   friend class uvm_process_phase;
   friend class uvm_sequencer_base;
+  friend class uvm_sequence_base;
+  friend class uvm_sequence_item;
   friend class uvm_report_object;
 
   typedef uvm_component this_type;
@@ -430,6 +432,8 @@ class uvm_component : public sc_core::sc_module,
                    const sc_core::sc_time& tr_time,
                    bool keep_active,
                    const std::string& kind );
+
+  void m_erase_tr_handle( const uvm_transaction* tr, int inst_id );
 
   uvm_tr_database* m_tr_database;
   std::map<std::string, std::map<std::string, uvm_tr_stream*> > m_streams;

@@ -113,6 +113,9 @@ class uvm_sequencer : public uvm_sequencer_param_base<REQ,RSP>,
   mutable bool sequence_item_requested;
   bool get_next_item_called;
 
+ protected:
+  virtual void m_clear_req_fifo_on_stop();
+
 }; // class uvm_sequencer
 
 
@@ -232,13 +235,21 @@ REQ uvm_sequencer<REQ,RSP>::get(REQ* req)
 {
   REQ r;
 
-  if (!sequence_item_requested)
-    this->m_select_sequence();
-
   if (req!=nullptr)
     this->m_current_sequence_item = req;
 
-  sequence_item_requested = true;
+  while (true)
+  {
+    if (!sequence_item_requested)
+      this->m_select_sequence();
+
+    sequence_item_requested = true;
+
+    if (this->m_wait_for_req_item())
+      break;
+
+    sequence_item_requested = false;
+  }
 
   r = this->m_req_fifo.peek((tlm::tlm_tag<REQ>*)(req)); //note: we peek here, as we do the get in the item_done() call
   item_done();
@@ -264,15 +275,23 @@ REQ uvm_sequencer<REQ,RSP>::peek(REQ* req)
 {
   REQ r;
 
-  if (!sequence_item_requested )
-    this->m_select_sequence();
-
   if (req!=nullptr)
     this->m_current_sequence_item = req;
 
-  // Set flag indicating that the item has been requested to ensure that
-  // item_done() or get() is called between requests
-  sequence_item_requested = true;
+  while (true)
+  {
+    if (!sequence_item_requested )
+      this->m_select_sequence();
+
+    // Set flag indicating that the item has been requested to ensure that
+    // item_done() or get() is called between requests
+    sequence_item_requested = true;
+
+    if (this->m_wait_for_req_item())
+      break;
+
+    sequence_item_requested = false;
+  }
 
   r = this->m_req_fifo.peek((tlm::tlm_tag<REQ>*)req);
   return r;
@@ -305,13 +324,22 @@ REQ uvm_sequencer<REQ,RSP>::get_next_item(REQ* req)
   if (req!=nullptr)
     this->m_current_sequence_item = req;
 
-  if (!sequence_item_requested)
-    this->m_select_sequence();
+  while (true)
+  {
+    if (!sequence_item_requested)
+      this->m_select_sequence();
 
-  // Set flag indicating that the item has been requested to ensure that item_done or get
-  // is called between requests
-  sequence_item_requested = true;
-  get_next_item_called = true;
+    // Set flag indicating that the item has been requested to ensure that item_done or get
+    // is called between requests
+    sequence_item_requested = true;
+    get_next_item_called = true;
+
+    if (this->m_wait_for_req_item())
+      break;
+
+    sequence_item_requested = false;
+    get_next_item_called = false;
+  }
 
   return this->m_req_fifo.peek((tlm::tlm_tag<REQ>*)req);
 }
@@ -343,44 +371,56 @@ bool uvm_sequencer<REQ,RSP>::try_next_item( REQ& req )
     return false;
   }
 
-  // allow state from last transaction to settle such that sequences'
-  // relevancy can be determined with up-to-date information
-  this->wait_for_sequences();
-
-  // choose the sequence based on relevancy
-  selected_sequence = this->m_choose_next_request();
-
-  // return if none available
-  if (selected_sequence == -1)
+  while (true)
   {
-    return false;
+    // allow state from last transaction to settle such that sequences'
+    // relevancy can be determined with up-to-date information
+    this->wait_for_sequences();
+
+    // choose the sequence based on relevancy
+    selected_sequence = this->m_choose_next_request();
+
+    // return if none available
+    if (selected_sequence == -1)
+    {
+      return false;
+    }
+
+    // now, allow chosen sequence to resume
+    uvm_sequence_request* selected = this->arb_sequence_q[selected_sequence];
+    this->m_set_arbitration_completed(selected->request_id);
+    this->m_record_grant(selected);
+    seq = selected->sequence_ptr;
+    this->arb_sequence_q.erase(this->arb_sequence_q.begin()+selected_sequence);
+    delete selected;
+    this->m_update_lists();
+    sequence_item_requested = true;
+    get_next_item_called = true;
+
+    // give it one NBA to put a new item in the fifo
+    this->wait_for_sequences();
+
+    // attempt to get the item; if it fails, check for mid-grant kill or report error
+    if (!this->m_req_fifo.nb_peek(req)) //try_peek
+    {
+      sequence_item_requested = false;
+      get_next_item_called = false;
+      if (this->m_check_and_clear_aborted_grant())
+        continue;
+
+      this->m_mark_grant_fulfilled(seq);
+      std::ostringstream str;
+      str << "try_next_item: the selected sequence '"
+          <<  seq->get_full_name()
+          << "' did not produce an item within an NBA delay. "
+          << "Sequences should not consume time between calls to start_item and finish_item. "
+          << "Returning nullptr item.";
+      uvm_report_error("TRY_NEXT_BLOCKED", str.str(), UVM_NONE);
+      return false;
+    }
+
+    return true;
   }
-
-  // now, allow chosen sequence to resume
-  this->m_set_arbitration_completed(this->arb_sequence_q[selected_sequence]->request_id);
-  seq = this->arb_sequence_q[selected_sequence]->sequence_ptr;
-  this->arb_sequence_q.erase(this->arb_sequence_q.begin()+selected_sequence);
-  this->m_update_lists();
-  sequence_item_requested = true;
-  get_next_item_called = true;
-
-  // give it one NBA to put a new item in the fifo
-  this->wait_for_sequences();
-
-  // attempt to get the item; if it fails, produce an error and return
-  if (!this->m_req_fifo.nb_peek(req)) //try_peek
-  {
-    std::ostringstream str;
-    str << "try_next_item: the selected sequence '"
-        <<  seq->get_full_name()
-        << "' did not produce an item within an NBA delay. "
-        << "Sequences should not consume time between calls to start_item and finish_item. "
-        << "Returning nullptr item.";
-    uvm_report_error("TRY_NEXT_BLOCKED", str.str(), UVM_NONE);
-    return false;
-  }
-
-  return true;
 }
 
 
@@ -394,10 +434,7 @@ bool uvm_sequencer<REQ,RSP>::try_next_item( REQ& req )
 template <typename REQ, typename RSP>
 void uvm_sequencer<REQ,RSP>::put( const RSP& rsp )
 {
-  RSP* crsp = const_cast<RSP*>(&rsp);
-  RSP* item = new RSP(rsp.get_name()+"_q");
-  *item = *crsp; // copy response in temporary item for queue
-  this->put_response_base(*item);
+  this->put_response_base(rsp);
   sc_core::wait(sc_core::SC_ZERO_TIME); // TODO do we really need this?
 }
 
@@ -410,10 +447,7 @@ void uvm_sequencer<REQ,RSP>::put( const RSP& rsp )
 template <typename REQ, typename RSP>
 void uvm_sequencer<REQ,RSP>::put_response( const RSP& rsp )
 {
-  RSP* crsp = const_cast<RSP*>(&rsp);
-  RSP* item = new RSP(rsp.get_name()+"_q");
-  *item = *crsp; // copy response in temporary item for queue
-  this->put_response_base(*item);
+  this->put_response_base(rsp);
   sc_core::wait(sc_core::SC_ZERO_TIME);  // TODO do we really need this?
 }
 
@@ -427,19 +461,23 @@ void uvm_sequencer<REQ,RSP>::put_response( const RSP& rsp )
 //----------------------------------------------------------------------
 
 template <typename REQ, typename RSP>
-void uvm_sequencer<REQ,RSP>::stop_sequences()
+void uvm_sequencer<REQ,RSP>::m_clear_req_fifo_on_stop()
 {
-  REQ t;
-  uvm_sequencer_param_base<REQ,RSP>::stop_sequences();
-  sequence_item_requested  = false;
-  get_next_item_called     = false;
+  sequence_item_requested = false;
+  get_next_item_called = false;
 
-  // Empty the request fifo
-  if (this->m_req_fifo.used())
+  // Empty the request fifo (including same-delta uncommitted puts)
+  if (this->m_req_fifo.clear_all())
   {
     uvm_report_info(this->get_full_name(), "Sequences stopped.  Removing all requests from sequencer FIFO.");
-    while (this->m_req_fifo.nb_get(t)); //try_get
+    this->m_cancel_wait_for_req();
   }
+}
+
+template <typename REQ, typename RSP>
+void uvm_sequencer<REQ,RSP>::stop_sequences()
+{
+  uvm_sequencer_param_base<REQ,RSP>::stop_sequences();
 }
 
 } /* namespace uvm */
