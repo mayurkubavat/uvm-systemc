@@ -233,8 +233,17 @@ class uvm_reg_field : public uvm_object
                            uvm_predict_e kind = UVM_PREDICT_DIRECT,
                            uvm_reg_byte_en_t be = -1 );
 
-  void pre_randomize();
-  void post_randomize();
+  //--------------------------------------------------------------------------
+  // Group: Randomization
+  //--------------------------------------------------------------------------
+
+  virtual bool randomize();
+
+  void set_rand_mode( bool on );
+  bool get_rand_mode() const;
+
+  virtual void pre_randomize();
+  virtual void post_randomize();
 
   ///////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////
@@ -254,6 +263,7 @@ class uvm_reg_field : public uvm_object
  private:
 
   static std::map<std::string, bool>& m_policy_names();
+  static unsigned int m_rng_next_instance( const std::string& name );
 
   UVM_REGISTER_CB( uvm_reg_field, uvm_reg_cbs )
 
@@ -262,7 +272,12 @@ class uvm_reg_field : public uvm_object
   static bool m_predefined;
   static bool m_predefined_policies;
 
-  /*rand*/ uvm_reg_data_t m_value; // Mirrored after randomize() // TODO randomize
+  uvm_reg_data_t m_value; // Mirrored after randomize()
+  bool m_rand_mode;       // m_value is changed by randomize()
+  sc_dt::uint64 m_rng_state;
+  bool m_rng_seeded;
+  unsigned int m_rng_global_seed; // global seed m_rng_state was made from
+  unsigned int m_rng_instance;    // fields with the same full name seeded before
 
   uvm_reg_data_t m_mirrored; // What we think is in the HW
   uvm_reg_data_t m_desired;  // Mirrored after set()

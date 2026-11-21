@@ -26,6 +26,7 @@
 //----------------------------------------------------------------------
 
 #include <iomanip>
+#include <map>
 
 #include "uvmsc/reg/uvm_reg_field.h"
 #include "uvmsc/reg/uvm_reg_model.h"
@@ -34,6 +35,7 @@
 #include "uvmsc/reg/uvm_reg_adapter.h"
 #include "uvmsc/reg/uvm_reg_block.h"
 #include "uvmsc/reg/uvm_reg_cbs.h"
+#include "uvmsc/misc/uvm_misc.h"
 
 //////////////
 
@@ -75,6 +77,11 @@ uvm_reg_field::uvm_reg_field( const std::string& name ) : uvm_object(name)
   m_cover_on = 0;
   m_individually_accessible = false;
   m_check = UVM_NO_CHECK;
+  m_rand_mode = false;
+  m_rng_state = 0;
+  m_rng_seeded = false;
+  m_rng_global_seed = 0;
+  m_rng_instance = 0;
 }
 
 //----------------------------------------------------------------------
@@ -150,19 +157,16 @@ void uvm_reg_field::configure( uvm_reg* parent,
 
   // Ignore is_rand if the field is known not to be writeable
   // i.e. not "RW", "WRC", "WRS", "WO", "W1", "WO1"
-  if( (access == "RO") || (access == "RC") || (access == "RS") ||
-      (access == "WC") || (access == "WS") || (access == "W1C") ||
-      (access == "W1S") || (access == "W1T") || (access == "W0C") ||
-      (access == "W0S") || (access == "W0T") || (access == "W1SRC") ||
-      (access == "W1CRS") || (access == "W0SRC") || (access == "W0CRS") ||
-      (access == "WSRC") || (access == "WCRS") || (access == "WOC") ||
-      (access == "WOS") )
+  if( (m_access == "RO") || (m_access == "RC") || (m_access == "RS") ||
+      (m_access == "WC") || (m_access == "WS") || (m_access == "W1C") ||
+      (m_access == "W1S") || (m_access == "W1T") || (m_access == "W0C") ||
+      (m_access == "W0S") || (m_access == "W0T") || (m_access == "W1SRC") ||
+      (m_access == "W1CRS") || (m_access == "W0SRC") || (m_access == "W0CRS") ||
+      (m_access == "WSRC") || (m_access == "WCRS") || (m_access == "WOC") ||
+      (m_access == "WOS") )
     is_rand = false;
 
-   /* TODO randomization
-   if (!is_rand)
-     m_value.rand_mode(0);
-   */
+  m_rand_mode = is_rand;
 }
 
 //----------------------------------------------------------------------
@@ -1840,6 +1844,141 @@ void uvm_reg_field::do_predict( uvm_reg_item* rw,
 //
 // Implementation defined
 //----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// member function: m_rng_next_instance
+//
+// Implementation defined
+//
+// Returns how many fields with full name \p name were seeded before.
+//----------------------------------------------------------------------
+
+unsigned int uvm_reg_field::m_rng_next_instance( const std::string& name )
+{
+  static std::map<std::string, unsigned int> count;
+  return count[name]++;
+}
+
+//----------------------------------------------------------------------
+// member function: randomize
+//
+//! Sets the desired value of the field to a random value which fits the
+//! size of the field, if the field was configured with ~is_rand~ (see
+//! also set_rand_mode). The value of any other field does not change.
+//! Calls pre_randomize before and post_randomize after the new value
+//! has been chosen. Always returns true.
+//!
+//! The values of a field only depend on the global seed (see
+//! uvm_set_random_seed) and on the full name which the field has when
+//! it is randomized for the first time, or for the first time after
+//! the global seed has been changed. They do not depend on the order
+//! in which the fields of a model are randomized. Fields with the same
+//! full name, as in two models which are both named "regmodel", get
+//! different values: like the seeds of uvm_create_random_seed, they are
+//! told apart by the order in which they are randomized for the first
+//! time. Only the order among fields with the same full name matters.
+//!
+//! In UVM-SystemVerilog the field is randomized with the built-in
+//! method randomize of the language.
+//----------------------------------------------------------------------
+
+bool uvm_reg_field::randomize()
+{
+  pre_randomize();
+
+  if (m_rand_mode)
+  {
+    if (!m_rng_seeded || m_rng_global_seed != uvm_get_random_seed())
+    {
+      // 64 bit FNV-1a hash of the global seed, the full name and the
+      // number of fields with this full name which were randomized
+      // before this one. The seed table of uvm_create_random_seed is
+      // not used: it is cleared when the global seed changes, so the
+      // number would depend on the order in which fields are reseeded.
+      const std::string name = get_full_name();
+
+      if (!m_rng_seeded)
+        m_rng_instance = m_rng_next_instance(name);
+
+      m_rng_global_seed = uvm_get_random_seed();
+      m_rng_state = 0xcbf29ce484222325ULL ^ m_rng_global_seed;
+      m_rng_state *= 0x100000001b3ULL;
+      for (std::string::size_type i = 0; i < name.size(); i++)
+      {
+        m_rng_state ^= static_cast<unsigned char>(name[i]);
+        m_rng_state *= 0x100000001b3ULL;
+      }
+      // The first field with a name keeps the values it had before
+      // fields with the same name were told apart. A zero byte, which
+      // a name does not contain, and four bytes of the number follow
+      // the name, so that no other name gives the same state.
+      if (m_rng_instance != 0)
+      {
+        m_rng_state *= 0x100000001b3ULL;
+        for (int i = 0; i < 32; i += 8)
+        {
+          m_rng_state ^= (m_rng_instance >> i) & 0xff;
+          m_rng_state *= 0x100000001b3ULL;
+        }
+      }
+      m_rng_seeded = true;
+    }
+
+    // a field which is larger than uvm_reg_data_t has been reported by configure
+    const unsigned int size = (m_size < UVM_REG_DATA_WIDTH) ? m_size : UVM_REG_DATA_WIDTH;
+
+    uvm_reg_data_t value = 0;
+
+    for (unsigned int lsb = 0; lsb < size; lsb += 64)
+    {
+      // SplitMix64: a small generator, since a register model can have
+      // a very large number of fields
+      m_rng_state += 0x9e3779b97f4a7c15ULL;
+      sc_dt::uint64 bits = m_rng_state;
+      bits = (bits ^ (bits >> 30)) * 0xbf58476d1ce4e5b9ULL;
+      bits = (bits ^ (bits >> 27)) * 0x94d049bb133111ebULL;
+      bits ^= bits >> 31;
+
+      value |= uvm_reg_data_t(bits) << lsb;
+    }
+
+    if (size < UVM_REG_DATA_WIDTH)
+      value &= (uvm_reg_data_t(1) << size) - 1;
+
+    m_value = value;
+  }
+
+  post_randomize();
+
+  return true;
+}
+
+//----------------------------------------------------------------------
+// member function: set_rand_mode
+//
+//! Implementation defined
+//!
+//! Turns the randomization of the field by the member function
+//! randomize on or off (value.rand_mode() in UVM-SystemVerilog).
+//----------------------------------------------------------------------
+
+void uvm_reg_field::set_rand_mode( bool on )
+{
+  m_rand_mode = on;
+}
+
+//----------------------------------------------------------------------
+// member function: get_rand_mode
+//
+//! Implementation defined
+//!
+//! Returns true if the field is changed by the member function randomize.
+//----------------------------------------------------------------------
+
+bool uvm_reg_field::get_rand_mode() const
+{
+  return m_rand_mode;
+}
 
 void uvm_reg_field::pre_randomize()
 {

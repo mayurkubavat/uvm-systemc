@@ -37,6 +37,7 @@ include $(srcdir)/integrated/ubus/test.am
 # CMake (UVM_SYSTEMC_ENABLE_CRAVE), so it is distributed without a test.
 examples_DIRS += \
 				 simple/crave/constrained_random \
+				 simple/crave/constrained_registers \
 				 simple/crave
 
 examples_FILES += \
@@ -45,7 +46,9 @@ examples_FILES += \
 	simple/crave/constrained_random/packet_sequence.h \
 	simple/crave/constrained_random/packet_sequencer.h \
 	simple/crave/constrained_random/sc_main.cpp \
-	simple/crave/constrained_random/testbench.h
+	simple/crave/constrained_random/testbench.h \
+	simple/crave/constrained_registers/sc_main.cpp \
+	simple/crave/constrained_registers/timer_reg_model.h
 
 examples_DIRS += \
 				 simple/callbacks \

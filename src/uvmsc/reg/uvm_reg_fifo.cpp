@@ -310,12 +310,14 @@ void uvm_reg_fifo::pre_read( uvm_reg_item* rw )
 // member function: post_randomize
 //
 //! Implementation defined
+//!
+//! Called by uvm_reg::randomize. The values of the FIFO are not
+//! randomized, so the values which have been set and not yet written
+//! with update are kept.
 //----------------------------------------------------------------------
 
 void uvm_reg_fifo::post_randomize()
-{
-  m_set_cnt = 0;
-}
+{}
 
 
 } // namespace uvm

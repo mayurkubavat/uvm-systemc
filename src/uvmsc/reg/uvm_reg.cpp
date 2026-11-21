@@ -2047,6 +2047,56 @@ void uvm_reg::set_parent( uvm_reg_block* blk_parent,
 }
 
 //----------------------------------------------------------------------
+// member function: randomize
+//
+//! Randomizes the fields of the register, see uvm_reg_field::randomize.
+//! Calls pre_randomize before and post_randomize after the fields have
+//! been randomized. Returns false if a field could not be randomized.
+//!
+//! The new values are the desired values of the fields. They are
+//! written to the DUT by the member function update.
+//!
+//! In UVM-SystemVerilog the register is randomized with the built-in
+//! method randomize of the language.
+//----------------------------------------------------------------------
+
+bool uvm_reg::randomize()
+{
+  bool ok = true;
+
+  pre_randomize();
+
+  for (unsigned int i = 0; i < m_fields.size(); i++)
+    if (!m_fields[i]->randomize())
+      ok = false;
+
+  post_randomize();
+
+  return ok;
+}
+
+//----------------------------------------------------------------------
+// member function: pre_randomize
+//
+//! Called by randomize before the fields are randomized. Does nothing;
+//! may be extended by the abstraction class generator or by the user.
+//----------------------------------------------------------------------
+
+void uvm_reg::pre_randomize()
+{}
+
+//----------------------------------------------------------------------
+// member function: post_randomize
+//
+//! Called by randomize after the fields have been randomized. Does
+//! nothing; may be extended, for example to make the values of the
+//! fields meet a constraint by calling uvm_reg_field::set.
+//----------------------------------------------------------------------
+
+void uvm_reg::post_randomize()
+{}
+
+//----------------------------------------------------------------------
 // member function: get_block
 //
 // Implementation defined

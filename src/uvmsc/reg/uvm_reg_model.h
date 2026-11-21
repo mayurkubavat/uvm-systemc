@@ -32,6 +32,41 @@
 
 namespace uvm {
 
+//----------------------------------------------------------------------
+// Class: uvm_reg_inst_key
+//
+//! Key of the containers which are keyed by an object of the register
+//! model. It stands for a pointer to the object, but is ordered by the
+//! instance id of the object, which is the order of creation, and not
+//! by the address. Iterating over such a container therefore does not
+//! depend on where the objects are located in memory.
+//!
+//! The instance id is stored in the key, so that comparing keys does
+//! not access the objects.
+//----------------------------------------------------------------------
+
+template <typename T>
+class uvm_reg_inst_key
+{
+ public:
+  uvm_reg_inst_key( T* obj )
+  : m_obj(obj), m_inst_id((obj != nullptr) ? obj->get_inst_id() : -1)
+  {}
+
+  operator T*() const { return m_obj; }
+
+  T* operator->() const { return m_obj; }
+
+  bool operator<( const uvm_reg_inst_key& rhs ) const
+  {
+    return m_inst_id < rhs.m_inst_id;
+  }
+
+ private:
+  T* m_obj;
+  int m_inst_id;
+};
+
 
 //----------------------------------------------------------------------
 // Group: typedefs

@@ -40,7 +40,11 @@ class testbench : public uvm::uvm_env
 
   testbench( uvm::uvm_component_name name )
   : uvm::uvm_env(name), sqr(nullptr), drv(nullptr)
-  {}
+  {
+    // CRAVE follows the global seed of UVM, so the packets are the same
+    // in every run and change with the command line argument +UVM_SEED
+    crave::set_global_seed(uvm::uvm_get_random_seed());
+  }
 
   void build_phase( uvm::uvm_phase& phase )
   {
