@@ -1,4 +1,5 @@
 H_FILES += \
+	reg/uvm_fc4sc_reg_cvr.h \
 	reg/uvm_hdl_path_concat.h \
 	reg/uvm_mem.h \
 	reg/uvm_mem_mam.h \

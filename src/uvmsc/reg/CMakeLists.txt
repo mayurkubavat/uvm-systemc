@@ -56,6 +56,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_vreg_field_cbs.h)
 
 install_headers (
+  uvm_fc4sc_reg_cvr.h
   uvm_hdl_path_concat.h
   uvm_mem.h
   uvm_mem_mam.h
