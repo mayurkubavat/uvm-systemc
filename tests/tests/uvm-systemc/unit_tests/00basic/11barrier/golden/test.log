@@ -23,15 +23,15 @@ barrier from the pool: sync
   passed at 110 ns d2
   passed at 115 ns d3
 125 ns: barrier stays open: 0 waiting, threshold 2
------------------------------------------------------
+----------------------------------------
 Name            Type         Size  Value
------------------------------------------------------
+----------------------------------------
 sync            uvm_barrier  -     @<removed by verify-uvm.pl>
   threshold     int          32    2
   num_waiters   int          32    0
-  at_threshold  bit          1     'b0000000000000001
-  auto_reset    bit          1     'b0000000000000000
------------------------------------------------------
+  at_threshold  bit          1     'b1
+  auto_reset    bit          1     'b0
+----------------------------------------
 UVM_INFO <removed by verify-uvm.pl> @ 125 ns: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---
 ** Report counts by severity

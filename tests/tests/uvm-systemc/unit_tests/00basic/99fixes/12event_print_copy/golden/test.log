@@ -1,0 +1,79 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+--- untriggered event
+--------------------------------------------
+Name            Type            Size  Value
+--------------------------------------------
+ev              uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     'b0
+  trigger_time  time            64    0 s
+  callbacks     queue           0     -
+  trigger_data  object          -1    <null>
+--------------------------------------------
+--- triggered event
+--------------------------------------------
+Name            Type            Size  Value
+--------------------------------------------
+ev              uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     'b1
+  trigger_time  time            64    10 ns
+  callbacks     queue           0     -
+  trigger_data  data_obj        -     @<removed by verify-uvm.pl>
+--------------------------------------------
+--- copy
+--------------------------------------------
+Name            Type            Size  Value
+--------------------------------------------
+cp              uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     'b1
+  trigger_time  time            64    10 ns
+  callbacks     queue           0     -
+  trigger_data  data_obj        -     @<removed by verify-uvm.pl>
+--------------------------------------------
+copy is on: ok
+copy trigger time: ok
+copy trigger data: ok
+copy keeps its name: ok
+copy of a reset event is off: ok
+--- event with callbacks
+--------------------------------------------
+Name            Type            Size  Value
+--------------------------------------------
+src             uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     'b0
+  trigger_time  time            64    0 s
+  callbacks     queue           1     -
+    [0]         count_cb        -     @<removed by verify-uvm.pl>
+  trigger_data  object          -1    <null>
+--------------------------------------------
+--- copy of an event with callbacks
+--------------------------------------------
+Name            Type            Size  Value
+--------------------------------------------
+cb_copy         uvm::uvm_event  -     @<removed by verify-uvm.pl>
+  num_waiters   int             32    0
+  on            bit             1     'b0
+  trigger_time  time            64    0 s
+  callbacks     queue           0     -
+  trigger_data  object          -1    <null>
+--------------------------------------------
+copy does not call the callbacks of the original: ok
+original calls its callback: ok
+copy reports no DOCPY warning: ok
+copy which turns the event on resumes wait_on(): ok
+copy which turns the event off resumes wait_off(): ok
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 10 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
