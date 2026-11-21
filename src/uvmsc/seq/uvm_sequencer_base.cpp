@@ -269,7 +269,10 @@ void uvm_sequencer_base::wait_for_grant(uvm_sequence_base* sequence_ptr,
                                         int item_priority,
                                         bool lock_request)
 {
-  std::unique_ptr<uvm_sequence_request> req_s;
+  // The requests belong to the arbitration queue: the sequencer deletes
+  // them when it takes them from the queue, also when the calling process
+  // was killed while it waited. Do not use them after waiting.
+  uvm_sequence_request* req_s = nullptr;
   int my_seq_id {};
 
   if (sequence_ptr == nullptr)
@@ -282,34 +285,38 @@ void uvm_sequencer_base::wait_for_grant(uvm_sequence_base* sequence_ptr,
   // there is a request immediately following the lock request
   if (lock_request)
   {
-    req_s = std::make_unique<uvm_sequence_request>();
+    req_s = new uvm_sequence_request();
     req_s->grant = false;
     req_s->sequence_id = my_seq_id;
     req_s->request = SEQ_TYPE_LOCK;
     req_s->sequence_ptr = sequence_ptr;
     req_s->request_id = g_request_id++;
-    arb_sequence_q.push_back(req_s.get());
+    req_s->process_id = sc_core::sc_get_current_process_handle();
+    arb_sequence_q.push_back(req_s);
   }
 
   // Push the request onto the queue
-  req_s = std::make_unique<uvm_sequence_request>();
+  req_s = new uvm_sequence_request();
   req_s->grant = false;
   req_s->request = SEQ_TYPE_REQ;
   req_s->sequence_id = my_seq_id;
   req_s->item_priority = item_priority;
   req_s->sequence_ptr = sequence_ptr;
   req_s->request_id = g_request_id++;
-  arb_sequence_q.push_back(req_s.get());
+  req_s->process_id = sc_core::sc_get_current_process_handle();
+  arb_sequence_q.push_back(req_s);
   m_update_lists();
 
   // Wait until this entry is granted
   // Continue to point to the element, since location in queue will change
-  m_wait_for_arbitration_completed(req_s->request_id);
+  const int my_request_id = req_s->request_id;
+  req_s = nullptr;
+  m_wait_for_arbitration_completed(my_request_id);
 
   // The wait_for_grant_semaphore is used only to check that send_request
   // is only called after wait_for_grant.  This is not a complete check, since
   // requests might be done in parallel, but it will catch basic errors
-  req_s->sequence_ptr->m_wait_for_grant_semaphore++;
+  sequence_ptr->m_wait_for_grant_semaphore++;
 }
 
 //----------------------------------------------------------------------
@@ -755,6 +762,7 @@ void uvm_sequencer_base::remove_sequence_from_queues(uvm_sequence_base* sequence
               << "' is being removed.";
           UVM_ERROR("SEQFINERR", str.str() );
         }
+        delete arb_sequence_q[i];
         arb_sequence_q.erase(arb_sequence_q.begin()+i);
         m_update_lists();
       }
@@ -814,6 +822,46 @@ void uvm_sequencer_base::m_unregister_sequence(int sequence_id)
 }
 
 //----------------------------------------------------------------------
+// member function: m_is_request_zombie
+//
+// Implementation-defined member function
+// Returns true when the process which made the request no longer exists,
+// so that nobody is waiting for the request to be granted.
+//----------------------------------------------------------------------
+
+bool uvm_sequencer_base::m_is_request_zombie( const uvm_sequence_request* request ) const
+{
+  return request->process_id.valid() && request->process_id.terminated();
+}
+
+//----------------------------------------------------------------------
+// member function: m_remove_zombie_request
+//
+// Implementation defined
+// Takes the request of a killed process at position idx from the
+// arbitration queue, together with the other requests of its sequence
+// and of the children of that sequence. The request itself is taken out
+// by position: its sequence may have been started again since, and is
+// then known under another sequence id.
+//
+// The sequence of the request must still exist. In UVM-SV it always
+// does; here the owner of a sequence must not delete it while one of its
+// requests is in the queue.
+//----------------------------------------------------------------------
+
+void uvm_sequencer_base::m_remove_zombie_request( unsigned int idx )
+{
+  uvm_sequence_request* zombie = arb_sequence_q[idx];
+  uvm_sequence_base* sequence_ptr = zombie->sequence_ptr;
+
+  arb_sequence_q.erase(arb_sequence_q.begin() + idx);
+  delete zombie;
+  m_update_lists();
+
+  remove_sequence_from_queues(sequence_ptr);
+}
+
+//----------------------------------------------------------------------
 // member function: grant_queued_locks
 //
 // Implementation-defined member function
@@ -833,21 +881,19 @@ void uvm_sequencer_base::grant_queued_locks()
     {
       if (arb_sequence_q[i]->request == SEQ_TYPE_LOCK)
       {
-         /* TODO grant_queued_locks
-         if ((arb_sequence_q[i].process_id.status == process::KILLED) ||
-             (arb_sequence_q[i].process_id.status == process::FINISHED))
-         {
-            std::ostringstream str;
-            str << "The task responsible for requesting a lock on sequencer '"
-                << this->get_full_name()
-                << "' for sequence '"
-                << arb_sequence_q[i]->sequence_ptr->get_full_name()
-                << "' has been killed, to avoid a deadlock the sequence will be removed from the arbitration queues.";
-            UVM_ERROR("SEQLCKZMB", str.str() );
-            remove_sequence_from_queues(arb_sequence_q[i]->sequence_ptr);
-            continue;
-         }
-         */
+        if (m_is_request_zombie(arb_sequence_q[i]))
+        {
+          uvm_sequence_request* zombie = arb_sequence_q[i];
+          std::ostringstream str;
+          str << "The task responsible for requesting a lock on sequencer '"
+              << this->get_full_name()
+              << "' for sequence '"
+              << zombie->sequence_ptr->get_full_name()
+              << "' has been killed, to avoid a deadlock the sequence will be removed from the arbitration queues.";
+          UVM_ERROR("SEQLCKZMB", str.str() );
+          m_remove_zombie_request(i);
+          continue;
+        }
          temp = (is_blocked(arb_sequence_q[i]->sequence_ptr) == 0);
       }
     }
@@ -857,18 +903,28 @@ void uvm_sequencer_base::grant_queued_locks()
     // Since each entry is deleted, i remains constant
     while (temp)
     {
-      lock_list.push_back(arb_sequence_q[i]->sequence_ptr);
-      m_set_arbitration_completed(arb_sequence_q[i]->request_id);
+      uvm_sequence_request* granted = arb_sequence_q[i];
+      lock_list.push_back(granted->sequence_ptr);
+      m_set_arbitration_completed(granted->request_id);
       arb_sequence_q.erase(arb_sequence_q.begin()+i);
+      delete granted;
       m_update_lists();
 
       temp = 0;
       if (i < arb_sequence_q.size())
       {
-        if (arb_sequence_q[i]->request == SEQ_TYPE_LOCK)
+        if (arb_sequence_q[i]->request == SEQ_TYPE_LOCK
+            && !m_is_request_zombie(arb_sequence_q[i]))
           temp = is_blocked(arb_sequence_q[i]->sequence_ptr) == 0;
       }
     }
+
+    // a lock request of a killed process which follows a granted one is
+    // looked at again, and removed, in the next round
+    if (i < arb_sequence_q.size()
+        && arb_sequence_q[i]->request == SEQ_TYPE_LOCK
+        && m_is_request_zombie(arb_sequence_q[i]))
+      continue;
 
     i++;
   } // while
@@ -898,8 +954,10 @@ void uvm_sequencer_base::m_select_sequence()
   // issue grant
   if (selected_sequence >= 0)
   {
-    m_set_arbitration_completed(arb_sequence_q[selected_sequence]->request_id);
+    uvm_sequence_request* selected = arb_sequence_q[selected_sequence];
+    m_set_arbitration_completed(selected->request_id);
     arb_sequence_q.erase(arb_sequence_q.begin() + selected_sequence);
+    delete selected;
     m_update_lists();
   }
 }
@@ -974,19 +1032,18 @@ int uvm_sequencer_base::m_choose_next_request()
 
   while ( i < arb_sequence_q.size() )
   {
-  /* TODO introduce process / phasing
-    if (((*it)->process_id.status() == uvm_process::KILLED) ||
-        ((*it)->process_id.status() == uvm_process::FINISHED))
+    if (m_is_request_zombie(arb_sequence_q[i]))
     {
+      uvm_sequence_request* zombie = arb_sequence_q[i];
       std::ostringstream str;
-      str << " The task responsible for requesting a wait_for_grant on sequencer '"
-          <<  this->get_full_name() << "' for sequence '"
-          << (*it)->sequence_ptr->get_full_name()
+      str << "The task responsible for requesting a wait_for_grant on sequencer '"
+          << this->get_full_name() << "' for sequence '"
+          << zombie->sequence_ptr->get_full_name()
           << "' has been killed, to avoid a deadlock the sequence will be removed from the arbitration queues.";
       UVM_ERROR("SEQREQZMB", str.str());
-      remove_sequence_from_queues((*it)->sequence_ptr);
+      m_remove_zombie_request(i);
       continue;
-    } */
+    }
 
     if ( i < arb_sequence_q.size() )
       if (arb_sequence_q[i]->request == SEQ_TYPE_REQ)
@@ -1275,13 +1332,13 @@ void uvm_sequencer_base::m_lock_req( uvm_sequence_base* sequence_ptr, bool lock)
 
   m_register_sequence(sequence_ptr);
 
-  new_req = new uvm_sequence_request(); // TODO delete at some stage...
+  new_req = new uvm_sequence_request(); // deleted when the lock is granted
   new_req->grant = 0;
   new_req->sequence_id = sequence_ptr->get_sequence_id();
   new_req->request = SEQ_TYPE_LOCK;
   new_req->sequence_ptr = sequence_ptr;
   new_req->request_id = g_request_id++;
-  //new_req->process_id = process::self(); // TODO
+  new_req->process_id = sc_core::sc_get_current_process_handle();
 
   if (lock == true)
   {
@@ -1297,10 +1354,13 @@ void uvm_sequencer_base::m_lock_req( uvm_sequence_base* sequence_ptr, bool lock)
     m_update_lists();
   }
 
+  // the request is deleted when the lock is granted
+  const int request_id = new_req->request_id;
+
   // If this lock can be granted immediately, then do so.
   grant_queued_locks();
 
-  m_wait_for_arbitration_completed(new_req->request_id);
+  m_wait_for_arbitration_completed(request_id);
 }
 
 //----------------------------------------------------------------------
