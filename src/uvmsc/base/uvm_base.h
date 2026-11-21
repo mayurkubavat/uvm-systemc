@@ -31,6 +31,7 @@
 #include "uvmsc/base/uvm_mutex.h"
 #include "uvmsc/base/uvm_object.h"
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/base/uvm_transaction.h"
 #include "uvmsc/base/uvm_traversal.h"
 #include "uvmsc/base/uvm_port_base.h"

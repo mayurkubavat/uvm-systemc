@@ -4,6 +4,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_domain.cpp
   uvm_objection.cpp
   uvm_phase.cpp
+  uvm_phase_cb.cpp
   uvm_process_phase.cpp
   uvm_runtime_phases.cpp
   uvm_topdown_phase.cpp
@@ -13,6 +14,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_objection.h
   uvm_objection_callback.h
   uvm_phase.h
+  uvm_phase_cb.h
   uvm_phase_queue.h
   uvm_phasing.h
   uvm_process.h
@@ -27,6 +29,7 @@ install_headers (
   uvm_objection.h
   uvm_objection_callback.h
   uvm_phase.h
+  uvm_phase_cb.h
   uvm_phase_queue.h
   uvm_phasing.h
   uvm_process.h

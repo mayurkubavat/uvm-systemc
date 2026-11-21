@@ -1,0 +1,20 @@
+SystemC Simulation
+0 s: cb1 pre_run_test
+delete cb2 returns 1
+delete cb3 returns 1
+add cb5 returns 1
+0 s: cb4 pre_run_test
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+0 s: cb1 post_run_test
+0 s: cb4 post_run_test
+0 s: cb5 post_run_test
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

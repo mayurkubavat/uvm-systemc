@@ -275,6 +275,9 @@ class uvm_phase : public uvm_object
   sc_core::sc_event m_state_ev;
   int m_run_count;
 
+  // sets m_state and calls the uvm_phase_cb callbacks
+  void m_set_state( uvm_phase_state state );
+
   // Overall Control
   //---------------------------------
   static uvm_phase_queue<uvm_phase*>* m_phase_hopper;
@@ -297,6 +300,9 @@ class uvm_phase : public uvm_object
  public:
   static bool m_phase_trace;
   bool m_use_ovm_run_semantic;
+
+  // registers the uvm_phase_cb callback type
+  virtual bool m_register_cb();
 
 }; // class uvm_phase
 
