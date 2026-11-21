@@ -30,6 +30,7 @@
 #include "uvmsc/base/uvm_cmdline_settings.h"
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_component_name.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
@@ -125,6 +126,8 @@ uvm_root::~uvm_root()
 
 void uvm_root::run_test( const std::string& test_name )
 {
+  uvm_run_test_callback::m_do_pre_run_test();
+
   // disable SystemC messages
   // TODO make switch available to enable SystemC messages
   sc_core::sc_report_handler::set_actions("/OSCI/SystemC", sc_core::SC_DO_NOTHING);
@@ -185,9 +188,27 @@ void uvm_root::run_test( const std::string& test_name )
 
 void uvm_root::die()
 {
+  // only die once, as for the UVM-SV core states UVM_CORE_PRE_ABORT and
+  // UVM_CORE_ABORTED: a fatal error reported by a pre_abort callback
+  // returns here instead of aborting again. The guard is cleared when
+  // die() is left by its exception, which the caller may catch, so that
+  // a later fatal error terminates again.
+  static bool m_dying = false;
+  if (m_dying)
+    return;
+
+  struct dying_guard
+  {
+    explicit dying_guard( bool& flag ) : m_flag(flag) { m_flag = true; }
+    ~dying_guard() { m_flag = false; }
+    bool& m_flag;
+  } guard(m_dying);
+
   uvm_report_server* l_rs = uvm_report_server::get_server();
   // do the pre_abort callbacks
   m_do_pre_abort();
+
+  uvm_run_test_callback::m_do_pre_abort();
 
   l_rs->report_summarize();
   throw std::runtime_error("Simulation terminated by uvm_root::die()");

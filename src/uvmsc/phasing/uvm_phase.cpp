@@ -31,9 +31,12 @@
 
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/phasing/uvm_objection.h"
 #include "uvmsc/phasing/uvm_process_phase.h"
 #include "uvmsc/phasing/uvm_phase.h"
+#include "uvmsc/phasing/uvm_phase_cb.h"
+#include "uvmsc/cb/uvm_callback_iter.h"
 #include "uvmsc/phasing/uvm_domain.h"
 #include "uvmsc/phasing/uvm_common_phases.h"
 #include "uvmsc/macros/uvm_message_defines.h"
@@ -152,6 +155,58 @@ uvm_phase_type uvm_phase::get_phase_type() const
 uvm_phase_state uvm_phase::get_state() const
 {
   return m_state;
+}
+
+//----------------------------------------------------------------------
+// member function: m_set_state
+//
+//! Implementation defined
+//! Sets the state of this phase and calls the member function
+//! phase_state_change of all uvm_phase_cb callbacks registered for this
+//! phase, if the state changes.
+//----------------------------------------------------------------------
+
+void uvm_phase::m_set_state( uvm_phase_state state )
+{
+  if (m_state == state)
+    return;
+
+  uvm_phase_state prev_state = m_state;
+  m_state = state;
+
+  if (!uvm_phase_cb::m_exists())
+    return;
+
+  uvm_callback_iter<uvm_phase, uvm_phase_cb> iter(this);
+  uvm_phase_cb* cb = iter.first();
+
+  if (cb == nullptr)
+    return;
+
+  uvm_phase_state_change state_chg(get_name());
+  state_chg.m_phase = this;
+  state_chg.m_prev_state = prev_state;
+  // the jump target is only reported for the states caused by the jump
+  if (state == UVM_PHASE_ENDED || state == UVM_PHASE_JUMPING)
+    state_chg.m_jump_to = m_jump_phase;
+
+  while (cb != nullptr)
+  {
+    cb->phase_state_change(this, &state_chg);
+    cb = iter.next();
+  }
+}
+
+//----------------------------------------------------------------------
+// member function: m_register_cb (virtual)
+//
+//! Implementation defined
+//! Registers the callback type uvm_phase_cb with uvm_phase
+//----------------------------------------------------------------------
+
+bool uvm_phase::m_register_cb()
+{
+  return uvm_callbacks<uvm_phase, uvm_phase_cb>::m_register_pair("uvm_phase", "uvm_phase_cb");
 }
 
 //----------------------------------------------------------------------
@@ -1071,7 +1126,7 @@ void uvm_phase::execute_phase( bool proc )
   // NOTE: this only works in a process thread
   if (m_sync.size() && proc)
   {
-    m_state = UVM_PHASE_SYNCING;
+    m_set_state(UVM_PHASE_SYNCING);
     m_state_ev.notify();
 
     for( phase_listItT it = m_sync.begin();
@@ -1094,7 +1149,7 @@ void uvm_phase::execute_phase( bool proc )
   // If we're a schedule or domain, then "fake" execution
   if (m_phase_type != UVM_PHASE_NODE)
   {
-    m_state = UVM_PHASE_STARTED;
+    m_set_state(UVM_PHASE_STARTED);
 
     if (proc)
     {
@@ -1104,7 +1159,7 @@ void uvm_phase::execute_phase( bool proc )
     else
       m_state_ev.notify(SC_ZERO_TIME);
 
-    m_state = UVM_PHASE_EXECUTING;
+    m_set_state(UVM_PHASE_EXECUTING);
     if (proc)
     {
       m_state_ev.notify();
@@ -1119,7 +1174,7 @@ void uvm_phase::execute_phase( bool proc )
     //---------
     // STARTED:
     //---------
-    m_state = UVM_PHASE_STARTED;
+    m_set_state(UVM_PHASE_STARTED);
 
     if (proc)
       m_state_ev.notify();
@@ -1137,7 +1192,7 @@ void uvm_phase::execute_phase( bool proc )
       //-----------
       // EXECUTING: (function phases)
       //-----------
-      m_state = UVM_PHASE_EXECUTING;
+      m_set_state(UVM_PHASE_EXECUTING);
       m_state_ev.notify(SC_ZERO_TIME);
       // cannot add wait to untimed phase
       // sc_core::wait(SC_ZERO_TIME); // LET ANY WAITERS WAKE UP
@@ -1233,7 +1288,7 @@ void uvm_phase::execute_phase( bool proc )
       if (m_phase_trace)
         UVM_PH_TRACE("PH_END","Jumping out of phase", this, UVM_HIGH);
 
-      m_state = UVM_PHASE_ENDED;
+      m_set_state(UVM_PHASE_ENDED);
       if (proc)
         m_state_ev.notify();
       else
@@ -1245,7 +1300,7 @@ void uvm_phase::execute_phase( bool proc )
       if (proc)
         sc_core::wait(SC_ZERO_TIME); // LET ANY WAITERS WAKE UP
 
-      m_state = UVM_PHASE_JUMPING;
+      m_set_state(UVM_PHASE_JUMPING);
       if (proc)
         m_state_ev.notify();
       else
@@ -1289,7 +1344,7 @@ void uvm_phase::execute_phase( bool proc )
     if (m_phase_trace)
       UVM_PH_TRACE("PH_END","ENDING PHASE", this, UVM_HIGH);
 
-    m_state = UVM_PHASE_ENDED;
+    m_set_state(UVM_PHASE_ENDED);
 
     if(proc)
       m_state_ev.notify();
@@ -1306,7 +1361,7 @@ void uvm_phase::execute_phase( bool proc )
     // CLEANUP:
     //---------
     // kill this phase's threads
-    m_state = UVM_PHASE_CLEANUP;
+    m_set_state(UVM_PHASE_CLEANUP);
 
     if (proc)
       m_state_ev.notify();
@@ -1334,7 +1389,7 @@ void uvm_phase::execute_phase( bool proc )
   //------
   if (m_phase_trace)
     UVM_PH_TRACE("PH/TRC/DONE","Completed phase", this, UVM_LOW);
-  m_state = UVM_PHASE_DONE;
+  m_set_state(UVM_PHASE_DONE);
 
 
   if (proc)
@@ -1363,7 +1418,7 @@ void uvm_phase::execute_phase( bool proc )
     {
       if( it->first->m_state < UVM_PHASE_SCHEDULED)
       {
-        it->first->m_state = UVM_PHASE_SCHEDULED;
+        it->first->m_set_state(UVM_PHASE_SCHEDULED);
 
         if (proc)
         {
@@ -1398,7 +1453,7 @@ void uvm_phase::m_master_phase_process( uvm_phase* process_phase )
   //-----------
   // EXECUTING: (process phases)
   //-----------
-  m_state = UVM_PHASE_EXECUTING;
+  m_set_state(UVM_PHASE_EXECUTING);
   m_state_ev.notify();
   process_phase->traverse(top, this, UVM_PHASE_EXECUTING);
 
@@ -1466,7 +1521,7 @@ void uvm_phase::m_wait_for_all_dropped()
     if (m_phase_trace)
       UVM_PH_TRACE("PH_READY_TO_END_CB","Calling callback ready_to_end", this, UVM_HIGH);
 
-    m_state = UVM_PHASE_READY_TO_END;
+    m_set_state(UVM_PHASE_READY_TO_END);
     m_state_ev.notify();
 
     if (m_imp != nullptr)
@@ -1904,6 +1959,8 @@ void uvm_phase::m_run_phases()
   //TODO clean up after ourselves
   //phase_runner_proc.kill();
 
+  uvm_run_test_callback::m_do_post_run_test();
+
   uvm_report_server* rs = uvm_report_server::get_server();
   rs->report_summarize();
 
@@ -1943,7 +2000,7 @@ void uvm_phase::wait_for_self_and_siblings_to_drop()
     // wait for own objections to drop
     if (phase_done->get_objection_total(top) != 0)
     {
-      m_state = UVM_PHASE_EXECUTING ;
+      m_set_state(UVM_PHASE_EXECUTING);
       m_state_ev.notify();
       phase_done->wait_for(UVM_ALL_DROPPED, top);
       need_to_check_all = true;
@@ -1957,7 +2014,7 @@ void uvm_phase::wait_for_self_and_siblings_to_drop()
       it->first->wait_for_state(UVM_PHASE_EXECUTING, UVM_GTE); // sibling must be at least executing
       if (it->first->phase_done->get_objection_total(top) != 0)
       {
-        m_state = UVM_PHASE_EXECUTING ;
+        m_set_state(UVM_PHASE_EXECUTING);
         m_state_ev.notify();
         it->first->phase_done->wait_for(UVM_ALL_DROPPED, top); // sibling must drop any objection
         need_to_check_all = true;
@@ -1975,7 +2032,7 @@ void uvm_phase::wait_for_self_and_siblings_to_drop()
 
 void uvm_phase::clear_phase( uvm_phase_state state )
 {
-  m_state = state;
+  m_set_state(state);
   m_state_ev.notify();
   //m_phase_proc = nullptr;
   phase_done->clear(this);
