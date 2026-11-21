@@ -1,0 +1,52 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+without a policy
+write 0x11223344
+  bus write 0x10 data 0x44
+  bus write 0x11 data 0x33
+  bus write 0x12 data 0x22
+  bus write 0x13 data 0x11
+read
+  bus read  0x10 data 0x44
+  bus read  0x11 data 0x33
+  bus read  0x12 data 0x22
+  bus read  0x13 data 0x11
+read back 0x11223344
+policy set: 1
+write 0xa1b2c3d4
+  bus write 0x13 data 0xa1
+  bus write 0x12 data 0xb2
+  bus write 0x11 data 0xc3
+  bus write 0x10 data 0xd4
+read
+  bus read  0x13 data 0xa1
+  bus read  0x12 data 0xb2
+  bus read  0x11 data 0xc3
+  bus read  0x10 data 0xd4
+read back 0xa1b2c3d4
+caught: The transaction order policy of map 'model.map' returned a read at address 0x20, which is not one of the addresses of the access; its data is not used
+  bus read  0x10 data 0xd4
+  bus read  0x11 data 0xc3
+  bus read  0x12 data 0xb2
+  bus read  0x20 data 0x0
+read with a bad policy: 0xb2c3d4, errors 1
+TEST PASSED
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    1
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   2
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[UVM/REPORT/CATCHER]    1
+UVM_INFO @ 20 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

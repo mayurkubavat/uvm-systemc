@@ -21,6 +21,7 @@ H_FILES += \
 	reg/uvm_reg_item.h \
 	reg/uvm_reg_layer.h \
 	reg/uvm_reg_map.h \
+	reg/uvm_reg_transaction_order_policy.h \
 	reg/uvm_reg_model.h \
 	reg/uvm_reg_predictor.h \
 	reg/uvm_reg_read_only_cbs.h \
