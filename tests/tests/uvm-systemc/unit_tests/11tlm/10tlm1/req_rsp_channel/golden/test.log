@@ -1,0 +1,56 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test ...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.request_ap
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.response_ap
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.put_request_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.put_response_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.get_request_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.get_response_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.get_peek_request_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.get_peek_response_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.master_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.chan.slave_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env [env] channel member test.env.uvm_tlm_req_rsp_channel_0.master_export
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.req_mon [monitor] observed 1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.req_mon [monitor] observed 2
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_put(2) via put_request_export accepted
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.req_mon [monitor] observed 3
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.req_mon [monitor] observed 4
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_put(4) via master_export accepted
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_put(99) via put_request_export refused (request FIFO full)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_can_put via master_export false (request FIFO full)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: get via get_request_export returns 1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: peek via get_peek_request_export returns 2
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: get via get_peek_request_export returns 2
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: peek via slave_export returns 3
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: get via slave_export returns 3
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_get via slave_export returns 4
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.rsp_mon [monitor] observed 10
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.rsp_mon [monitor] observed 11
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_put(11) via put_response_export accepted
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.rsp_mon [monitor] observed 12
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.rsp_mon [monitor] observed 13
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_put(13) via slave_export accepted
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_put(99) via slave_export refused (response FIFO full)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: get via get_response_export returns 10
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: peek via get_peek_response_export returns 11
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: get via get_peek_response_export returns 11
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: peek via master_export returns 12
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: get via master_export returns 12
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_get via master_export returns 13
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: nb_get via get_response_export fails (response FIFO empty)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: request_ap wrote [1 2 3 4], expected [1 2 3 4]
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [CHECK] ok: response_ap wrote [10 11 12 13], expected [10 11 12 13]
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :  42
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[CHECK]                22
+[RNTST]                 1
+[env]                  11
+[monitor]               8
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
