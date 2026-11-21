@@ -8,6 +8,7 @@ H_FILES += \
 	comps/uvm_monitor.h \
 	comps/uvm_pair.h \
 	comps/uvm_policies.h \
+	comps/uvm_push_driver.h \
 	comps/uvm_scoreboard.h \
 	comps/uvm_subscriber.h \
 	comps/uvm_test.h

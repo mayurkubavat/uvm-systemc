@@ -1248,9 +1248,11 @@ void uvm_sequencer_base::do_print( const uvm_printer& printer ) const
 // member function: analysis_write
 //
 // Implementation defined.
+// Receives the responses which a driver writes to the rsp_export of the
+// sequencer. The parameterized sequencer passes them on to the sequences.
 //----------------------------------------------------------------------
 
-void uvm_sequencer_base::analysis_write(uvm_sequence_item t)
+void uvm_sequencer_base::analysis_write( const uvm_sequence_item& t )
 {
   return;
 }

@@ -92,6 +92,7 @@ class uvm_sequencer_param_base : public uvm_sequencer_base
   virtual const char* kind() const; // SystemC API
   virtual const std::string get_type_name() const;
   void put_response_base( const RSP& rsp );
+  virtual void analysis_write( const uvm_sequence_item& t );
   void m_last_req_push_front( const REQ& item );
   void m_last_rsp_push_front( const RSP& item );
 
@@ -183,6 +184,32 @@ void uvm_sequencer_param_base<REQ,RSP>::build_phase(uvm_phase& phase)
 {
   uvm_sequencer_base::build_phase(phase);
   sqr_rsp_analysis_fifo.sequencer_ptr = this;
+}
+
+//----------------------------------------------------------------------
+// member function: analysis_write (virtual)
+//
+// Implementation defined
+// Passes a response which a driver wrote to rsp_export on to its
+// sequence, as put_response() does.
+//----------------------------------------------------------------------
+
+template <typename REQ, typename RSP>
+void uvm_sequencer_param_base<REQ,RSP>::analysis_write( const uvm_sequence_item& t )
+{
+  const RSP* response = dynamic_cast<const RSP*>(&t);
+
+  if (response == nullptr)
+  {
+    uvm_report_fatal("ANALWRT", "Failure to cast analysis port write item", UVM_NONE);
+    return;
+  }
+
+  // the response queue of the sequence takes and deletes its own copy,
+  // as for put_response() of the sequencer
+  RSP* item = new RSP(response->get_name() + "_q");
+  *item = *response;
+  put_response_base(*item);
 }
 
 //----------------------------------------------------------------------

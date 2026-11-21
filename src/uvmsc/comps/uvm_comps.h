@@ -26,6 +26,7 @@
 #include "uvmsc/comps/uvm_env.h"
 #include "uvmsc/comps/uvm_agent.h"
 #include "uvmsc/comps/uvm_driver.h"
+#include "uvmsc/comps/uvm_push_driver.h"
 #include "uvmsc/comps/uvm_monitor.h"
 #include "uvmsc/comps/uvm_test.h"
 #include "uvmsc/comps/uvm_scoreboard.h"
