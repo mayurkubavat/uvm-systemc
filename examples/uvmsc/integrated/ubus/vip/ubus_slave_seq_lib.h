@@ -49,6 +49,7 @@ class simple_response_seq : public uvm::uvm_sequence<ubus_transfer>
   simple_response_seq( const std::string& name = "simple_response_seq")
   : uvm::uvm_sequence<ubus_transfer>(name)
   {
+      set_response_queue_error_report_disabled(true);
       req = ubus_transfer::type_id::create();
   }
   
@@ -109,6 +110,7 @@ class slave_memory_seq : public uvm::uvm_sequence<ubus_transfer>
   slave_memory_seq( const std::string& name = "slave_memory_seq" )
   : uvm::uvm_sequence<ubus_transfer>(name), rng(SEED)
   {
+    set_response_queue_error_report_disabled(true);
   }
 
   UVM_OBJECT_UTILS(slave_memory_seq);

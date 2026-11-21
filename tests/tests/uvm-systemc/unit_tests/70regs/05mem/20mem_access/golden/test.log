@@ -41,6 +41,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 2 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 1 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -51,6 +52,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 3 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 2 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -61,6 +63,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 4 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 3 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -71,6 +74,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 5 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 4 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -81,6 +85,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 6 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 5 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -91,6 +96,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 7 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 6 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -101,6 +107,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 8 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 7 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq

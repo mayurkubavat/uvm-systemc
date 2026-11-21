@@ -26,6 +26,7 @@
 #include <systemc>
 #include <iostream>
 #include <list>
+#include <vector>
 
 #include "uvmsc/seq/uvm_sequence_item.h"
 #include "uvmsc/base/uvm_object_globals.h"
@@ -48,6 +49,7 @@ class uvm_sequencer_base;
 class uvm_sequence_base: public uvm_sequence_item
 {
   friend class uvm_sequencer_base;
+  friend class uvm_sequence_item;
   friend class uvm_component;
   template <typename REQ, typename RSP> friend class uvm_sequencer;
   template <typename REQ, typename RSP> friend class uvm_sequencer_param_base;
@@ -166,7 +168,25 @@ private:
 
   void m_clear();
   void m_kill();
+  void m_register_tr_item( uvm_sequence_item* item,
+                           uvm_sequencer_base* sqr,
+                           int sqr_handle );
+  void m_detach_tr_item( uvm_sequence_item* item );
+  void m_end_tr_item( uvm_sequence_item* item );
+  void m_end_active_tr_items();
+  void m_cleanup_active_tr_items();
   //  void m_copy(); // TODO
+
+  struct m_kill_scope_guard
+  {
+    bool m_active;
+    m_kill_scope_guard();
+    ~m_kill_scope_guard();
+    void finish();
+  };
+  static bool m_process_contains( const sc_core::sc_process_handle& ancestor,
+                                  const sc_core::sc_process_handle& target );
+  static void m_defer_kill_process( const sc_core::sc_process_handle& proc );
 
   void m_safe_raise_starting_phase( std::string description = "",
                                     int count = 1 );
@@ -218,6 +238,9 @@ private:
   response_queue_listT response_queue;
 
   int m_tr_handle;
+  uvm_sequencer_base* m_tr_seq_sqr;
+  std::vector<uvm_sequence_item*> m_tr_items;
+  bool m_auto_phase_obj_raised;
 
   mutable bool is_rel_default;
   mutable bool wait_rel_default;

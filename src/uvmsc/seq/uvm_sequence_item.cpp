@@ -28,6 +28,7 @@
 #include "uvmsc/seq/uvm_sequence_item.h"
 #include "uvmsc/seq/uvm_sequence_base.h"
 #include "uvmsc/seq/uvm_sequencer_base.h"
+#include "uvmsc/policy/uvm_recorder.h"
 #include "uvmsc/report/uvm_report_object.h"
 #include "uvmsc/report/uvm_report_handler.h"
 #include "uvmsc/report/uvm_report_message.h"
@@ -52,6 +53,9 @@ uvm_sequence_item::uvm_sequence_item()
   m_use_sequence_info = true;
   m_sequence_id = -1;
   m_depth = -1;
+  m_tr_seq = nullptr;
+  m_tr_sqr = nullptr;
+  m_tr_sqr_handle = 0;
 }
 
 uvm_sequence_item::uvm_sequence_item( uvm_object_name name_ )
@@ -63,6 +67,40 @@ uvm_sequence_item::uvm_sequence_item( uvm_object_name name_ )
   m_use_sequence_info = true;
   m_sequence_id = -1;
   m_depth = -1;
+  m_tr_seq = nullptr;
+  m_tr_sqr = nullptr;
+  m_tr_sqr_handle = 0;
+}
+
+uvm_sequence_item::uvm_sequence_item( const uvm_sequence_item& rhs )
+  : uvm_transaction( rhs ),
+    print_sequence_info( rhs.print_sequence_info ),
+    m_parent_sequence( rhs.m_parent_sequence ),
+    m_sequencer( rhs.m_sequencer ),
+    m_use_sequence_info( rhs.m_use_sequence_info ),
+    m_sequence_id( rhs.m_sequence_id ),
+    m_depth( rhs.m_depth ),
+    m_tr_seq( nullptr ),
+    m_tr_sqr( nullptr ),
+    m_tr_sqr_handle( 0 )
+{}
+
+uvm_sequence_item& uvm_sequence_item::operator=( const uvm_sequence_item& rhs )
+{
+  if (this != &rhs)
+  {
+    uvm_transaction::operator=( rhs );
+    print_sequence_info = rhs.print_sequence_info;
+    m_use_sequence_info = rhs.m_use_sequence_info;
+    if (m_tr_seq == nullptr && m_tr_sqr == nullptr && m_tr_sqr_handle == 0 && !is_active())
+    {
+      m_parent_sequence = rhs.m_parent_sequence;
+      m_sequencer = rhs.m_sequencer;
+      m_sequence_id = rhs.m_sequence_id;
+      m_depth = rhs.m_depth;
+    }
+  }
+  return *this;
 }
 
 //----------------------------------------------------------------------
@@ -71,7 +109,49 @@ uvm_sequence_item::uvm_sequence_item( uvm_object_name name_ )
 
 uvm_sequence_item::~uvm_sequence_item()
 {
-  // TODO - cleanup
+  m_cleanup_tr_tracking();
+}
+
+void uvm_sequence_item::m_cleanup_tr_tracking()
+{
+  uvm_sequencer_base* sqr = m_tr_sqr;
+  const int sqr_h = m_tr_sqr_handle;
+
+  if (m_tr_seq != nullptr)
+  {
+    m_tr_seq->m_detach_tr_item(this);
+    m_tr_seq = nullptr;
+  }
+
+  if (sqr != nullptr)
+  {
+    sqr->m_detach_active_tr_item(this);
+    sqr->m_erase_tr_handle(this, get_inst_id());
+  }
+  m_tr_sqr = nullptr;
+
+  if (sqr_h != 0)
+  {
+    uvm_recorder* sqr_rec = uvm_recorder::get_recorder_from_handle(sqr_h);
+    if (sqr_rec != nullptr)
+    {
+      sqr_rec->close();
+      sqr_rec->free();
+    }
+  }
+  m_tr_sqr_handle = 0;
+
+  const int own_handle = get_tr_handle();
+  if (own_handle != 0)
+  {
+    uvm_recorder* own_rec = uvm_recorder::get_recorder_from_handle(own_handle);
+    if (own_rec != nullptr)
+    {
+      own_rec->close();
+      own_rec->free();
+    }
+  }
+  m_reset_tr_state();
 }
 
 //----------------------------------------------------------------------

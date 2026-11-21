@@ -1429,6 +1429,13 @@ void uvm_component::end_tr( const uvm_transaction& tr,
   }
 }
 
+void uvm_component::m_erase_tr_handle( const uvm_transaction* tr, int inst_id )
+{
+  std::map<const uvm_transaction*, std::pair<int, int> >::iterator it = m_tr_h.find(tr);
+  if (it != m_tr_h.end() && it->second.first == inst_id)
+    m_tr_h.erase(it);
+}
+
 //----------------------------------------------------------------------------
 // member function: do_end_tr
 //

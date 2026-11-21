@@ -68,7 +68,10 @@ class uvm_push_sequencer : public uvm_sequencer_param_base<REQ, RSP>
     while (true)
     {
       this->m_select_sequence();
-      t = this->m_req_fifo.get();
+      if (!this->m_wait_for_req_item())
+        continue;
+      if (!this->m_req_fifo.nb_get(t))
+        continue;
 
       req_port->put(t);
 
@@ -79,6 +82,23 @@ class uvm_push_sequencer : public uvm_sequencer_param_base<REQ, RSP>
       this->grant_queued_locks();
     }
   }
+
+  virtual void stop_sequences()
+  {
+    uvm_sequencer_param_base<REQ, RSP>::stop_sequences();
+  }
+
+ protected:
+  virtual void m_clear_req_fifo_on_stop()
+  {
+    if (this->m_req_fifo.clear_all())
+    {
+      uvm_report_info(this->get_full_name(), "Sequences stopped.  Removing all requests from sequencer FIFO.");
+      this->m_cancel_wait_for_req();
+    }
+  }
+
+ public:
 
   virtual const std::string get_type_name() const
   {

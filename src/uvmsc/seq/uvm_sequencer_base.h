@@ -27,6 +27,7 @@
 
 #include <list>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "uvmsc/base/uvm_component.h"
@@ -63,6 +64,7 @@ class uvm_sequencer_base : public uvm_component
   template <typename REQ, typename RSP> friend class uvm_sequencer_param_base;
   template <typename REQ, typename RSP> friend class uvm_push_sequencer;
   friend class uvm_sequence_base;
+  friend class uvm_sequence_item;
   template <typename RSP>
   friend class uvm_sequencer_analysis_fifo;
 
@@ -139,10 +141,17 @@ public:
   void m_select_sequence();
   int m_choose_next_request();
   void m_set_arbitration_completed(int request_id);
+  void m_record_grant(uvm_sequence_request* selected);
+  void m_mark_grant_fulfilled(uvm_sequence_base* sequence_ptr);
+  bool m_check_and_clear_aborted_grant();
   void m_wait_for_available_sequence();
   void m_wait_arb_not_equal();
   uvm_sequence_base* m_find_sequence(int sequence_id);
   void m_kill_sequence( uvm_sequence_base* sequence_ptr );
+  void m_attach_active_tr_item( uvm_sequence_item* item );
+  void m_detach_active_tr_item( uvm_sequence_item* item );
+  void m_attach_active_tr_seq( uvm_sequence_base* seq );
+  void m_detach_active_tr_seq( uvm_sequence_base* seq );
   virtual void do_print( const uvm_printer& printer ) const;
 
   virtual void analysis_write( const uvm_sequence_item& t );
@@ -168,7 +177,18 @@ public:
   std::mt19937 m_rng;
   bool m_rng_seeded;
 
+  uvm_sequence_base* m_granted_seq;
+  sc_core::sc_process_handle m_granted_proc;
+  bool m_grant_cancelled;
+  sc_core::sc_event m_grant_cancelled_ev;
+
+  std::vector<std::pair<uvm_sequence_base*, sc_core::sc_process_handle> > m_rel_watchers;
+  std::vector<uvm_sequence_item*> m_tr_active_items;
+  std::vector<uvm_sequence_base*> m_tr_active_seqs;
+
  protected:
+  virtual void m_clear_req_fifo_on_stop() {}
+  void m_cancel_wait_for_req();
   int m_sequencer_id;
   std::map<int, bool> arb_completed;
   std::map<int, uvm_sequence_base*> reg_sequences;

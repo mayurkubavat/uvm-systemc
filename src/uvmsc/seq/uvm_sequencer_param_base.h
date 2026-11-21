@@ -54,7 +54,26 @@ template <typename REQ = uvm_sequence_item, typename RSP = REQ>
 class uvm_sequencer_param_base : public uvm_sequencer_base
 {
  public:
-  tlm::tlm_fifo<REQ> m_req_fifo;
+  class uvm_req_fifo : public tlm::tlm_fifo<REQ>
+  {
+   public:
+    uvm_req_fifo( const char* name_, int size_ ) : tlm::tlm_fifo<REQ>(name_, size_) {}
+
+    bool clear_all()
+    {
+      const bool had_items = (this->buffer.used() > 0) || (this->m_num_written > 0);
+      this->buffer.clear();
+      this->m_num_readable = 0;
+      this->m_num_read = 0;
+      this->m_num_written = 0;
+      this->m_expand = false;
+      this->m_num_read_no_notify = 0;
+      this->m_data_written_event.cancel();
+      return had_items;
+    }
+  };
+
+  uvm_req_fifo m_req_fifo;
   //tlm::tlm_analysis_fifo<REQ> m_req_fifo; // TODO add analysis fifo
 
   uvm_analysis_export<RSP> rsp_export;
@@ -98,6 +117,9 @@ class uvm_sequencer_param_base : public uvm_sequencer_base
 
   virtual void connect_phase( uvm_phase& phase );
   virtual void build_phase( uvm_phase& phase );
+
+ protected:
+  bool m_wait_for_req_item();
 
  private:
   // class data members
@@ -205,11 +227,7 @@ void uvm_sequencer_param_base<REQ,RSP>::analysis_write( const uvm_sequence_item&
     return;
   }
 
-  // the response queue of the sequence takes and deletes its own copy,
-  // as for put_response() of the sequencer
-  RSP* item = new RSP(response->get_name() + "_q");
-  *item = *response;
-  put_response_base(*item);
+  put_response_base(*response);
 }
 
 //----------------------------------------------------------------------
@@ -260,6 +278,7 @@ void uvm_sequencer_param_base<REQ,RSP>::send_request( uvm_sequence_base* sequenc
     uvm_report_fatal(name(),"Send_request failed to cast sequence item", UVM_NONE);
 
   seq_item->set_sequencer(this);
+  this->m_mark_grant_fulfilled(sequence_ptr);
 
   if (!m_req_fifo.nb_put(param_t))
   {
@@ -496,7 +515,9 @@ void uvm_sequencer_param_base<REQ,RSP>::put_response_base(const RSP& rsp)
       sequence_ptr->response_handler(&rsp);
       return;
     }
-    sequence_ptr->put_response(rsp);
+    RSP* item = new RSP(rsp.get_name() + "_q");
+    *item = rsp;
+    sequence_ptr->put_response(*item);
   }
   else
   {
@@ -504,6 +525,23 @@ void uvm_sequencer_param_base<REQ,RSP>::put_response_base(const RSP& rsp)
     str << "Dropping response for sequence '" << rsp.get_name() << "' (id= " << rsp.get_sequence_id() << "), since sequence is not found. Probable cause: sequence exited or has been killed.";
     uvm_report_info("Sequencer", str.str() );
   }
+}
+
+template <typename REQ, typename RSP>
+bool uvm_sequencer_param_base<REQ,RSP>::m_wait_for_req_item()
+{
+  while (!this->m_req_fifo.nb_can_peek())
+  {
+    if (this->m_check_and_clear_aborted_grant())
+      return false;
+
+    sc_core::sc_event_or_list ev =
+      this->m_req_fifo.ok_to_peek() | this->m_grant_cancelled_ev;
+    if (this->m_granted_seq != nullptr && this->m_granted_proc.valid())
+      ev |= this->m_granted_proc.terminated_event();
+    sc_core::wait(ev);
+  }
+  return true;
 }
 
 //----------------------------------------------------------------------
