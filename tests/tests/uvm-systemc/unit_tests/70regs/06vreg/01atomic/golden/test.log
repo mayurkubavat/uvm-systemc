@@ -1,0 +1,31 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x0:0x3]...
+0 s: write [0] start
+10 ns: write [0] end
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [RegModel] Wrote virtual field 'vr.f' [0] via backdoor with: 0x11
+10 ns: write [1] start
+20 ns: write [1] end
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [RegModel] Wrote virtual field 'vr.f' [1] via backdoor with: 0x22
+30 ns: write [2] start
+35 ns: write [2] killed
+55 ns: write [3] waiting
+55 ns: reset
+55 ns: write [3] start
+65 ns: write [3] end
+UVM_INFO <removed by verify-uvm.pl> @ 65 ns: reporter [RegModel] Wrote virtual field 'vr.f' [3] via backdoor with: 0x44
+mem[0] = 0x11
+mem[1] = 0x22
+mem[2] = 0x0
+mem[3] = 0x44
+UVM_INFO <removed by verify-uvm.pl> @ 65 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   5
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[RegModel]              4
+UVM_INFO @ 65 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
