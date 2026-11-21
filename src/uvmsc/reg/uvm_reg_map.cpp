@@ -1798,6 +1798,30 @@ void uvm_reg_map::m_set_reg_offset( uvm_reg* rg,
 }
 
 //----------------------------------------------------------------------
+// member function: m_get_mem_stride
+//
+// Implementation defined
+// Returns the address interval between consecutive locations of a
+// memory, from the addresses of its first (first_addr) and last
+// (last_addr) location. A memory with one location gets the interval
+// it would have with two.
+//----------------------------------------------------------------------
+
+unsigned long uvm_reg_map::m_get_mem_stride( uvm_mem* mem,
+                                             uvm_reg_addr_t offset,
+                                             uvm_reg_addr_t first_addr,
+                                             uvm_reg_addr_t last_addr )
+{
+  if (mem->get_size() > 1)
+    return (last_addr.to_uint64() - first_addr.to_uint64()) / (mem->get_size() - 1);
+
+  std::vector<uvm_reg_addr_t> addrs_next;
+  get_physical_addresses(offset, 1, mem->get_n_bytes(), addrs_next);
+
+  return addrs_next[0].to_uint64() - first_addr.to_uint64();
+}
+
+//----------------------------------------------------------------------
 // member function: m_set_mem_offset
 //
 // Implementation defined
@@ -1828,12 +1852,13 @@ void uvm_reg_map::m_set_mem_offset( uvm_mem* mem,
     if (!info->unmapped)
     {
       for( m_mems_by_offset_itt it = top_map->m_mems_by_offset.begin();
-           it != top_map->m_mems_by_offset.end();
-           it++ )
+           it != top_map->m_mems_by_offset.end(); )
       {
-        uvm_reg_map_addr_range* range = (*it).first;
-        if (top_map->m_mems_by_offset[range] == mem)
-          top_map->m_mems_by_offset.erase(range);
+        // erasing invalidates the iterator of the erased element only
+        if ((*it).second == mem)
+          it = top_map->m_mems_by_offset.erase(it);
+        else
+          it++;
       }
     }
 
@@ -1855,8 +1880,9 @@ void uvm_reg_map::m_set_mem_offset( uvm_mem* mem,
       max = (addrs_max[0] > addrs_max[addrs_max.size()-1]) ?
           addrs_max[0] : addrs_max[addrs_max.size()-1];
       max2 = addrs_max[0];
+
       // address interval between consecutive mem locations
-      stride = (max2 - max)/(mem->get_size()-1);
+      stride = m_get_mem_stride(mem, offset, min2, max2);
 
       // make sure new offset does not conflict with others
       for( m_regs_by_offset_itt it = top_map->m_regs_by_offset.begin();
@@ -2236,7 +2262,7 @@ void uvm_reg_map::m_init_address_map()
       max2 = addrs_max[0];
 
       // address interval between consecutive mem offsets
-      stride = (max2 - min2)/(mem->get_size()-1);
+      stride = m_get_mem_stride(mem, m_mems_info[mem]->offset, min2, max2);
 
       for( m_regs_by_offset_itt ita = top_map->m_regs_by_offset.begin();
           ita != top_map->m_regs_by_offset.end();

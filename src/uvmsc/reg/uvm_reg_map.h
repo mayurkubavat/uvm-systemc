@@ -237,6 +237,11 @@ public:
                                  uvm_reg_addr_t offset,
                                  bool unmapped );
 
+  unsigned long m_get_mem_stride( uvm_mem* mem,
+                                  uvm_reg_addr_t offset,
+                                  uvm_reg_addr_t first_addr,
+                                  uvm_reg_addr_t last_addr );
+
   virtual uvm_reg_map_info* get_reg_map_info( const uvm_reg* rg, bool error = true ) const;
 
   virtual uvm_reg_map_info* get_mem_map_info( const uvm_mem* mem, bool error = true ) const;
