@@ -177,6 +177,7 @@
     <ClCompile Include="..\..\src\uvmsc\base\uvm_object.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_object_globals.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_root.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\base\uvm_run_test_callback.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_transaction.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_traversal.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_version.cpp" />
@@ -201,6 +202,7 @@
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_domain.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_objection.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_phase.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\phasing\uvm_phase_cb.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_process_phase.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_runtime_phases.cpp" />
     <ClCompile Include="..\..\src\uvmsc\phasing\uvm_topdown_phase.cpp" />
@@ -262,6 +264,7 @@
     <ClInclude Include="..\..\src\uvmsc\base\uvm_object_globals.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_port_base.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_root.h" />
+    <ClInclude Include="..\..\src\uvmsc\base\uvm_run_test_callback.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_transaction.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_traversal.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_version.h" />
@@ -326,6 +329,7 @@
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_objection.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_objection_callback.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase.h" />
+    <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase_cb.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase_queue.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phasing.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_process.h" />
