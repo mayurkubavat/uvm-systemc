@@ -1,0 +1,33 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+uvm::uvm_blocking_transport_port
+uvm::uvm_nonblocking_transport_port
+uvm::uvm_transport_port
+uvm::uvm_blocking_transport_imp
+uvm::uvm_nonblocking_transport_imp
+uvm::uvm_transport_imp
+uvm::uvm_transport_export
+5 ns: test.target transport 1 -> rsp1
+5 ns: initiator b_port.transport(1, rsp): true rsp1
+10 ns: test.target transport 2 -> rsp2
+10 ns: initiator b_port.transport(2): true rsp2
+10 ns: test.target nb_transport 3 -> nb_rsp3
+10 ns: initiator nb_port.nb_transport(3, rsp): true nb_rsp3
+10 ns: test.target nb_transport -1 refused
+10 ns: initiator nb_port.nb_transport(-1, rsp): false
+15 ns: test.wrapper.target transport 4 -> rsp4
+15 ns: initiator port.transport(4, rsp): true rsp4
+20 ns: test.wrapper.target transport 5 -> rsp5
+20 ns: initiator port.transport(5): true rsp5
+20 ns: test.wrapper.target nb_transport 6 -> nb_rsp6
+20 ns: initiator port.nb_transport(6, rsp): true nb_rsp6
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 20 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
