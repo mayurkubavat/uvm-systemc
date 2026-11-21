@@ -76,6 +76,44 @@ uvm_comparer* uvm_comparer::init()
 
 
 //----------------------------------------------------------------------------
+// Local functions: m_radix, m_radix_prefix
+//
+// Implementation defined
+//
+// Miscompare messages use the formats of UVM-SV: 'b%0b, 'o%0o, %0d,
+// %0t, %0s, and 'h%0x for any other radix. UVM_ENUM is shown as a
+// decimal number.
+//----------------------------------------------------------------------------
+
+static uvm_radix_enum m_radix( uvm_radix_enum radix )
+{
+  switch (radix)
+  {
+    case UVM_BIN:
+    case UVM_OCT:
+    case UVM_DEC:
+    case UVM_TIME:
+    case UVM_STRING:
+      return radix;
+    case UVM_ENUM:
+      return UVM_DEC;
+    default:
+      return UVM_HEX;
+  }
+}
+
+static std::string m_radix_prefix( uvm_radix_enum radix )
+{
+  switch (m_radix(radix))
+  {
+    case UVM_BIN: return "'b";
+    case UVM_OCT: return "'o";
+    case UVM_HEX: return "'h";
+    default:      return "";
+  }
+}
+
+//----------------------------------------------------------------------------
 // member function: compare_field
 //
 //! Compares two integral values.
@@ -112,52 +150,10 @@ bool uvm_comparer::compare_field( const std::string& name,
   {
     uvm_object::__m_uvm_status_container->scope->set_arg(name);
 
-    switch (radix)
-    {
-      case UVM_BIN:
-      {
-        msg << "lhs = 0b" << lhs_masked.to_string(sc_dt::SC_BIN_US, true)
-            << " : rhs = 0b" << rhs_masked.to_string(sc_dt::SC_BIN_US, true);
-        break;
-      }
-      case UVM_OCT:
-      {
-        msg << "lhs = 0o" << std::oct << lhs_masked.to_string(sc_dt::SC_OCT_US, true)
-            << " : rhs = 0o" << std::oct << rhs_masked.to_string(sc_dt::SC_OCT_US, true);
-        break;
-      }
-      case UVM_DEC:
-      {
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      case UVM_TIME: // TODO how to deal with time/sc_time?
-      {
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      case UVM_STRING: // TODO printed as binary ??
-      {
-        msg << "lhs = 0b" << lhs_masked.to_string(sc_dt::SC_BIN_US, true)
-            << " : rhs = 0b" << rhs_masked.to_string(sc_dt::SC_BIN_US, true);
-        break;
-      }
-      case UVM_ENUM: // printed in decimal
-      {
-        // Printed as decimal, user should use compare string for enum val
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      default: // default is printed in hex
-      {
-        msg << "lhs = 0x" << lhs_masked.to_string(sc_dt::SC_HEX_US, true)
-            << " : rhs = 0x" << rhs_masked.to_string(sc_dt::SC_HEX_US, true);
-        break;
-      }
-    } // switch
+    msg << "lhs = " << m_radix_prefix(radix)
+        << uvm_vector_to_string(uvm_bitstream_t(lhs & mask), size, m_radix(radix))
+        << " : rhs = " << m_radix_prefix(radix)
+        << uvm_vector_to_string(uvm_bitstream_t(rhs & mask), size, m_radix(radix));
 
     print_msg(msg.str());
     return false;
@@ -194,52 +190,10 @@ bool uvm_comparer::compare_field_int( const std::string& name,
   {
     uvm_object::__m_uvm_status_container->scope->set_arg(name);
 
-    switch(radix)
-    {
-      case UVM_BIN:
-      {
-        msg << "lhs = 0b" << lhs_masked.to_string(sc_dt::SC_BIN_US, true)
-            << " : rhs = 0b" << rhs_masked.to_string(sc_dt::SC_BIN_US, true);
-        break;
-      }
-      case UVM_OCT:
-      {
-        msg << "lhs = 0o" << lhs_masked.to_string(sc_dt::SC_OCT_US, true)
-            << " : rhs = 0o" << rhs_masked.to_string(sc_dt::SC_OCT_US, true);
-        break;
-      }
-      case UVM_DEC:
-      {
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      case UVM_TIME: // TODO how to deal with time/sc_time?
-      {
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      case UVM_STRING: // show as bit string
-      {
-        msg << "lhs = 0b" << lhs_masked.to_string(sc_dt::SC_BIN_US, true)
-            << " : rhs = 0b" << rhs_masked.to_string(sc_dt::SC_BIN_US, true);
-        break;
-      }
-      case UVM_ENUM:
-      {
-        // Printed as decimal, user should use compare string for enum val
-        msg << "lhs = " << lhs_masked.to_string(sc_dt::SC_DEC, true)
-            << " : rhs = " << rhs_masked.to_string(sc_dt::SC_DEC, true);
-        break;
-      }
-      default: // default shown as hex
-      {
-        msg << "lhs = 0x" << lhs_masked.to_string(sc_dt::SC_HEX_US, true)
-            << " : rhs = 0x" << rhs_masked.to_string(sc_dt::SC_HEX_US, true);
-        break;
-      }
-    } // switch
+    msg << "lhs = " << m_radix_prefix(radix)
+        << uvm_vector_to_string(lhs, size, m_radix(radix))
+        << " : rhs = " << m_radix_prefix(radix)
+        << uvm_vector_to_string(rhs, size, m_radix(radix));
 
     print_msg(msg.str());
     return false;
