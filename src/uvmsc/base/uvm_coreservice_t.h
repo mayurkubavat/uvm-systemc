@@ -36,8 +36,8 @@ class uvm_root;
 //class uvm_visitor;
 //class uvm_component_name_check_visitor;
 class uvm_component;
-//class uvm_tr_database;
-//class uvm_text_tr_database;
+class uvm_tr_database;
+class uvm_text_tr_database;
 class uvm_default_coreservice_t;
 
 //----------------------------------------------------------------------
@@ -62,8 +62,8 @@ class uvm_coreservice_t
   virtual uvm_report_server* get_report_server() const = 0;
   virtual void set_report_server( uvm_report_server* server ) = 0;
 
-//  virtual uvm_tr_database* get_default_tr_database() = 0;
-//  virtual void set_default_tr_database( uvm_tr_database db ) = 0;
+  virtual uvm_tr_database* get_default_tr_database() const = 0;
+  virtual void set_default_tr_database( uvm_tr_database* db ) = 0;
 
 //  virtual void set_component_visitor( uvm_visitor<uvm_component> v ) = 0;
 //  virtual uvm_visitor<uvm_component> get_component_visitor() const = 0;

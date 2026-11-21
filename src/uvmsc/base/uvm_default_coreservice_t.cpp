@@ -25,6 +25,7 @@
 #include "uvmsc/base/uvm_default_coreservice_t.h"
 #include "uvmsc/report/uvm_report_server.h"
 #include "uvmsc/report/uvm_default_report_server.h"
+#include "uvmsc/policy/uvm_tr_database.h"
 
 namespace uvm {
 
@@ -67,24 +68,11 @@ void uvm_default_coreservice_t::set_factory( uvm_factory* f )
 // is called, returns an instance of <uvm_text_tr_database>
 //----------------------------------------------------------------------------
 
-/* TODO TR database
 uvm_tr_database* uvm_default_coreservice_t::get_default_tr_database() const
 {
   if (tr_database == nullptr)
-  {
-    //   process p = process::self();
-    uvm_text_tr_database* tx_db;
-    std::string s;
+    tr_database = new uvm_text_tr_database("default_tr_database");
 
-    //if(p != nullptr)
-    //  s = p.get_randstate();
-
-    tx_db = new uvm_tr_database("default_tr_database");
-    tr_database = tx_db;
-
-    //if(p != null)
-    //  p.set_randstate(s);
-  }
   return tr_database;
 }
 
@@ -98,7 +86,6 @@ void uvm_default_coreservice_t::set_default_tr_database( uvm_tr_database* db )
 {
   tr_database = db;
 }
-*/
 
 //----------------------------------------------------------------------------
 // member function: get_report_server (virtual)
