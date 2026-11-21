@@ -1,0 +1,26 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+test.channel (uvm::uvm_tlm_transport_channel)
+test.channel.transport_export (uvm::uvm_transport_imp)
+test.uvm_tlm_transport_channel_0
+test.uvm_tlm_transport_channel_0.transport_export
+0 s: responder got 1
+10 ns: initiator transport 1 -> rsp1
+10 ns: responder got 2
+20 ns: initiator transport 2 -> rsp2
+20 ns: responder got 3
+30 ns: initiator transport 3 -> rsp3
+30 ns: initiator nb_transport 4: 0
+30 ns: responder got 4
+50 ns: initiator transport 5 -> rsp4
+50 ns: responder got 5
+UVM_INFO <removed by verify-uvm.pl> @ 50 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 50 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

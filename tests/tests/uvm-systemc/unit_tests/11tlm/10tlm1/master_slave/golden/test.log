@@ -1,0 +1,45 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+uvm::uvm_blocking_master_port uvm::uvm_nonblocking_master_port uvm::uvm_master_port
+uvm::uvm_blocking_slave_port uvm::uvm_nonblocking_slave_port uvm::uvm_slave_port
+uvm::uvm_blocking_master_export uvm::uvm_nonblocking_master_export uvm::uvm_master_export
+uvm::uvm_blocking_slave_export uvm::uvm_nonblocking_slave_export uvm::uvm_slave_export
+uvm::uvm_blocking_master_imp uvm::uvm_nonblocking_master_imp uvm::uvm_master_imp
+uvm::uvm_blocking_slave_imp uvm::uvm_nonblocking_slave_imp uvm::uvm_slave_imp
+0 s: master_target put 1
+b_mport peek rsp1
+b_mport get rsp1
+nb_mport can_get 0
+0 s: master_target put 2
+nb_mport can_put 1 try_put 1
+nb_mport can_peek 1 try_peek 1 rsp2
+nb_mport try_get 1 rsp2
+nb_mport try_get 0
+0 s: sink put 3
+mport peek rsp3
+mport get rsp3
+0 s: sink put 4
+mport try_put 1
+mport try_get 1 rsp4
+b_sport peek 100
+b_sport get 100
+0 s: slave_target put rsp100
+nb_sport try_peek 1 100
+nb_sport try_get 1 100
+0 s: slave_target put rsp100
+nb_sport can_put 1 try_put 1
+sport get 101
+0 s: slave_target put rsp101
+10 ns: channel_master 10 -> rsp10
+20 ns: channel_master 11 -> rsp11
+30 ns: channel_master 12 -> rsp12
+UVM_INFO <removed by verify-uvm.pl> @ 30 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 30 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
