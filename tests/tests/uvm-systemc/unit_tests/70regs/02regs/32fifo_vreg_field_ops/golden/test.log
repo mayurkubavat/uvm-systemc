@@ -9,7 +9,7 @@ pop0=0x11 rem=2
 pop1=0x22 rem=1
 pop2=0x33 rem=0
 vreg_mem4=vr_a vreg_mem3=null vreg_map17=vr_b
-UVM_INFO <removed by verify-uvm.pl> @ 12 ns: reporter [MISCMP] Miscompare for f: lhs = 0x0xus00000000000000a5 : rhs = 0x0xus000000000000005a
+UVM_INFO <removed by verify-uvm.pl> @ 12 ns: reporter [MISCMP] Miscompare for f: lhs = 'ha5 : rhs = 'h5a
 field_copy=0x5a eq_same=1 eq_diff=0
 UVM_INFO <removed by verify-uvm.pl> @ 12 ns: reporter [UVM/REPORT/SERVER] 
 --- UVM Report Summary ---
