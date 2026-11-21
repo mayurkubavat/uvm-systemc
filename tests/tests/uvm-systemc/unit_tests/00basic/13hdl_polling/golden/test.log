@@ -1,0 +1,62 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+the same object for the same path: 1
+backdoor probe: 1
+5 ns: all: top.sig is 1 (64 bits)
+5 ns: only_sig: top.sig is 1 (64 bits)
+5 ns: changed to 1, ok 1
+10 ns: all: top.hidden is 101 (32 bits)
+15 ns: all: top.sig is 2 (64 bits)
+15 ns: only_sig: top.sig is 2 (64 bits)
+20 ns: all: top.hidden is 102 (32 bits)
+25 ns: all: top.sig is 3 (64 bits)
+25 ns: only_sig: top.sig is 3 (64 bits)
+30 ns: all: top.hidden is 103 (32 bits)
+35 ns: all: top.sig is 4 (64 bits)
+35 ns: only_sig: top.sig is 4 (64 bits)
+35 ns: the signal is 4
+35 ns: still 4, no wait
+40 ns: all: top.hidden is 104 (32 bits)
+45 ns: all: top.sig is 5 (64 bits)
+45 ns: only_sig: top.sig is 5 (64 bits)
+50 ns: all: top.hidden is 105 (32 bits)
+50 ns: the hidden value is 105 through the backdoor
+55 ns: all: top.sig is 6 (64 bits)
+55 ns: only_sig: top.sig is 6 (64 bits)
+60 ns: all: top.hidden is 106 (32 bits)
+65 ns: all: top.sig is 7 (64 bits)
+65 ns: only_sig: top.sig is 7 (64 bits)
+changes waited for: 4, paths: 1
+callbacks: all 13, only_sig 7
+the path can be polled again: 1
+75 ns: all: top.sig is 8 (64 bits)
+75 ns: only_sig: top.sig is 8 (64 bits)
+75 ns: all: top.sig2 is 8 (64 bits)
+85 ns: all: top.sig is 9 (64 bits)
+85 ns: only_sig: top.sig is 9 (64 bits)
+85 ns: all: top.sig2 is 9 (64 bits)
+callbacks go on after the process which added them was killed: 1
+95 ns: all: top.sig is 10 (64 bits)
+95 ns: only_sig: top.sig is 10 (64 bits)
+95 ns: all: top.sig2 is 10 (64 bits)
+95 ns: the polling object of a killed process still polls: 10
+105 ns: all: top.sig is 11 (64 bits)
+105 ns: only_sig: top.sig is 11 (64 bits)
+105 ns: all: top.sig2 is 11 (64 bits)
+105 ns: a callback deletes its polling object
+a polling object deleted by its callback frees its path: 1
+115 ns: all: top.sig is 12 (64 bits)
+115 ns: only_sig: top.sig is 12 (64 bits)
+120 ns: all: top.hidden is 112 (32 bits)
+120 ns: a callback deletes its polling object
+a backdoor polling object deleted by its callback frees its path: 1
+UVM_INFO <removed by verify-uvm.pl> @ 125 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 125 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
