@@ -50,6 +50,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_reg_tlm_adapter.h
   uvm_reg_write_only_cbs.h
   uvm_sc_if.h
+  uvm_verilator_reg_backdoor.h
   uvm_vreg.h
   uvm_vreg_cbs.h
   uvm_vreg_field.h
@@ -87,6 +88,7 @@ install_headers (
   uvm_reg_tlm_adapter.h
   uvm_reg_write_only_cbs.h
   uvm_sc_if.h
+  uvm_verilator_reg_backdoor.h
   uvm_vreg.h
   uvm_vreg_cbs.h
   uvm_vreg_field.h

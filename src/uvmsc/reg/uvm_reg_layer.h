@@ -64,5 +64,6 @@
 
 // SystemC inspection interface
 #include "uvmsc/reg/uvm_sc_if.h"
+#include "uvmsc/reg/uvm_verilator_reg_backdoor.h"
 
 #endif /* UVM_REG_LAYER_H_ */
