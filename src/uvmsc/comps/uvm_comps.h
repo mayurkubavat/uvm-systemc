@@ -30,5 +30,9 @@
 #include "uvmsc/comps/uvm_test.h"
 #include "uvmsc/comps/uvm_scoreboard.h"
 #include "uvmsc/comps/uvm_subscriber.h"
+#include "uvmsc/comps/uvm_policies.h"
+#include "uvmsc/comps/uvm_pair.h"
+#include "uvmsc/comps/uvm_in_order_comparator.h"
+#include "uvmsc/comps/uvm_algorithmic_comparator.h"
 
 #endif /* UVM_COMPS_H_ */

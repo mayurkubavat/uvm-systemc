@@ -1,0 +1,36 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test ...
+UVM_INFO @ 10 ns: t.int_comp [Comparator Match] 1
+int_pairs: built-in pair : 1, 1
+UVM_INFO @ 10 ns: t.int_comp [Comparator Match] 2
+int_pairs: built-in pair : 2, 2
+UVM_WARNING @ 20 ns: t.int_comp [Comparator Mismatch] 30 differs from 3
+int_pairs: built-in pair : 30, 3
+UVM_INFO @ 20 ns: t.int_comp [Comparator Match] 4
+int_pairs: built-in pair : 4, 4
+int_comp: matches 3, mismatches 1
+UVM_INFO @ 30 ns: t.pkt_comp [Comparator Match] addr=1 data=100
+pkt_pairs: pair : addr=1 data=100, addr=1 data=100
+UVM_WARNING @ 40 ns: t.pkt_comp [Comparator Mismatch] addr=2 data=201 differs from addr=2 data=200
+pkt_pairs: pair : addr=2 data=201, addr=2 data=200
+pkt_comp: matches 1, mismatches 1
+pkt_comp after flush: matches 0, mismatches 0
+class pairs which differ compare 0
+after copy they compare 1, pair : addr=1 data=2, addr=3 data=4
+built-in pairs which differ compare 0
+after copy they compare 1, built-in pair : 7, 8
+clone: built-in pair : 7, 8
+type names: uvm_in_order_built_in_comparator #(T), uvm_in_order_class_comparator #(T)
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 60 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   5
+UVM_WARNING   :   2
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[Comparator Match]      4
+[Comparator Mismatch]   2
+[RNTST]                 1
+UVM_INFO @ 60 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

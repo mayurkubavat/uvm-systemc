@@ -6,6 +6,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_imps.h
   uvm_ports.h
   uvm_sqr_connections.h
+  uvm_tlm_fifos.h
   uvm_tlm_req_rsp_channel.h
   uvm_tlm1.h)
 
@@ -17,5 +18,6 @@ install_headers (
   uvm_imps.h
   uvm_ports.h
   uvm_sqr_connections.h
+  uvm_tlm_fifos.h
   uvm_tlm_req_rsp_channel.h
   uvm_tlm1.h)

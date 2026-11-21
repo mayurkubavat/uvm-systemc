@@ -1,0 +1,48 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test ...
+0 s producer: put 10
+0 s producer: put 20
+local_fifo, new: size 3, used 0, is_empty 1, is_full 0
+can_get 0, try_get 0
+try_put(1) returns 1
+try_put(2) returns 1
+try_put(3) returns 1
+try_put(4) returns 0
+local_fifo, after 4 x try_put: size 3, used 3, is_empty 0, is_full 1
+can_put 0
+try_peek gives 1
+get gives 1
+peek gives 2
+try_get returns 1 and gives 2
+local_fifo, after get and try_get: size 3, used 1, is_empty 0, is_full 1
+local_fifo: put_ap wrote 3 transactions, get_ap wrote 2
+local_fifo, after flush: size 3, used 0, is_empty 1, is_full 1
+local_fifo, one delta cycle later: size 3, used 0, is_empty 1, is_full 0
+local_fifo: get_ap wrote 2 transactions after flush
+unnamed_fifo: size 4, used 0, is_empty 1, is_full 0
+unbounded_fifo, new: no limit, used 0, is_empty 1, is_full 0
+unbounded_fifo, after 100 x try_put: no limit, used 100, is_empty 0, is_full 0
+10 ns consumer: peek 10, get 10
+10 ns producer: put 30
+20 ns consumer: peek 20, get 20
+20 ns producer: put 40
+30 ns consumer: peek 30, get 30
+30 ns producer: put 50
+40 ns consumer: peek 40, get 40
+40 ns producer: put 60
+50 ns consumer: peek 50, get 50
+60 ns consumer: peek 60, get 60
+fifo, at the end: size 2, used 0, is_empty 1, is_full 0
+put_ap wrote 6 transactions, get_ap wrote 6
+type name uvm::uvm_tlm_fifo
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 60 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 60 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
