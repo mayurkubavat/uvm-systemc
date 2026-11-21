@@ -32,5 +32,6 @@
 #include "uvmsc/conf/uvm_config_db.h"
 #include "uvmsc/conf/uvm_config_db_options.h"
 #include "uvmsc/conf/uvm_object_string_pool.h"
+#include "uvmsc/conf/uvm_pool.h"
 
 #endif /* UVM_CONF_H_ */

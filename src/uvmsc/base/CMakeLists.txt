@@ -7,6 +7,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_default_coreservice_t.cpp
   uvm_enum_wrapper.cpp
   uvm_event_callback.cpp
+  uvm_barrier.cpp
   uvm_event.cpp
   uvm_globals.cpp
   uvm_mutex.cpp
@@ -26,6 +27,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_default_coreservice_t.h
   uvm_enum_wrapper.h
   uvm_event_callback.h
+  uvm_barrier.h
   uvm_event.h
   uvm_export_base.h
   uvm_globals.h
@@ -49,6 +51,7 @@ install_headers (
   uvm_default_coreservice_t.h
   uvm_enum_wrapper.h
   uvm_event_callback.h
+  uvm_barrier.h
   uvm_event.h
   uvm_export_base.h
   uvm_globals.h
