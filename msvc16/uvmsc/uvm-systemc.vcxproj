@@ -324,6 +324,7 @@
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_common_phases.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_domain.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_objection.h" />
+    <ClInclude Include="..\..\src\uvmsc\phasing\uvm_objection_callback.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phase_queue.h" />
     <ClInclude Include="..\..\src\uvmsc\phasing\uvm_phasing.h" />

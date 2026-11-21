@@ -3,6 +3,7 @@ H_FILES += \
 	phasing/uvm_common_phases.h \
 	phasing/uvm_domain.h \
 	phasing/uvm_objection.h \
+	phasing/uvm_objection_callback.h \
 	phasing/uvm_phase.h \
 	phasing/uvm_phase_queue.h \
 	phasing/uvm_phasing.h \

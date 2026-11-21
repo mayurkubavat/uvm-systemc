@@ -23,6 +23,7 @@
 #include "uvmsc/phasing/uvm_phase.h"
 #include "uvmsc/phasing/uvm_phase_queue.h"
 #include "uvmsc/phasing/uvm_objection.h"
+#include "uvmsc/phasing/uvm_objection_callback.h"
 #include "uvmsc/phasing/uvm_domain.h"
 #include "uvmsc/phasing/uvm_topdown_phase.h"
 #include "uvmsc/phasing/uvm_bottomup_phase.h"

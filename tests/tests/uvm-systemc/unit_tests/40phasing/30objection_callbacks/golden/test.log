@@ -1,0 +1,44 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+0 s: all_cb raised at 'test.c' from 'test.c' count 1 (busy)
+0 s: all_cb raised at 'test' from 'test.c' count 1 (busy)
+0 s: all_cb raised at 'uvm_top' from 'test.c' count 1 (busy)
+0 s: all_cb raised at 'test' from 'test' count 1
+0 s: all_cb raised at 'uvm_top' from 'test' count 1
+10 ns: all_cb dropped at 'test.c' from 'test.c' count 1 (done)
+10 ns: all_cb all_dropped at 'test.c' from 'test.c' count 1 (done)
+10 ns: all_cb dropped at 'test' from 'test.c' count 1 (done)
+10 ns: all_cb dropped at 'uvm_top' from 'test.c' count 1 (done)
+20 ns: all_cb raised at 'test' from 'test' count 2 (own objection)
+20 ns: own_cb raised at 'test' from 'test' count 2 (own objection)
+20 ns: all_cb raised at 'uvm_top' from 'test' count 2 (own objection)
+20 ns: own_cb raised at 'uvm_top' from 'test' count 2 (own objection)
+25 ns: all_cb dropped at 'test' from 'test' count 2 (own objection)
+25 ns: own_cb dropped at 'test' from 'test' count 2 (own objection)
+25 ns: all_cb all_dropped at 'test' from 'test' count 2 (own objection)
+25 ns: own_cb all_dropped at 'test' from 'test' count 2 (own objection)
+25 ns: all_cb dropped at 'uvm_top' from 'test' count 2 (own objection)
+25 ns: own_cb dropped at 'uvm_top' from 'test' count 2 (own objection)
+25 ns: all_cb all_dropped at 'uvm_top' from 'test' count 2 (own objection)
+25 ns: own_cb all_dropped at 'uvm_top' from 'test' count 2 (own objection)
+30 ns: all_cb raised at 'test' from 'test' count 1
+30 ns: all_cb raised at 'uvm_top' from 'test' count 1
+30 ns: all_cb dropped at 'test' from 'test' count 1
+30 ns: all_cb all_dropped at 'test' from 'test' count 1
+30 ns: all_cb dropped at 'uvm_top' from 'test' count 1
+30 ns: all_cb all_dropped at 'uvm_top' from 'test' count 1
+35 ns: no callback after it was deleted
+35 ns: all_cb dropped at 'test' from 'test' count 1
+35 ns: all_cb all_dropped at 'test' from 'test' count 1
+35 ns: all_cb dropped at 'uvm_top' from 'test' count 1
+35 ns: all_cb all_dropped at 'uvm_top' from 'test' count 1
+UVM_INFO <removed by verify-uvm.pl> @ 35 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 35 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
