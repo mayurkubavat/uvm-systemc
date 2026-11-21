@@ -43,7 +43,8 @@ namespace uvm {
 //----------------------------------------------------------------------
 
 uvm_sequence_base::uvm_sequence_base( uvm_object_name name_ )
- : uvm_sequence_item( name_ ), m_sequence_state(UVM_CREATED)
+ : uvm_sequence_item( name_ ), do_not_randomize(false),
+   m_sequence_state(UVM_CREATED)
 {
   m_wait_for_grant_semaphore = 0;
   m_next_transaction_id = 1;
@@ -689,8 +690,6 @@ uvm_sequence_item* uvm_sequence_base::create_item( uvm_object_wrapper* type_var,
 //! initialized using #create_item, then it will be initialized here to use
 //! the default sequencer specified by #m_sequencer.  Randomization
 //! may be done between #start_item and #finish_item to ensure late generation
-//!
-//!  TODO - randomization not implemented
 //----------------------------------------------------------------------
 
 void uvm_sequence_base::start_item( uvm_sequence_item* item,

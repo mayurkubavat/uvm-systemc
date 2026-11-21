@@ -214,17 +214,13 @@ void uvm_sequencer_param_base<REQ,RSP>::send_request( uvm_sequence_base* sequenc
 
   if (param_tp != nullptr)
   {
-    param_t = *param_tp; // TODO workaround: dereference to get const REQ& for the TLM put. Alternative?
-
     if (rerandomize)
     {
-      // TODO no randomization for UVM-SC yet
-      // report error is dummy for now
-      uvm_report_error("SEQR-RND", "Randomization not implemented and thus skipped", UVM_NONE);
-
-      //if (!param_t->randomize())
-      //  uvm_report_warning("SQRSNDREQ", "Failed to rerandomize sequence item in send_request");
+      if (!seq_item->m_uvm_randomize())
+        uvm_report_warning("SQRSNDREQ", "Failed to rerandomize sequence item in send_request");
     }
+
+    param_t = *param_tp; // TODO workaround: dereference to get const REQ& for the TLM put. Alternative?
 
     if (param_t.get_transaction_id() == -1)
       param_t.set_transaction_id(sequence_ptr->m_next_transaction_id++);

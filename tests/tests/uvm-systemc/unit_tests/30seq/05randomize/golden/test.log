@@ -1,0 +1,89 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+0 s: randomize count_seq to count 2
+default sequences
+0 s: fixed sends 3 items
+0 s: count_seq sends 2 items
+0 s: randomize req to 100
+0 s: randomize req to 101
+0 s: main_drv got value 100
+0 s: fixed_drv got value 101
+10 ns: randomize req to 102
+10 ns: randomize req to 103
+10 ns: fixed_drv got value 102
+10 ns: main_drv got value 103
+20 ns: randomize req to 104
+20 ns: fixed_drv got value 104
+send_request
+100 ns: drv got value 1
+110 ns: randomize req to 105
+110 ns: drv got value 105
+120 ns: value of req in the sequence 105
+120 ns: randomize req fails
+UVM_WARNING @ 120 ns: test.sqr [SQRSNDREQ] Failed to rerandomize sequence item in send_request
+120 ns: drv got value 105
+UVM_DO
+130 ns: pre_do
+130 ns: randomize req to 106
+130 ns: mid_do 106
+130 ns: drv got value 106
+140 ns: randomize sub to count 2
+140 ns: sub sends 2 items
+140 ns: randomize req to 107
+140 ns: drv got value 107
+150 ns: randomize req to 108
+150 ns: drv got value 108
+160 ns: fixed_sub sends 1 items
+160 ns: randomize req to 109
+160 ns: drv got value 109
+170 ns: pre_do
+170 ns: randomize req_with to 110
+UVM_WARNING <removed by verify-uvm.pl> @ 170 ns: test.sqr@@s2 [RNDCSTR] The constraints of uvm_do_with are not applied: req_with->value == 5
+170 ns: mid_do 110
+170 ns: drv got value 110
+180 ns: pre_do
+180 ns: randomize req_with to 111
+180 ns: mid_do 111
+180 ns: drv got value 111
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class void_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize void_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class private_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize private_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class protected_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize protected_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class pointer_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize pointer_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class argument_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize argument_item returns 1
+190 ns: randomize ambiguous_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The class of object no_utils_item is derived from base_item without UVM_OBJECT_UTILS or UVM_OBJECT_PARAM_UTILS, so it is randomized with the randomize() of base_item. A randomize() which it declares is only called if it overrides a virtual one.
+190 ns: randomize no_utils_item returns 1
+190 ns: randomize final_item
+190 ns: randomize final_item returns 1
+UVM_WARNING @ 190 ns: reporter [RNDNOTCALLED] The member randomize of class final_private_item is not called to randomize its objects. Declare it as a public member function without arguments, which returns bool or an integral type, and which is not ambiguous.
+190 ns: randomize final_private_item returns 1
+190 ns: randomize final_dtor_item returns 1
+190 ns: randomize void_item returns 1
+190 ns: randomize private_item returns 1
+190 ns: randomize protected_item returns 1
+190 ns: randomize pointer_item returns 1
+190 ns: randomize argument_item returns 1
+190 ns: randomize ambiguous_item returns 1
+190 ns: randomize no_utils_item returns 1
+190 ns: randomize final_item
+190 ns: randomize final_item returns 1
+190 ns: randomize final_private_item returns 1
+190 ns: randomize final_dtor_item returns 1
+UVM_INFO <removed by verify-uvm.pl> @ 190 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   9
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNDCSTR]               1
+[RNDNOTCALLED]          7
+[RNTST]                 1
+[SQRSNDREQ]             1
+UVM_INFO @ 190 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
