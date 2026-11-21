@@ -330,6 +330,13 @@
     <ClInclude Include="..\..\src\uvmsc\print\uvm_tree_printer.h" />
     <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_reg_bit_bash_seq.h" />
     <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_reg_mem_hdl_paths_seq.h" />
+    <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_reg_hw_reset_seq.h" />
+    <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_reg_access_seq.h" />
+    <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_mem_walk_seq.h" />
+    <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_mem_access_seq.h" />
+    <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_reg_mem_shared_access_seq.h" />
+    <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_reg_mem_built_in_seq.h" />
+    <ClInclude Include="..\..\src\uvmsc\reg\sequences\uvm_reg_randval.h" />
     <ClInclude Include="..\..\src\uvmsc\reg\uvm_hdl_path_concat.h" />
     <ClInclude Include="..\..\src\uvmsc\reg\uvm_mem.h" />
     <ClInclude Include="..\..\src\uvmsc\reg\uvm_mem_mam.h" />

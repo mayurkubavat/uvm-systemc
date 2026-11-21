@@ -25,6 +25,7 @@
 
 #include "uvc_intf.h"
 #include "transaction.h"
+#include "reg.h"
 
 // TODO move to command line option
 #define NUM_REGS 10
@@ -34,12 +35,13 @@ class dut : public sc_core::sc_module
 public:
   sc_core::sc_in<transaction> in;
 
-  // Dummy Registers
-  sc_dt::sc_lv<32> myreg[NUM_REGS];
+  // Dummy Registers, which can be reached by their name for backdoor access
+  sc_core::sc_vector< reg<uvm::uvm_reg_data_t> > myreg;
 
   SC_HAS_PROCESS(dut);
 
-  dut( sc_core::sc_module_name name ) : sc_core::sc_module(name)
+  dut( sc_core::sc_module_name name )
+  : sc_core::sc_module(name), myreg("myreg", NUM_REGS)
   {
     reset();
     SC_THREAD(proc);
@@ -58,9 +60,9 @@ public:
     int addr_loc = tr.addr.to_int()/4;
 
     if(tr.dir == uvm::UVM_WRITE)
-      myreg[addr_loc] = tr.data;
+      myreg[addr_loc] = uvm::uvm_reg_data_t(tr.data.to_uint());
     else
-      tr.data = myreg[addr_loc];
+      tr.data = myreg[addr_loc].read().to_uint64();
   }
 
  private:

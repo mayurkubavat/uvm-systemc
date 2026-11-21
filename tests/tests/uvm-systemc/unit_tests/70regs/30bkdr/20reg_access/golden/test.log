@@ -1,0 +1,47 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+poke ctrl, design has: status UVM_IS_OK, value 0xa5a5
+peek ctrl: status UVM_IS_OK, value 0x1234
+mirror of ctrl: status UVM_IS_OK, value 0x1234
+backdoor write ctrl, design has: status UVM_IS_OK, value 0xff0
+backdoor read ctrl: status UVM_IS_OK, value 0x4321
+poke stat, design has stat_lo: status UVM_IS_OK, value 0xef
+poke stat, design has stat_hi: status UVM_IS_OK, value 0xbe
+peek stat: status UVM_IS_OK, value 0x1234
+poke id, design has id_a: status UVM_IS_OK, value 0xc0
+poke id, design has id_b: status UVM_IS_OK, value 0xc0
+peek id: status UVM_IS_OK, value 0xc0
+the copies differ, an error is expected
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Backdoor read of register model.id with multiple HDL copies: values are not the same: 0xc0 at path 'top.id_a', and 0xc1 at path 'top.id_b'. Returning first value.
+peek id: status UVM_NOT_OK, value 0xc0
+the mirror differs from the design, an error is expected
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Register 'model.ctrl' value read from DUT (0x4321) does not match mirrored value (0xabcd)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Field data (model.ctrl[15:0]) mismatch read = 0x4321(size: 16) mirrored = 0xabcd(size: 16)
+mirror ctrl with check, mirror is: status UVM_IS_OK, value 0x4321
+the register has no HDL path, errors are expected
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] No backdoor access available to peek register 'model.nopath'
+peek nopath: status UVM_NOT_OK, value 0x0
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] No backdoor access available to poke register 'model.nopath'
+poke nopath: status UVM_NOT_OK, value 0x0
+the slice does not fit into the register, errors are expected
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] HDL path slice 'top.ctrl' (offset 12, size 8) is not within the 16 bits of register 'model.wide'
+peek wide: status UVM_NOT_OK, value 0x0
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] HDL path slice 'top.ctrl' (offset 12, size 8) is not within the 16 bits of register 'model.wide'
+poke wide, design has ctrl: status UVM_NOT_OK, value 0x4321
+no further errors are expected
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@uvm_reg_sequence_inst [uvm_reg_mem_hdl_paths_seq] checking HDL paths for all registers/memories in model
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@uvm_reg_sequence_inst [uvm_reg_mem_hdl_paths_seq] Validating HDL paths in model for default design abstraction
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@uvm_reg_sequence_inst [uvm_reg_mem_hdl_paths_seq] HDL path validation completed
+number of errors: 6
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   5
+UVM_WARNING   :   0
+UVM_ERROR     :   6
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[RegModel]              7
+[uvm_reg_mem_hdl_paths_seq]                                      3
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

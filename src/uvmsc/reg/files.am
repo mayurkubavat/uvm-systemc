@@ -32,8 +32,15 @@ H_FILES += \
 	reg/uvm_vreg_cbs.h \
 	reg/uvm_vreg_field.h \
 	reg/uvm_vreg_field_cbs.h \
+    reg/sequences/uvm_mem_access_seq.h \
+    reg/sequences/uvm_mem_walk_seq.h \
+    reg/sequences/uvm_reg_access_seq.h \
     reg/sequences/uvm_reg_bit_bash_seq.h \
-    reg/sequences/uvm_reg_mem_hdl_paths_seq.h
+    reg/sequences/uvm_reg_hw_reset_seq.h \
+    reg/sequences/uvm_reg_mem_built_in_seq.h \
+    reg/sequences/uvm_reg_mem_hdl_paths_seq.h \
+    reg/sequences/uvm_reg_mem_shared_access_seq.h \
+    reg/sequences/uvm_reg_randval.h
 
 CXX_FILES += \
 	reg/uvm_mem.cpp \
