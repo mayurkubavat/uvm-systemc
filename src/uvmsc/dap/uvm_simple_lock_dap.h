@@ -34,10 +34,10 @@
 #include "uvmsc/macros/uvm_object_defines.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 
-// forward declaration
-class uvm_object;
-
 namespace uvm {
+
+// forward declarations
+class uvm_object;
 
 //----------------------------------------------------------------------------
 // Class: uvm_simple_lock_dap
