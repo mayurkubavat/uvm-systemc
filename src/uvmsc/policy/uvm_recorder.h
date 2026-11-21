@@ -1,8 +1,9 @@
-//-----------------------------------------------------------------------------
-//   Copyright 2007-2011 Mentor Graphics Corporation
-//   Copyright 2007-2011 Cadence Design Systems, Inc.
-//   Copyright 2010 Synopsys, Inc.
+//----------------------------------------------------------------------
+//   Copyright 2007-2018 Cadence Design Systems, Inc.
+//   Copyright 2007-2014 Mentor Graphics Corporation
+//   Copyright 2013-2024 NVIDIA Corporation
 //   Copyright 2013 NXP B.V.
+//   Copyright 2026 Mayur Kubavat
 //   All Rights Reserved Worldwide
 //
 //   Licensed under the Apache License, Version 2.0 (the
@@ -18,184 +19,253 @@
 //   CONDITIONS OF ANY KIND, either express or implied.  See
 //   the License for the specific language governing
 //   permissions and limitations under the License.
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------
 
 #ifndef UVM_RECORDER_H_
 #define UVM_RECORDER_H_
 
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+
 #include <systemc>
 
-#include "uvmsc/macros/uvm_object_defines.h"
-#include "uvmsc/base/uvm_object_globals.h"
 #include "uvmsc/base/uvm_object.h"
+#include "uvmsc/base/uvm_object_globals.h"
 #include "uvmsc/factory/uvm_object_registry.h"
+#include "uvmsc/macros/uvm_object_defines.h"
 
 namespace uvm {
 
+class uvm_tr_stream;
+class uvm_text_tr_database;
 
-// forward class declarations
-class uvm_scope_stack;
-
-//------------------------------------------------------------------------------
+//----------------------------------------------------------------------
 // CLASS: uvm_recorder
 //
-//! The class #uvm_recorder shall provide a policy object for recording objects of
-//! type #uvm_object.
-//! The policies determine how recording should be done.
+//! Records the attributes of one transaction into the stream of a
+//! transaction database. A recorder is created by
+//! uvm_tr_stream::open_recorder() and belongs to its stream: it is
+//! deleted when it is freed, so it shall not be used after free(); use
+//! its handle to find it again (get_recorder_from_handle()).
 //!
-//! A default recorder instance, #uvm_default_recorder, is used when the
-//! uvm_object::record is called without specifying a recorder.
-//----------------------------------------------------------------------------
-
+//! This base class keeps the state of the recorder and does not store
+//! anything: an extension implements the do_* member functions, as
+//! uvm_text_recorder does.
+//----------------------------------------------------------------------
 
 class uvm_recorder : public uvm_object
 {
- public:
+  friend class uvm_tr_stream;
 
+ public:
   UVM_OBJECT_UTILS(uvm_recorder);
 
-  uvm_recorder( const std::string& name = "uvm_recorder" );
-
+  explicit uvm_recorder( const std::string& name = "uvm_recorder" );
   virtual ~uvm_recorder();
 
-  virtual void record_field( const std::string& name,
-                             uvm_bitstream_t value,
-                             int size,
-                             uvm_radix_enum radix = UVM_NORADIX);
-
-  virtual void record_field_real( const std::string& name,
-                                  double value );
-
-  virtual void record_object( const std::string& name,
-                              uvm_object* value );
-
-  virtual void record_string( const std::string& name, const std::string& value );
-
-  virtual void record_time( const std::string& name, const sc_core::sc_time& value );
-
-  virtual void record_generic( const std::string& name, const std::string& value );
-
-
   //--------------------------------------------------------------------------
-  // data member: tr_handle
-  //
-  //! This is an integral handle to a transaction object. Its use is vendor
-  //! specific.
-  //! A handle of 0 indicates there is no active transaction object.
+  // Group: Configuration API
   //--------------------------------------------------------------------------
 
-  int tr_handle; // default: 0
+  //! The default radix of record_field() without a radix
+  uvm_radix_enum default_radix;
+
+  //! Filters of the fields which do_record() may test
+  bool physical;
+  bool abstract;
+
+  //! Records the instance ids of the objects
+  bool identifier;
+
+  //! The recursion policy for recording objects
+  uvm_recursion_policy_enum policy;
+
+  virtual void set_recursion_policy( uvm_recursion_policy_enum p );
+  virtual uvm_recursion_policy_enum get_recursion_policy() const;
+
+  virtual void set_id_enabled( bool enabled );
+  virtual bool get_id_enabled() const;
+
+  virtual void set_default_radix( uvm_radix_enum radix );
+  virtual uvm_radix_enum get_default_radix() const;
 
   //--------------------------------------------------------------------------
-  // data member: default_radix
-  //
-  //! This is the default radix setting if #record_field is called without
-  //! a radix.
+  // Group: Transaction Recorder API
   //--------------------------------------------------------------------------
 
-  uvm_radix_enum default_radix; // default = UVM_HEX;
+  uvm_tr_stream* get_stream() const;
+
+  void close( const sc_core::sc_time& close_time = sc_core::SC_ZERO_TIME );
+  void free( const sc_core::sc_time& close_time = sc_core::SC_ZERO_TIME );
+
+  bool is_open() const;
+  sc_core::sc_time get_open_time() const;
+
+  bool is_closed() const;
+  sc_core::sc_time get_close_time() const;
 
   //--------------------------------------------------------------------------
-  // data member: physical
-  //
-  //! This boolean variable provides a filtering mechanism for fields.
-  //! The #abstract and physical settings allow an object to distinguish between
-  //! two different classes of fields.
-  //! It is up to you, in the uvm_object::do_record method, to test the
-  //! setting of this field if you want to use the physical trait as a filter.
+  // Group: Handles
   //--------------------------------------------------------------------------
 
-  bool physical; // default = true;
+  int get_handle() const;
+  static uvm_recorder* get_recorder_from_handle( int id );
 
   //--------------------------------------------------------------------------
-  // data member: abstract
-  //
-  //! This boolean variable provides a filtering mechanism for fields.
-  //!
-  //! The abstract and physical settings allow an object to distinguish between
-  //! two different classes of fields.
-  //!
-  //! It is up to you, in the uvm_object::do_record method, to test the
-  //! setting of this field if you want to use the abstract trait as a filter.
+  // Group: Attribute Recording
   //--------------------------------------------------------------------------
 
-  bool abstract; // default = true;
+  void record_field( const std::string& name,
+                     const uvm_bitstream_t& value,
+                     int size,
+                     uvm_radix_enum radix = UVM_NORADIX );
 
-  //--------------------------------------------------------------------------
-  // data member: identifier
-  //
-  //! This data member is used to specify whether or not an object's reference should be
-  //! recorded when the object is recorded.
-  //--------------------------------------------------------------------------
+  void record_field_int( const std::string& name,
+                         const uvm_integral_t& value,
+                         int size,
+                         uvm_radix_enum radix = UVM_NORADIX );
 
-  bool identifier; // default = true;
+  void record_field_real( const std::string& name, double value );
 
-  //--------------------------------------------------------------------------
-  // data member: recursion_policy
-  //
-  //! Sets the recursion policy for recording objects.
-  //!
-  //! The default policy is deep (which means to recurse an object).
-  //--------------------------------------------------------------------------
+  void record_object( const std::string& name, uvm_object* value );
 
-  uvm_recursion_policy_enum policy; // default = UVM_DEFAULT_POLICY;
+  void record_string( const std::string& name, const std::string& value );
+
+  void record_time( const std::string& name, const sc_core::sc_time& value );
+
+  void record_generic( const std::string& name,
+                       const std::string& value,
+                       const std::string& type_name = "" );
+
+  virtual bool use_record_attribute() const;
+  virtual int get_record_attribute_handle() const;
 
   /////////////////////////////////////////////////////
   // Implementation-defined member functions below,
   // not part of UVM Class reference / LRM
   /////////////////////////////////////////////////////
 
-  int recording_depth; // TODO move to private?
+  //! The number of objects which are being recorded, one inside the other
+  int get_active_object_depth() const;
+
+  //! Kept for compatibility: the depth of the recording
+  int recording_depth;
+
+ protected:
+  //--------------------------------------------------------------------------
+  // Group: Implementation Agnostic API
+  //--------------------------------------------------------------------------
+
+  virtual void do_open( uvm_tr_stream* stream,
+                        const sc_core::sc_time& open_time,
+                        const std::string& type_name );
+  virtual void do_close( const sc_core::sc_time& close_time );
+  virtual void do_free();
+
+  virtual void do_record_field( const std::string& name,
+                                const uvm_bitstream_t& value,
+                                int size,
+                                uvm_radix_enum radix );
+
+  virtual void do_record_field_int( const std::string& name,
+                                    const uvm_integral_t& value,
+                                    int size,
+                                    uvm_radix_enum radix );
+
+  virtual void do_record_field_real( const std::string& name, double value );
+
+  virtual void do_record_object( const std::string& name, uvm_object* value );
+
+  virtual void do_record_string( const std::string& name, const std::string& value );
+
+  virtual void do_record_time( const std::string& name, const sc_core::sc_time& value );
+
+  virtual void do_record_generic( const std::string& name,
+                                  const std::string& value,
+                                  const std::string& type_name );
 
  private:
+  void m_do_open( uvm_tr_stream* stream,
+                  const sc_core::sc_time& open_time,
+                  const std::string& type_name );
+  void m_free_handle();
 
+  static std::map<int, uvm_recorder*>& m_recorders_by_id();
 
-  std::ofstream file;
-  std::ostream* outstr;
-  std::string filename;
-
-  uvm_scope_stack* scope;
-
-  static int handle;
-
-  static std::map<int, bool>& m_handles();
-
-  virtual bool open_file();
-
-  virtual int create_stream( const std::string& name,
-                             const std::string& t,
-                             const std::string& scope );
-
-  virtual void m_set_attribute( int txh,
-                                const std::string& nm,
-                                const std::string& value );
-
-  virtual void set_attribute( int txh,
-                              const std::string& nm,
-                              const std::string& value, // TODO was logic [1023:0]
-                              uvm_radix_enum radix,
-                              int numbits = 1024);
-
-  virtual bool check_handle_kind( const std::string& htype, int handle );
-
-  virtual int begin_tr( const std::string& txtype,
-                        int stream,
-                        const std::string& nm,
-                        const std::string& label = "",
-                        const std::string& desc = "",
-                        const sc_core::sc_time begin_time = sc_core::SC_ZERO_TIME );
-
-  virtual void end_tr( int handle, const sc_core::sc_time end_time = sc_core::SC_ZERO_TIME );
-
-  virtual void link_tr( int h1,
-                        int h2,
-                        const std::string& relation = "" );
-
-  virtual void free_tr( int handle );
+  uvm_tr_stream* m_stream;
+  bool m_is_opened;
+  bool m_is_closed;
+  sc_core::sc_time m_open_time;
+  sc_core::sc_time m_close_time;
+  std::vector<uvm_object*> m_active_objects;
 
 }; // class uvm_recorder
 
+//----------------------------------------------------------------------
+// CLASS: uvm_text_recorder
+//
+//! The recorder of the uvm_text_tr_database, which writes the
+//! attributes to the text file of the database
+//----------------------------------------------------------------------
+
+class uvm_text_recorder : public uvm_recorder
+{
+ public:
+  UVM_OBJECT_UTILS(uvm_text_recorder);
+
+  explicit uvm_text_recorder( const std::string& name = "unnamed-uvm_text_recorder" );
+
+  void write_attribute( const std::string& nm,
+                        const uvm_bitstream_t& value,
+                        uvm_radix_enum radix,
+                        int numbits = UVM_MAX_STREAMBITS );
+
+  void write_attribute_int( const std::string& nm,
+                            const uvm_integral_t& value,
+                            uvm_radix_enum radix,
+                            int numbits = 64 );
+
+ protected:
+  virtual void do_open( uvm_tr_stream* stream,
+                        const sc_core::sc_time& open_time,
+                        const std::string& type_name );
+  virtual void do_close( const sc_core::sc_time& close_time );
+  virtual void do_free();
+
+  virtual void do_record_field( const std::string& name,
+                                const uvm_bitstream_t& value,
+                                int size,
+                                uvm_radix_enum radix );
+
+  virtual void do_record_field_int( const std::string& name,
+                                    const uvm_integral_t& value,
+                                    int size,
+                                    uvm_radix_enum radix );
+
+  virtual void do_record_field_real( const std::string& name, double value );
+
+  virtual void do_record_object( const std::string& name, uvm_object* value );
+
+  virtual void do_record_string( const std::string& name, const std::string& value );
+
+  virtual void do_record_time( const std::string& name, const sc_core::sc_time& value );
+
+  virtual void do_record_generic( const std::string& name,
+                                  const std::string& value,
+                                  const std::string& type_name );
+
+ private:
+  std::string m_current_context( const std::string& name = "" ) const;
+  void m_write_attr( const std::string& nm, const std::string& value,
+                     const std::string& radix, int numbits );
+
+  uvm_text_tr_database* m_text_db;
+  std::vector<std::string> m_object_names;
+
+}; // class uvm_text_recorder
+
 } // namespace uvm
-  
-  
-#endif /* UVM_RECORDER_H_ */
+
+#endif // UVM_RECORDER_H_
