@@ -88,6 +88,15 @@ endif # SEPARATE_INSTALL_TREE
 EXTRA_DIST += \
 	$(examples_FILES)
 
+# The FC4SC coverage example requires the optional FC4SC library. It is
+# only built and run by the CMake regression flow, and distributed here.
+EXTRA_DIST += \
+	simple/coverage/fc4sc/README.md \
+	simple/coverage/fc4sc/coverage_subscriber.h \
+	simple/coverage/fc4sc/monitor.h \
+	simple/coverage/fc4sc/packet.h \
+	simple/coverage/fc4sc/sc_main.cpp
+
 CLEANFILES += \
 	$(examples_CLEAN) \
 	$(check_SCRIPTS)

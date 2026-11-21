@@ -536,12 +536,42 @@ if (UVM_SYSTEMC_ENABLE_CRAVE AND NOT ENABLE_REGRESSION)
                    "ENABLE_REGRESSION.")
 endif ()
 
+option (UVM_SYSTEMC_ENABLE_FC4SC
+        "Add the FC4SC functional coverage example to the regression tests." OFF)
+set (FC4SC_HOME "" CACHE PATH
+     "FC4SC source directory, used when no FC4SC CMake package is found.")
+
+if (UVM_SYSTEMC_ENABLE_FC4SC AND NOT ENABLE_REGRESSION)
+  message (WARNING
+           "UVM_SYSTEMC_ENABLE_FC4SC has no effect without ENABLE_REGRESSION.")
+endif ()
+
 if (ENABLE_REGRESSION)
   if (UVM_SYSTEMC_ENABLE_CRAVE)
     # CRAVE and its UVM-SystemC layer (crave2uvm) are not part of this
     # package, see https://github.com/accellera-official/crave
     find_package (crave2uvm REQUIRED CONFIG)
     message (STATUS "Using CRAVE (${crave2uvm_DIR})")
+  endif ()
+
+  if (UVM_SYSTEMC_ENABLE_FC4SC)
+    # Prefer an FC4SC CMake package; fall back to a plain header checkout
+    # located via FC4SC_HOME.
+    find_package (FC4SC CONFIG QUIET)
+    if (NOT TARGET FC4SC::fc4sc)
+      find_path (FC4SC_INCLUDE_DIR fc4sc.hpp
+                 HINTS "${FC4SC_HOME}" ENV FC4SC_HOME
+                 PATH_SUFFIXES includes include/fc4sc include)
+      if (NOT FC4SC_INCLUDE_DIR)
+        message (FATAL_ERROR
+                 "UVM_SYSTEMC_ENABLE_FC4SC is set, but FC4SC was not found. "
+                 "Add the FC4SC installation to CMAKE_PREFIX_PATH or set "
+                 "FC4SC_HOME to the FC4SC source directory.")
+      endif ()
+      add_library (FC4SC::fc4sc INTERFACE IMPORTED)
+      set_target_properties (FC4SC::fc4sc PROPERTIES
+                             INTERFACE_INCLUDE_DIRECTORIES "${FC4SC_INCLUDE_DIR}")
+    endif ()
   endif ()
 
   include (CTest)
@@ -566,6 +596,7 @@ message (STATUS "  UVM_SYSTEMC_REGEX               = ${UVM_SYSTEMC_REGEX}")
 message (STATUS "  SystemC compatibility check     = ${UVM_SYSTEMC_SYSTEMC_COMPAT_CHECK}")
 message (STATUS "  ENABLE_REGRESSION               = ${ENABLE_REGRESSION}")
 message (STATUS "  UVM_SYSTEMC_ENABLE_CRAVE        = ${UVM_SYSTEMC_ENABLE_CRAVE}")
+message (STATUS "  UVM_SYSTEMC_ENABLE_FC4SC        = ${UVM_SYSTEMC_ENABLE_FC4SC}")
 message (STATUS "  INSTALL_TO_LIB_BUILD_TYPE_DIR   = ${INSTALL_TO_LIB_BUILD_TYPE_DIR}")
 message (STATUS "  INSTALL_TO_LIB_TARGET_ARCH_DIR  = ${INSTALL_TO_LIB_TARGET_ARCH_DIR}")
 message (STATUS "  INSTALL_LIB_TARGET_ARCH_SYMLINK = ${INSTALL_LIB_TARGET_ARCH_SYMLINK}")
