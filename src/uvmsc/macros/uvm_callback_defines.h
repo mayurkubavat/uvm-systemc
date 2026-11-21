@@ -77,13 +77,13 @@
 
 #define UVM_DO_OBJ_CALLBACKS(T,CB,OBJ,METHOD) \
    { \
-     ::uvm::uvm_callback_iter<T,CB>* iter = new ::uvm::uvm_callback_iter<T,CB>(OBJ); \
-     CB* cb = iter->first(); \
+     ::uvm::uvm_callback_iter<T,CB> iter(OBJ); \
+     CB* cb = iter.first(); \
      while(cb != nullptr) { \
        /*UVM_CB_TRACE_NOOBJ(cb, "Executing callback method 'METHOD' for callback " + cb->get_name() + " (CB) from " + OBJ->get_full_name() + " (T)")*/ \
        UVM_CB_TRACE_NOOBJ(cb, "Test") \
        cb->METHOD; \
-       cb = iter->next(); \
+       cb = iter.next(); \
      } \
    }
 
@@ -134,15 +134,15 @@
 
 #define UVM_DO_OBJ_CALLBACKS_EXIT_ON(T,CB,OBJ,METHOD,VAL) \
 { \
-  ::uvm::uvm_callback_iter<T,CB>* iter = new ::uvm::uvm_callback_iter<T,CB>(OBJ); \
-  CB* cb = iter->first(); \
+  ::uvm::uvm_callback_iter<T,CB> iter(OBJ); \
+  CB* cb = iter.first(); \
   while(cb != nullptr) { \
     if (cb->METHOD == true) { \
       UVM_CB_TRACE_NOOBJ(cb, "Executed callback method 'METHOD' for callback " + cb->get_name() + " (CB) from " + OBJ->get_full_name() + " (T) : returned value VAL (other callbacks will be ignored)") \
       return VAL; \
     } \
     UVM_CB_TRACE_NOOBJ(cb, "Executed callback method 'METHOD' for callback " + cb->get_name() + " (CB) from " + OBJ->get_full_name() + " (T) : did not return value VAL") \
-    cb = iter->next(); \
+    cb = iter.next(); \
   } \
   return !VAL; \
 }
