@@ -24,6 +24,7 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -81,6 +82,21 @@ uvm_objection::uvm_objection() : uvm_object( sc_core::sc_gen_unique_name("object
 uvm_objection::uvm_objection( const std::string& name ) : uvm_object(name)
 {
   m_objection_init();
+}
+
+uvm_objection::~uvm_objection()
+{
+  m_objections_list& objs = m_objections();
+  objs.erase(std::remove(objs.begin(), objs.end(), this), objs.end());
+
+  m_objection_list_t& sched = m_scheduled_list();
+  for (m_scheduled_list_itt it = sched.begin(); it != sched.end(); )
+  {
+    if ((*it)->objection == this)
+      it = sched.erase(it);
+    else
+      ++it;
+  }
 }
 
 //----------------------------------------------------------------------
@@ -580,8 +596,8 @@ void uvm_objection::m_objection_init()
 
 uvm_objection::m_objections_list& uvm_objection::m_objections()
 {
-  static m_objections_list list;
-  return list;
+  static m_objections_list* list = new m_objections_list();
+  return *list;
 }
 
 //----------------------------------------------------------------------
@@ -592,8 +608,9 @@ uvm_objection::m_objections_list& uvm_objection::m_objections()
 
 std::vector<uvm_objection_context_object*>& uvm_objection::m_scheduled_list()
 {
-  static std::vector<uvm_objection_context_object*> list;
-  return list;
+  static std::vector<uvm_objection_context_object*>* list =
+    new std::vector<uvm_objection_context_object*>();
+  return *list;
 }
 
 //----------------------------------------------------------------------

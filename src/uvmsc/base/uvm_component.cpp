@@ -715,6 +715,7 @@ void uvm_component::define_domain( uvm_domain& domain )
     m_schedule = new uvm_phase("uvm_sched", UVM_PHASE_SCHEDULE);
     uvm_domain::add_uvm_phases(m_schedule);
     domain.add(m_schedule);
+    domain.m_schedule = m_schedule;
 
     m_common = uvm_domain::get_common_domain();
     if (m_common->find(&domain, false) == nullptr)

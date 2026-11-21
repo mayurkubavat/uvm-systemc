@@ -94,6 +94,7 @@ class uvm_objection : public uvm_object
   // Constructors
   uvm_objection();
   uvm_objection( const std::string& name );
+  virtual ~uvm_objection();
 
   virtual void clear( uvm_object* obj = nullptr );
 
