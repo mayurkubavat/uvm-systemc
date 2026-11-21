@@ -1616,8 +1616,25 @@ void uvm_reg_field::do_write( uvm_reg_item* rw )
     rw->local_map->do_write(rw);
 
     if (system_map->get_auto_predict())
-      // TODO from UVM-SV: Call parent.m_sample();
+    {
+      uvm_status_e status = rw->status;
+      if (rw->status != UVM_NOT_OK)
+      {
+        uvm_reg_data_t field_mask = uvm_mask_size(m_size) << m_lsb;
+        uvm_reg_data_t byte_en = 0;
+        for (unsigned int i = 0; i < m_parent->get_n_bytes(); ++i)
+          byte_en[i] = (((field_mask >> (i * 8)) & 0xff) != 0) ? 1 : 0;
+        uvm_reg_data_t reg_val =
+            (m_parent->get_mirrored_value() & ~field_mask) |
+            ((rw->value[0] & uvm_mask_size(m_size)) << m_lsb);
+        m_parent->m_sample(reg_val, byte_en, 0, rw->map);
+        uvm_reg_block* blk = m_parent->get_parent();
+        if (blk != nullptr)
+          blk->m_sample(map_info->offset, 0, rw->map);
+      }
       do_predict(rw, UVM_PREDICT_WRITE);
+      rw->status = status;
+    }
 
     post_write(rw);
 
@@ -1694,8 +1711,25 @@ void uvm_reg_field::do_read( uvm_reg_item* rw )
     rw->local_map->do_read(rw);
 
     if (system_map->get_auto_predict())
-      // TODO from UVM-SV: Call parent.m_sample();
+    {
+      uvm_status_e status = rw->status;
+      if (rw->status != UVM_NOT_OK)
+      {
+        uvm_reg_data_t field_mask = uvm_mask_size(m_size) << m_lsb;
+        uvm_reg_data_t byte_en = 0;
+        for (unsigned int i = 0; i < m_parent->get_n_bytes(); ++i)
+          byte_en[i] = (((field_mask >> (i * 8)) & 0xff) != 0) ? 1 : 0;
+        uvm_reg_data_t reg_val =
+            (m_parent->get_mirrored_value() & ~field_mask) |
+            ((rw->value[0] & uvm_mask_size(m_size)) << m_lsb);
+        m_parent->m_sample(reg_val, byte_en, 1, rw->map);
+        uvm_reg_block* blk = m_parent->get_parent();
+        if (blk != nullptr)
+          blk->m_sample(map_info->offset, 1, rw->map);
+      }
       do_predict(rw, UVM_PREDICT_READ);
+      rw->status = status;
+    }
 
     post_read(rw);
 

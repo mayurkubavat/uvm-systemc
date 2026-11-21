@@ -2058,7 +2058,7 @@ void uvm_mem::do_write( uvm_reg_item* rw )
 
     if (rw->status != UVM_NOT_OK)
       for ( uvm_reg_addr_t idx = rw->offset;
-          idx <= rw->offset + rw->value.size();
+          idx < rw->offset + rw->value.size();
           idx++ )
       {
         m_sample(map_info->mem_range.stride * idx, 0, rw->map);
@@ -2175,7 +2175,7 @@ void uvm_mem::do_read( uvm_reg_item* rw )
 
     if (rw->status != UVM_NOT_OK)
       for (uvm_reg_addr_t idx = rw->offset;
-          idx <= rw->offset + rw->value.size();
+          idx < rw->offset + rw->value.size();
           idx++ )
       {
         m_sample(map_info->mem_range.stride * idx, 1, rw->map);
