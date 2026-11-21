@@ -187,7 +187,24 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
 
   rg = map->get_reg_by_offset(rw.addr, (rw.kind == UVM_READ));
 
-  // UVM_SV TODO: Add memory look-up and call uvm_mem::m_sample()
+  if (rg == nullptr)
+  {
+    uvm_mem* mem = map->get_mem_by_offset(rw.addr);
+    if (mem != nullptr)
+    {
+      uvm_reg_map* local_map = mem->get_local_map(map, "predictor::write()");
+      if (local_map != nullptr && rw.status != UVM_NOT_OK)
+      {
+        uvm_reg_map_info* map_info = local_map->get_mem_map_info(mem);
+        uvm_reg_addr_t mem_offset = rw.addr - map_info->mem_range.min;
+        mem->m_sample(mem_offset, rw.kind == UVM_READ, local_map);
+        uvm_reg_block* blk = mem->get_parent();
+        if (blk != nullptr)
+          blk->m_sample(map_info->offset + mem_offset, rw.kind == UVM_READ, local_map);
+      }
+      return;
+    }
+  }
 
   if (rg != nullptr)
   {

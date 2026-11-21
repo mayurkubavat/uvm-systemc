@@ -39,6 +39,7 @@
 #include "uvmsc/reg/uvm_reg_cbs.h"
 #include "uvmsc/conf/uvm_object_string_pool.h"
 #include "uvmsc/macros/uvm_message_defines.h"
+#include "uvmsc/dpi/uvm_hdl.h"
 
 namespace uvm {
 
@@ -1596,38 +1597,44 @@ void uvm_reg::backdoor_read( uvm_reg_item* rw )
 
 void uvm_reg::backdoor_write( uvm_reg_item* rw )
 {
-  /* TODO backdoor write
   std::vector<uvm_hdl_path_concat> paths;
-  std::vector<uvm_hdl_path_concat>::iterator paths_itT;
-
   bool ok = true;
 
   get_full_hdl_path(paths, rw->bd_kind);
 
-  for( paths_itT it = paths.begin(); it != paths.end(); it++ )
-  {
-    uvm_hdl_path_concat hdl_concat = (*it);
+  // no HDL path was found for this kind, there is nothing to write to
+  if (paths.empty())
+    ok = false;
 
-    for( int j = 0; j < hdl_concat.slices.size(); j++)
+  for( unsigned int i = 0; i < paths.size(); i++ )
+  {
+    uvm_hdl_path_concat hdl_concat = paths[i];
+
+    for( unsigned int j = 0; j < hdl_concat.slices.size(); j++ )
     {
       UVM_INFO("RegMem", "backdoor_write to " +
-          hdl_concat.slices[j].path ,UVM_DEBUG)
+        hdl_concat.slices[j].path, UVM_DEBUG);
 
-          if (hdl_concat.slices[j].offset < 0)
-          {
-            ok &= uvm_hdl_deposit(hdl_concat.slices[j].path,rw.value[0]);
-            continue;
-          }
+      if (hdl_concat.slices[j].offset < 0)
+      {
+        ok &= uvm_hdl_deposit(hdl_concat.slices[j].path, rw->value[0]);
+        continue;
+      }
+
+      if (!m_check_hdl_slice(hdl_concat.slices[j]))
+      {
+        ok = false;
+        continue;
+      }
 
       uvm_reg_data_t slice;
-      slice = rw.value[0] >> hdl_concat.slices[j].offset;
+      slice = rw->value[0] >> hdl_concat.slices[j].offset;
       slice &= uvm_mask_size(hdl_concat.slices[j].size);
       ok &= uvm_hdl_deposit(hdl_concat.slices[j].path, slice);
-
     }
   }
+
   rw->status = (ok ? UVM_IS_OK : UVM_NOT_OK);
-  */
 }
 
 //----------------------------------------------------------------------
@@ -1641,40 +1648,45 @@ void uvm_reg::backdoor_write( uvm_reg_item* rw )
 
 uvm_status_e uvm_reg::backdoor_read_func( uvm_reg_item* rw )
 {
-  /* TODO backdoor read func
-
   std::vector<uvm_hdl_path_concat> paths;
   uvm_reg_data_t val;
-
   bool ok = true;
 
   get_full_hdl_path(paths, rw->bd_kind);
 
-  for( int i = 0; i < paths.size(); i++ )
+  // no HDL path was found for this kind, there is nothing to read from
+  if (paths.empty())
+    ok = false;
+
+  for( unsigned int i = 0; i < paths.size(); i++ )
   {
     uvm_hdl_path_concat hdl_concat = paths[i];
 
     val = 0;
 
-    foreach (hdl_concat.slices[j])
+    for( unsigned int j = 0; j < hdl_concat.slices.size(); j++ )
     {
-      std::ostringstream str;
-      str << "backdoor_read from "
-          << hdl_concat.slices[j].path;
-      UVM_INFO("RegMem", str.str(), UVM_DEBUG);
+      UVM_INFO("RegMem", "backdoor_read from " +
+        hdl_concat.slices[j].path, UVM_DEBUG);
 
       if (hdl_concat.slices[j].offset < 0)
       {
-        ok &= uvm_hdl_read(hdl_concat.slices[j].path,val);
+        ok &= uvm_hdl_read(hdl_concat.slices[j].path, val);
         continue;
       }
 
-      uvm_reg_data_t slice;
+      if (!m_check_hdl_slice(hdl_concat.slices[j]))
+      {
+        ok = false;
+        continue;
+      }
+
+      uvm_reg_data_t slice = 0;
       int k = hdl_concat.slices[j].offset;
 
       ok &= uvm_hdl_read(hdl_concat.slices[j].path, slice);
 
-      for (int s = 0; s < hdl_concat.slices[j].size; s++)
+      for( int s = 0; s < hdl_concat.slices[j].size; s++ )
       {
         val[k++] = slice[0];
         slice >>= 1;
@@ -1691,29 +1703,49 @@ uvm_status_e uvm_reg::backdoor_read_func( uvm_reg_item* rw )
       std::ostringstream str;
       str << "Backdoor read of register "
           << get_full_name()
-          << " with multiple HDL copies: values are not the same: "
-          << rw->value[0]
-                       << " at path '"
-                       << uvm_hdl_concat2string(paths[0])
-                       << "', and "
-                       << val
-                       << " at path '"
-                       << uvm_hdl_concat2string(paths[i])
-                       << "'. Returning first value.";
+          << " with multiple HDL copies: values are not the same: 0x"
+          << std::hex << rw->value[0].to_uint64()
+          << " at path '"
+          << uvm_hdl_concat2string(paths[0])
+          << "', and 0x"
+          << val.to_uint64()
+          << " at path '"
+          << uvm_hdl_concat2string(paths[i])
+          << "'. Returning first value.";
       UVM_ERROR("RegModel", str.str());
       return UVM_NOT_OK;
     }
+
     std::ostringstream str;
     str << "returned backdoor value 0x"
         << std::hex << rw->value[0].to_uint64();
     UVM_INFO("RegMem", str.str(), UVM_DEBUG);
   }
 
-  rw->status = (ok) ? UVM_IS_OK : UVM_NOT_OK;
+  rw->status = (ok ? UVM_IS_OK : UVM_NOT_OK);
   return rw->status;
-  */
+}
 
-  return UVM_NOT_OK; // dummy only
+//----------------------------------------------------------------------
+// member function: m_check_hdl_slice
+//
+// Implementation defined
+// Check that a slice of a HDL path lies within the register
+//----------------------------------------------------------------------
+
+bool uvm_reg::m_check_hdl_slice( const uvm_hdl_path_slice& slice ) const
+{
+  if (slice.size > 0 && (slice.offset + slice.size) <= (int)m_n_bits)
+    return true;
+
+  std::ostringstream str;
+  str << "HDL path slice '" << slice.path
+      << "' (offset " << slice.offset << ", size " << slice.size
+      << ") is not within the " << m_n_bits << " bits of register '"
+      << get_full_name() << "'";
+  UVM_ERROR("RegModel", str.str());
+
+  return false;
 }
 
 //----------------------------------------------------------------------
@@ -1769,11 +1801,9 @@ void uvm_reg::include_coverage( const std::string& scope,
                                 uvm_reg_cvr_t models,
                                 uvm_object* accessor )
 {
-  /* TODO support of regular data in resource database
   uvm_reg_cvr_rsrc_db::set( "uvm_reg::"+ scope,
                             "include_coverage",
                             models, accessor);
-                            */
 }
 
 //----------------------------------------------------------------------
@@ -2542,7 +2572,7 @@ bool uvm_reg::do_check( uvm_reg_data_t expected,
   for( unsigned int i = 0; i < m_fields.size(); i++ )
   {
     std::string acc = m_fields[i]->get_access(map);
-    acc = acc.substr(0, 1);
+    acc = acc.substr(0, 2);
     if (m_fields[i]->get_compare() == UVM_NO_CHECK ||
         acc == "WO")
     {
@@ -2567,7 +2597,7 @@ bool uvm_reg::do_check( uvm_reg_data_t expected,
   for( unsigned int i = 0; i < m_fields.size(); i++ )
   {
     std::string acc = m_fields[i]->get_access(map);
-    acc = acc.substr(0, 1);
+    acc = acc.substr(0, 2);
     if (!(m_fields[i]->get_compare() == UVM_NO_CHECK || acc == "WO"))
     {
       uvm_reg_data_t mask = uvm_mask_size(m_fields[i]->get_n_bits());

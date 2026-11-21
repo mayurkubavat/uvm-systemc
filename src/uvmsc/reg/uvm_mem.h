@@ -67,6 +67,7 @@ class uvm_mem : public uvm_object
   friend class uvm_reg_block;
   friend class uvm_reg_map;
   friend class uvm_vreg;
+  template <typename BUSTYPE> friend class uvm_reg_predictor;
 
   typedef enum {UNKNOWNS, ZEROES, ONES, ADDRESS, VALUE, INCR, DECR} init_e;
 

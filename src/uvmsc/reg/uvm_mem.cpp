@@ -1449,7 +1449,8 @@ void uvm_mem::backdoor_write( uvm_reg_item* rw )
 uvm_status_e uvm_mem::backdoor_read_func( uvm_reg_item* rw )
 {
   std::vector<uvm_hdl_path_concat> paths;
-  uvm_hdl_data_t val;
+  // the type which backdoor_write() deposits
+  uvm_reg_data_t val;
   bool ok = true;
 
   get_full_hdl_path(paths, rw->bd_kind);
@@ -2057,7 +2058,7 @@ void uvm_mem::do_write( uvm_reg_item* rw )
 
     if (rw->status != UVM_NOT_OK)
       for ( uvm_reg_addr_t idx = rw->offset;
-          idx <= rw->offset + rw->value.size();
+          idx < rw->offset + rw->value.size();
           idx++ )
       {
         m_sample(map_info->mem_range.stride * idx, 0, rw->map);
@@ -2174,7 +2175,7 @@ void uvm_mem::do_read( uvm_reg_item* rw )
 
     if (rw->status != UVM_NOT_OK)
       for (uvm_reg_addr_t idx = rw->offset;
-          idx <= rw->offset + rw->value.size();
+          idx < rw->offset + rw->value.size();
           idx++ )
       {
         m_sample(map_info->mem_range.stride * idx, 1, rw->map);

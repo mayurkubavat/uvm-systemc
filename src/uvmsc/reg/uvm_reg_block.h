@@ -60,6 +60,7 @@ class uvm_reg_block : public uvm_object
 {
  public:
   friend class uvm_reg;
+  friend class uvm_reg_field;
   friend class uvm_vreg;
   friend class uvm_mem;
   template <typename BUSTYPE> friend class uvm_reg_predictor;

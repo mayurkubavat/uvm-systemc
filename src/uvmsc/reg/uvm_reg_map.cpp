@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "uvmsc/reg/uvm_reg_map.h"
+#include "uvmsc/reg/uvm_reg_transaction_order_policy.h"
 #include "uvmsc/reg/uvm_reg_block.h"
 #include "uvmsc/reg/uvm_reg_model.h"
 #include "uvmsc/reg/uvm_reg_item.h"
@@ -122,6 +123,7 @@ uvm_reg_map::uvm_reg_map( const std::string& name )
 
   m_auto_predict = false;
   m_check_on_read = false;
+  m_policy = nullptr;
 
 }
 
@@ -1058,6 +1060,31 @@ bool uvm_reg_map::get_auto_predict() const
 
 
 //----------------------------------------------------------------------
+// member function: set_transaction_order_policy
+//
+//! Sets the policy which orders the bus transactions of one register
+//! access. The map does not own the policy; nullptr removes it.
+//----------------------------------------------------------------------
+
+void uvm_reg_map::set_transaction_order_policy( uvm_reg_transaction_order_policy* pol )
+{
+  m_policy = pol;
+}
+
+
+//----------------------------------------------------------------------
+// member function: get_transaction_order_policy
+//
+//! Returns the policy which orders the bus transactions, or nullptr
+//----------------------------------------------------------------------
+
+uvm_reg_transaction_order_policy* uvm_reg_map::get_transaction_order_policy() const
+{
+  return m_policy;
+}
+
+
+//----------------------------------------------------------------------
 // member function: set_check_on_read
 //
 //! Sets the check-on-read mode for his map
@@ -1173,25 +1200,12 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
     curr_byte = 0;
     n_bits= n_bits_init;
 
+    // the bus transactions of this value, in the order of their addresses
+    std::vector<uvm_reg_bus_op> accesses;
+
     for( unsigned int i = 0; i < addrs.size(); i++ )
     {
-      uvm_sequence_item* bus_req;
       uvm_reg_bus_op rw_access;
-      uvm_reg_data_t data;
-
-      // TODO check
-      // eq: (value >> (curr_byte*8)) & (( 1 << (bus_width * 8))-1);
-      data = (value >> (curr_byte*8)) & uvm_mask_size(bus_width * 8);
-
-      std::ostringstream str;
-      str << "Writing 0x"
-          <<  data.to_string(sc_dt::SC_HEX_US, false)
-          << " at address 0x"
-          << std::hex << addrs[i].to_uint64()
-          << " via map '"
-          << rw->map->get_full_name()
-          << "'...";
-      UVM_INFO(get_type_name(), str.str(), UVM_FULL);
 
       if (rw->element_kind == UVM_FIELD)
       {
@@ -1201,9 +1215,36 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
 
       rw_access.kind = rw->access_kind;
       rw_access.addr = addrs[i];
-      rw_access.data = data;
+      rw_access.data = (value >> (curr_byte*8)) & uvm_mask_size(bus_width * 8);
       rw_access.n_bits = (n_bits > bus_width*8) ? bus_width*8 : n_bits;
       rw_access.byte_en = byte_en;
+
+      accesses.push_back(rw_access);
+
+      curr_byte += bus_width;
+      n_bits -= bus_width * 8;
+    }
+
+    // Other than in UVM-SV, which orders the transactions of all the
+    // values of a burst at once, the policy orders those of each value.
+    if (m_policy != nullptr)
+      m_policy->order(accesses);
+
+    for( unsigned int i = 0; i < accesses.size(); i++ )
+    {
+      uvm_sequence_item* bus_req;
+      uvm_reg_bus_op& rw_access = accesses[i];
+      uvm_reg_data_t data = rw_access.data;
+
+      std::ostringstream str;
+      str << "Writing 0x"
+          <<  data.to_string(sc_dt::SC_HEX_US, false)
+          << " at address 0x"
+          << std::hex << rw_access.addr.to_uint64()
+          << " via map '"
+          << rw->map->get_full_name()
+          << "'...";
+      UVM_INFO(get_type_name(), str.str(), UVM_FULL);
 
       adapter->m_set_item(rw);
       bus_req = adapter->reg2bus(rw_access);
@@ -1233,7 +1274,7 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
       else
         adapter->bus2reg(bus_req, rw_access);
 
-       if (rw->parent != nullptr && i == addrs.size()-1)
+       if (rw->parent != nullptr && i == accesses.size()-1)
         rw->parent->post_do(rw);
 
       rw->status = rw_access.status;
@@ -1242,7 +1283,7 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
       str1 << "Wrote 0x"
            << data.to_string(sc_dt::SC_HEX_US, false)
            << " at address 0x"
-           << std::hex << addrs[i].to_uint64()
+           << std::hex << rw_access.addr.to_uint64()
            << " via map '"
            << rw->map->get_full_name()
            << "': "
@@ -1253,10 +1294,7 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
       if (rw->status == UVM_NOT_OK)
         break;
 
-      curr_byte += bus_width;
-      n_bits -= bus_width * 8;
-
-    } // for-addr
+    } // for-access
 
     for( unsigned int i = 0; i < addrs.size(); i++ )
       addrs[i] = addrs[i] + map_info->mem_range.stride;
@@ -1335,19 +1373,15 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
     curr_byte = 0;
     rw->value[val_idx] = 0;
 
+    // the bus transactions of this value, in the order of their addresses,
+    // and the byte of the value which each of them reads
+    std::vector<uvm_reg_bus_op> accesses;
+    std::vector<unsigned int> first_bytes;
+    unsigned int n_bits_left = n_bits;
+
     for( unsigned int i = 0; i < addrs.size(); i++ )
     {
-      uvm_sequence_item* bus_req;
       uvm_reg_bus_op rw_access;
-      uvm_reg_data_logic_t data;
-
-      std::ostringstream inf;
-      inf << "Reading address 0x"
-          << std::hex << addrs[i].to_uint64()
-          << " via map '"
-          << get_full_name()
-          << "'...";
-      UVM_INFO(get_type_name(), inf.str(), UVM_FULL);
 
       if (rw->element_kind == UVM_FIELD)
         for( unsigned int z = 0; z < bus_width; z++)
@@ -1357,7 +1391,61 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
       rw_access.addr = addrs[i];
       rw_access.data = 0;
       rw_access.byte_en = byte_en;
-      rw_access.n_bits = (n_bits > bus_width*8) ? bus_width*8 : n_bits;
+      rw_access.n_bits = (n_bits_left > bus_width*8) ? bus_width*8 : n_bits_left;
+
+      accesses.push_back(rw_access);
+      first_bytes.push_back(curr_byte);
+
+      curr_byte += bus_width;
+      n_bits_left -= bus_width * 8;
+    }
+
+    if (m_policy != nullptr)
+    {
+      std::vector<uvm_reg_bus_op> in_address_order = accesses;
+      m_policy->order(accesses);
+
+      // Other than in UVM-SV, the data of each transaction goes to its own
+      // bytes of the value, whatever order the policy chose.
+      std::vector<unsigned int> ordered_bytes;
+      for( unsigned int i = 0; i < accesses.size(); i++ )
+      {
+        unsigned int byte_pos = 0;
+        bool found = false;
+        for( unsigned int j = 0; j < in_address_order.size(); j++ )
+          if (in_address_order[j].addr == accesses[i].addr)
+          {
+            byte_pos = first_bytes[j];
+            found = true;
+          }
+
+        if (!found)
+        {
+          std::ostringstream str;
+          str << "The transaction order policy of map '" << get_full_name()
+              << "' returned a read at address 0x" << std::hex << accesses[i].addr.to_uint64()
+              << ", which is not one of the addresses of the access; its data is not used";
+          UVM_ERROR("RegMem", str.str());
+          byte_pos = static_cast<unsigned int>(-1);
+        }
+        ordered_bytes.push_back(byte_pos);
+      }
+      first_bytes = ordered_bytes;
+    }
+
+    for( unsigned int i = 0; i < accesses.size(); i++ )
+    {
+      uvm_sequence_item* bus_req;
+      uvm_reg_bus_op& rw_access = accesses[i];
+      uvm_reg_data_logic_t data;
+
+      std::ostringstream inf;
+      inf << "Reading address 0x"
+          << std::hex << rw_access.addr.to_uint64()
+          << " via map '"
+          << get_full_name()
+          << "'...";
+      UVM_INFO(get_type_name(), inf.str(), UVM_FULL);
 
       adapter->m_set_item(rw);
       bus_req = adapter->reg2bus(rw_access);
@@ -1400,7 +1488,7 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
       str1 << "Read 0x"
            << data.to_string(sc_dt::SC_HEX_US, false)
            << " at address 0x"
-           << std::hex << addrs[i].to_uint64()
+           << std::hex << rw_access.addr.to_uint64()
            << " via map '"
            << get_full_name()
            << "': "
@@ -1412,16 +1500,16 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
       if (rw->status == UVM_NOT_OK)
         break;
 
-      uvm_reg_data_t val = rw->value[val_idx];
-      uvm_reg_data_t val2 = data << curr_byte * 8;
-      val |= val2;
-      rw->value[val_idx] = val;
+      if (first_bytes[i] != static_cast<unsigned int>(-1))
+      {
+        uvm_reg_data_t val = rw->value[val_idx];
+        uvm_reg_data_t val2 = data << first_bytes[i] * 8;
+        val |= val2;
+        rw->value[val_idx] = val;
+      }
 
-      if (rw->parent != nullptr && i == addrs.size()-1)
+      if (rw->parent != nullptr && i == accesses.size()-1)
         rw->parent->post_do(rw);
-
-      curr_byte += bus_width;
-      n_bits -= bus_width * 8;
     }
 
     for( unsigned int i = 0; i < addrs.size(); i++ )

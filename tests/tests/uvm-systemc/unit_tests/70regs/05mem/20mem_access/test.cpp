@@ -183,6 +183,16 @@ public:
         model->mem->write(status, idx, data, UVM_BACKDOOR, nullptr, this);
       }
 
+      // Read all memory elements back through the backdoor
+      for(int idx = 0; idx < 8; idx++)
+      {
+        uvm_reg_data_t value = 0;
+        model->mem->read(status, idx, value, UVM_BACKDOOR, nullptr, this);
+        std::cout << "Backdoor read Mem[" << std::dec << idx << "] "
+                  << ((status == UVM_IS_OK) ? "UVM_IS_OK" : "UVM_NOT_OK")
+                  << " = " << std::hex << value << std::endl;
+      }
+
     }
   }; // class user_test_seq
 

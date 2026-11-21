@@ -176,7 +176,7 @@ void uvm_reg_indirect_data::do_predict( uvm_reg_item* rw,
 
   //NOTE limit to 2**32 registers
   {
-    unsigned int idx = m_idx->get();
+    unsigned int idx = static_cast<unsigned int>(m_idx->get().to_uint64());
     m_tbl[idx]->do_predict(rw, kind, be);
   }
 }
@@ -243,7 +243,7 @@ uvm_reg_data_t uvm_reg_indirect_data::get( const std::string& fname,
 uvm_reg* uvm_reg_indirect_data::get_indirect_reg( const std::string& fname,
                                                   int lineno ) const
 {
-  unsigned int idx = m_idx->get_mirrored_value();
+  unsigned int idx = static_cast<unsigned int>(m_idx->get_mirrored_value().to_uint64());
   return(m_tbl[idx]);
 }
 

@@ -377,6 +377,8 @@ class uvm_reg : public uvm_object
 
   void m_atomic_check_lock( bool on );
 
+  bool m_check_hdl_slice( const uvm_hdl_path_slice& slice ) const;
+
   virtual bool m_check_access( uvm_reg_item* rw,
                                uvm_reg_map_info*& map_info,
                                const std::string& caller );

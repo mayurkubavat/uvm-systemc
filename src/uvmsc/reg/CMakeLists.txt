@@ -42,6 +42,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_reg_item.h
   uvm_reg_layer.h
   uvm_reg_map.h
+  uvm_reg_transaction_order_policy.h
   uvm_reg_model.h
   uvm_reg_predictor.h
   uvm_reg_read_only_cbs.h
@@ -55,6 +56,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_vreg_field_cbs.h)
 
 install_headers (
+  uvm_fc4sc_reg_cvr.h
   uvm_hdl_path_concat.h
   uvm_mem.h
   uvm_mem_mam.h
@@ -77,6 +79,7 @@ install_headers (
   uvm_reg_item.h
   uvm_reg_layer.h
   uvm_reg_map.h
+  uvm_reg_transaction_order_policy.h
   uvm_reg_model.h
   uvm_reg_predictor.h
   uvm_reg_read_only_cbs.h

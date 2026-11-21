@@ -1,0 +1,17 @@
+SystemC Simulation
+wide field set to 0xfedcba9876543210
+wide field set to 0x1
+a warning for the narrow field is expected
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Specified value (0x1ff) greater than field 'full' size (8 bits)
+narrow field set to 0xff
+narrow field set to 0xff
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   0
+UVM_WARNING   :   1
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RegModel]              1
+** UVM TEST PASSED **
