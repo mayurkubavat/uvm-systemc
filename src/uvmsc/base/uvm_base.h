@@ -39,5 +39,6 @@
 #include "uvmsc/base/uvm_event.h"
 #include "uvmsc/base/uvm_barrier.h"
 #include "uvmsc/base/uvm_event_callback.h"
+#include "uvmsc/base/uvm_heartbeat.h"
 
 #endif /* UVM_BASE_H_ */
