@@ -8,7 +8,7 @@ packet1  packet  -     @<removed by verify-uvm.pl>
   s      string  3     bla
   addr   int     64    0x100
   real   double  64    1.07967
-  time   double  64    0.0011
+  time   time    64    1100 us
   o      myobj   -     @<removed by verify-uvm.pl>
     a    int     64    0x1
     b    int     64    0x2
@@ -21,7 +21,7 @@ packet2  packet  -     @<removed by verify-uvm.pl>
   s      string  0     ""
   addr   int     64    0x0
   real   double  64    0
-  time   double  64    0
+  time   time    64    0 s
   o      myobj   -     @<removed by verify-uvm.pl>
     a    int     64    0x0
     b    int     64    0x0
@@ -85,7 +85,7 @@ packet1  packet  -     @<removed by verify-uvm.pl>
   s      string  3     bla
   addr   int     64    0x100
   real   double  64    1.07967
-  time   double  64    0.0011
+  time   time    64    1100 us
   o      myobj   -     @<removed by verify-uvm.pl>
     a    int     64    0x1
     b    int     64    0x2
@@ -98,7 +98,7 @@ packet2  packet  -     @<removed by verify-uvm.pl>
   s      string  3     bla
   addr   int     64    0x100
   real   double  64    1.07967
-  time   double  64    0.0011
+  time   time    64    1100 us
   o      myobj   -     @<removed by verify-uvm.pl>
     a    int     64    0x1
     b    int     64    0x2

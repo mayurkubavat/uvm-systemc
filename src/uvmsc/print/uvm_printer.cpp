@@ -356,8 +356,7 @@ void uvm_printer::print_time( const std::string& name,
                               const sc_core::sc_time& value,
                               const char* scope_separator ) const
 {
-  double t = value.to_seconds();
-  print_real(name, t, scope_separator); // TODO print as string??
+  print_generic(name, "time", 64, value.to_string(), scope_separator);
 }
 
 //----------------------------------------------------------------------
