@@ -564,7 +564,15 @@ void uvm_report_message_element_container::do_copy( const uvm_object& rhs )
 //------------------------------------------------------------------------------
 
 uvm_report_message::uvm_report_message( const std::string& name )
-: uvm_object(name)
+: uvm_object(name),
+  m_report_object(nullptr),
+  m_report_handler(nullptr),
+  m_report_server(nullptr),
+  m_severity(UVM_INFO),
+  m_verbosity(UVM_MEDIUM),
+  m_line(0),
+  m_action(UVM_NO_ACTION),
+  m_file(nullptr)
 {
   m_report_message_element_container = new uvm_report_message_element_container();
 }
@@ -614,16 +622,20 @@ void uvm_report_message::do_print( const uvm_printer& printer ) const
        (m_verbosity == UVM_HIGH) ||
        (m_verbosity == UVM_FULL) ||
        (m_verbosity == UVM_DEBUG) )
-    printer.print_generic("verbosity", "uvm_verbosity", m_verbosity, uvm_verbosity_name[m_verbosity]);
+  {
+    const int idx = m_verbosity / 100;
+    printer.print_generic("verbosity", "uvm_verbosity", 32,
+                          (idx >= 0 && idx < 6) ? uvm_verbosity_name[idx] : "UVM_NONE");
+  }
   else
   {
     std::ostringstream str;
     str << m_verbosity;
-    printer.print_generic("verbosity", "uvm_verbosity", m_verbosity, str.str());
+    printer.print_generic("verbosity", "uvm_verbosity", 32, str.str());
   }
 
   printer.print_string("filename", m_filename);
-  printer.print_field_int("line", m_line, m_line, UVM_UNSIGNED);
+  printer.print_field_int("line", m_line, static_cast<int>(sizeof(int) * 8), UVM_UNSIGNED);
   printer.print_string("context_name", m_context_name);
 
   // TODO fix const
@@ -1023,7 +1035,7 @@ void uvm_report_message::m_record_core_properties( const uvm_recorder& recorder 
     lrecorder->record_string("context_name", m_context_name);
 
   lrecorder->record_string("filename", m_filename);
-  lrecorder->record_field("line", m_line, m_line, UVM_UNSIGNED);
+  lrecorder->record_field("line", m_line, static_cast<int>(sizeof(int) * 8), UVM_UNSIGNED);
   lrecorder->record_string("severity", uvm_severity_name[m_severity]);
 
   if( (m_verbosity == UVM_NONE) ||
@@ -1032,7 +1044,11 @@ void uvm_report_message::m_record_core_properties( const uvm_recorder& recorder 
       (m_verbosity == UVM_HIGH) ||
       (m_verbosity == UVM_FULL) ||
       (m_verbosity == UVM_DEBUG) )
-    lrecorder->record_string("verbosity", uvm_verbosity_name[m_verbosity]);
+  {
+    const int idx = m_verbosity / 100;
+    lrecorder->record_string("verbosity",
+                             (idx >= 0 && idx < 6) ? uvm_verbosity_name[idx] : "UVM_NONE");
+  }
   else
   {
     std::ostringstream str;

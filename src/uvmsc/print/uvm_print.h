@@ -20,11 +20,14 @@
 #ifndef UVM_PRINT_H_
 #define UVM_PRINT_H_
 
+#include "uvmsc/print/uvm_printer_knobs.h"
+#include "uvmsc/print/uvm_printer_element.h"
 #include "uvmsc/print/uvm_printer.h"
-#include "uvmsc/print/uvm_printer_globals.h"
 #include "uvmsc/print/uvm_table_printer.h"
 #include "uvmsc/print/uvm_tree_printer.h"
 #include "uvmsc/print/uvm_line_printer.h"
-#include "uvmsc/print/uvm_printer_knobs.h"
+#include "uvmsc/print/uvm_json_printer.h"
+#include "uvmsc/print/uvm_xml_printer.h"
+#include "uvmsc/print/uvm_printer_globals.h"
 
 #endif /* UVM_PRINT_H_ */

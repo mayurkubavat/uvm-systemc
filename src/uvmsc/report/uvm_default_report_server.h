@@ -35,7 +35,7 @@
 namespace uvm {
 
 // forward class declarations
-//class uvm_tr_stream;
+class uvm_tr_stream;
 class uvm_object_server;
 class uvm_report_message;
 
@@ -101,9 +101,9 @@ class uvm_default_report_server : public uvm_report_server
   // Group: Message recording
   //--------------------------------------------------------------------------
 
-//  virtual void set_message_database( uvm_tr_database* database );
+  virtual void set_message_database( uvm_tr_database* database );
 
-//  virtual uvm_tr_database* get_message_database() const;
+  virtual uvm_tr_database* get_message_database() const;
 
   virtual void get_severity_set( std::vector<uvm_severity>& q ) const;
 
@@ -161,10 +161,8 @@ class uvm_default_report_server : public uvm_report_server
   typedef id_count_map::iterator id_count_itt;
   typedef id_count_map::const_iterator id_count_citt;
 
-  // TODO transaction database
-  //uvm_tr_database* m_message_db;
-  //uvm_tr_stream* m_streams[string][string]; // ro.name,rh.name
-  //std::map<std::string, std::map<std::string, uvm_tr_stream*> > m_streams;
+  uvm_tr_database* m_message_db;
+  std::map<std::string, std::map<std::string, uvm_tr_stream*> > m_streams;
 
 }; // class uvm_default_report_server
 

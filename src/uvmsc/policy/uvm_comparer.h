@@ -24,9 +24,16 @@
 #define UVM_COMPARER_H_
 
 #include <systemc>
+#include <set>
+#include <string>
+#include <utility>
+
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/factory/uvm_object_registry.h"
+#include "uvmsc/macros/uvm_object_defines.h"
 #include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/misc/uvm_copy_map.h"
+#include "uvmsc/policy/uvm_policy_base.h"
 
 //////////////
 
@@ -43,9 +50,21 @@ namespace uvm {
 //------------------------------------------------------------------------------
 
 
-class uvm_comparer
+class uvm_comparer : public uvm_policy
 {
  public:
+  friend class uvm_object;
+
+  UVM_OBJECT_UTILS(uvm_comparer);
+
+  explicit uvm_comparer( const std::string& name = "uvm_comparer" );
+
+  virtual ~uvm_comparer();
+
+  virtual void flush();
+
+  static uvm_comparer* get_default();
+  static void set_default( uvm_comparer* comparer );
 
   //--------------------------------------------------------------------------
   // UVM Standard LRM API below
@@ -78,6 +97,10 @@ class uvm_comparer
   virtual bool compare_object( const std::string& name,
                                const uvm_object& lhs,
                                const uvm_object& rhs ) const;
+
+  virtual bool compare_object( const std::string& name,
+                               const uvm_object* lhs,
+                               const uvm_object* rhs ) const;
 
   virtual bool compare_string( const std::string& name,
                                const std::string& lhs,
@@ -119,9 +142,8 @@ class uvm_comparer
 
  private:
 
-  uvm_comparer(); // constructor
-
-  virtual ~uvm_comparer(); // destructor
+  uvm_comparer( const std::string& name, no_inst_count_t );
+  static uvm_comparer& m_builtin_default();
 
   void print_rollup( const uvm_object& rhs,
                      const uvm_object& lhs ) const;
@@ -237,10 +259,8 @@ class uvm_comparer
 
  private:
 
-  // TODO do we need these members?
-  //  int depth;                 // current depth of objects
-  //  uvm_copy_map* compare_map; // mapping of rhs to lhs objects
-  //  uvm_scope_stack* scope;
+  mutable std::set<std::pair<const uvm_object*, const uvm_object*> > m_compare_map;
+  mutable unsigned int m_compare_depth;
 
 }; // class comparer
 

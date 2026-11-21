@@ -35,7 +35,7 @@ namespace uvm {
 //! uvm_object::do_print to get tabular style printing.
 //----------------------------------------------------------------------
 
-uvm_table_printer* uvm_default_table_printer = new uvm_table_printer();
+uvm_table_printer* uvm_default_table_printer = uvm_table_printer::m_create_default();
 
 //----------------------------------------------------------------------
 // Member variable: uvm_default_printer
@@ -56,7 +56,7 @@ uvm_printer* uvm_default_printer = uvm_default_table_printer;
 //! uvm_object::do_print to get multi-line tree style printing.
 //----------------------------------------------------------------------
 
-uvm_tree_printer* uvm_default_tree_printer = new uvm_tree_printer();
+uvm_tree_printer* uvm_default_tree_printer = uvm_tree_printer::m_create_default();
 
 //----------------------------------------------------------------------
 // Member variable: uvm_default_line_printer
@@ -65,7 +65,7 @@ uvm_tree_printer* uvm_default_tree_printer = new uvm_tree_printer();
 //! uvm_object::do_print to get single-line style printing.
 //----------------------------------------------------------------------
 
-uvm_line_printer* uvm_default_line_printer = new uvm_line_printer();
+uvm_line_printer* uvm_default_line_printer = uvm_line_printer::m_create_default();
 
 
 } /* namespace uvm */

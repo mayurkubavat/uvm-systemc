@@ -37,6 +37,10 @@
 #include "uvmsc/report/uvm_report_message.h"
 #include "uvmsc/report/uvm_report_catcher.h"
 #include "uvmsc/report/uvm_report_handler.h"
+#include "uvmsc/report/uvm_report_object.h"
+#include "uvmsc/policy/uvm_tr_database.h"
+#include "uvmsc/policy/uvm_tr_stream.h"
+#include "uvmsc/policy/uvm_recorder.h"
 #include "uvmsc/print/uvm_printer.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
@@ -52,7 +56,8 @@ namespace uvm {
 //----------------------------------------------------------------------------
 
 uvm_default_report_server::uvm_default_report_server( const std::string& name )
-: uvm_report_server(name)
+: uvm_report_server(name),
+  m_message_db(nullptr)
 {
   max_quit_overridable = true;
 
@@ -290,7 +295,6 @@ void uvm_default_report_server::incr_id_count( const std::string& id )
     m_id_count[id] = 1;
 }
 
-/* TODO transaction recording
 //----------------------------------------------------------------------------
 // member function: set_message_database
 //
@@ -299,7 +303,11 @@ void uvm_default_report_server::incr_id_count( const std::string& id )
 
 void uvm_default_report_server::set_message_database( uvm_tr_database* database )
 {
-  m_message_db = database;
+  if (database != m_message_db)
+  {
+    m_streams.clear();
+    m_message_db = database;
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -312,8 +320,6 @@ uvm_tr_database* uvm_default_report_server::get_message_database() const
 {
   return m_message_db;
 }
-
-*/
 
 //----------------------------------------------------------------------------
 // member function: get_severity_set
@@ -411,56 +417,55 @@ void uvm_default_report_server::execute_report_message(
   if (record_all_messages)
     report_message->set_action(report_message->get_action() | UVM_RM_RECORD);
 
-  /* TODO transaction recording
-
   // UVM_RM_RECORD action
-  if(report_message->get_action() & UVM_RM_RECORD)
+  if (report_message->get_action() & UVM_RM_RECORD)
   {
-    uvm_tr_stream* stream;
-
-    uvm_report_object ro = report_message->get_report_object();
-    uvm_report_handler rh = report_message->get_report_handler();
-
-    // Check for pre-existing stream
-    if( (m_streams.find(ro.get_name()) != m_streams.end()) &&
-        (m_streams[ro.get_name()].find(rh.get_name())) != m_streams.end() )
-      stream = m_streams[ro.get_name()][rh.get_name()];
-
-    // If no pre-existing stream (or for some reason pre-existing stream was ~null~)
-    if (stream == nullptr)
+    uvm_tr_database* db = get_message_database();
+    if (db == nullptr)
     {
-      uvm_tr_database* db;
-
-      // Grab the database
-      db = get_message_database();
-
-      // If database is ~null~, use the default database
-      if (db == nullptr)
-      {
-        uvm_coreservice_t* cs = uvm_coreservice_t::get();
+      uvm_coreservice_t* cs = uvm_coreservice_t::get();
+      if (cs != nullptr)
         db = cs->get_default_tr_database();
-      }
-
-      if (db != nullptr)
-      {
-        // Open the stream.  Name=report object name, scope=report handler name, type=MESSAGES
-        stream = db->open_stream(ro.get_name(), rh.get_name(), "MESSAGES");
-        // Save off the openned stream
-        m_streams[ro.get_name()][rh.get_name()] = stream;
-      }
     }
 
-    if (stream != nullptr)
+    if (db != nullptr)
     {
-      uvm_recorder* recorder = stream->open_recorder(report_message->get_name(),,report_message->get_type_name());
-      if (recorder != nullptr)
+      uvm_report_object* ro = report_message->get_report_object();
+      uvm_report_handler* rh = report_message->get_report_handler();
+      const std::string ro_name = (ro != nullptr) ? ro->get_name() : "";
+      const std::string rh_name = (rh != nullptr) ? rh->get_name() : "";
+
+      uvm_tr_stream* stream = nullptr;
+      std::map<std::string, std::map<std::string, uvm_tr_stream*> >::iterator it_ro =
+        m_streams.find(ro_name);
+      if (it_ro != m_streams.end())
       {
-        report_message->record(recorder);
-        recorder->free();
+        std::map<std::string, uvm_tr_stream*>::iterator it_rh = it_ro->second.find(rh_name);
+        if (it_rh != it_ro->second.end())
+          stream = it_rh->second;
+      }
+
+      if (stream != nullptr && (!stream->is_open() || stream->get_db() != db))
+        stream = nullptr;
+
+      if (stream == nullptr)
+      {
+        stream = db->open_stream(ro_name, rh_name, "MESSAGES");
+        m_streams[ro_name][rh_name] = stream;
+      }
+
+      if (stream != nullptr)
+      {
+        uvm_recorder* recorder = stream->open_recorder(
+          report_message->get_name(), sc_core::SC_ZERO_TIME, report_message->get_type_name());
+        if (recorder != nullptr)
+        {
+          report_message->record(recorder);
+          recorder->free();
+        }
       }
     }
   }
-  */
 
   // DISPLAY action (to stdout)
   if(report_message->get_action() & UVM_DISPLAY)

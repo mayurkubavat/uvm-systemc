@@ -23,8 +23,11 @@
 #ifndef UVM_TREE_PRINTER_H_
 #define UVM_TREE_PRINTER_H_
 
+#include <string>
 #include <systemc>
 
+#include "uvmsc/factory/uvm_object_registry.h"
+#include "uvmsc/macros/uvm_object_defines.h"
 #include "uvmsc/print/uvm_printer.h"
 
 
@@ -43,10 +46,16 @@ namespace uvm {
 class uvm_tree_printer: public uvm_printer
 {
  public:
-  uvm_tree_printer();
+  UVM_OBJECT_UTILS(uvm_tree_printer);
+
+  explicit uvm_tree_printer( const std::string& name = "uvm_tree_printer" );
   virtual ~uvm_tree_printer();
   virtual std::string emit();
+  static uvm_tree_printer* m_create_default();
   std::string newline;
+
+ protected:
+  uvm_tree_printer( const std::string& name, no_inst_count_t );
 };
 
 //////////////

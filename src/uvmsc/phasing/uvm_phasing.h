@@ -31,5 +31,6 @@
 #include "uvmsc/phasing/uvm_process_phase.h"
 #include "uvmsc/phasing/uvm_common_phases.h"
 #include "uvmsc/phasing/uvm_runtime_phases.h"
+#include "uvmsc/phasing/uvm_process.h"
 
 #endif /* UVM_PHASING_H_ */

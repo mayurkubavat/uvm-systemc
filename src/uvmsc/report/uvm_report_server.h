@@ -77,10 +77,9 @@ class uvm_report_server : public uvm_object
 
   virtual void get_severity_set( std::vector<uvm_severity>& q ) const = 0;
 
-//TODO transaction recording
-//  virtual void set_message_database( uvm_tr_database* database ) = 0;
+  virtual void set_message_database( uvm_tr_database* database ) = 0;
 
-//  virtual uvm_tr_database* get_message_database() const = 0;
+  virtual uvm_tr_database* get_message_database() const = 0;
 
   void do_copy( const uvm_object& rhs );
 

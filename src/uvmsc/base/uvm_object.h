@@ -227,6 +227,9 @@ public:
   void m_unpack_post( uvm_packer*& packer );
 
  protected:
+  struct no_inst_count_t {};
+  uvm_object( uvm_object_name name, no_inst_count_t );
+
   virtual bool m_register_cb();
 
   // data members below

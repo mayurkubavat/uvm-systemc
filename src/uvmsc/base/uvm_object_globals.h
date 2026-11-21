@@ -31,9 +31,13 @@ namespace uvm {
 
 // forward class declarations
 class uvm_printer;
+class uvm_printer_element;
+class uvm_printer_element_proxy;
 class uvm_table_printer;
 class uvm_line_printer;
 class uvm_tree_printer;
+class uvm_json_printer;
+class uvm_xml_printer;
 class uvm_comparer;
 class uvm_copier;
 

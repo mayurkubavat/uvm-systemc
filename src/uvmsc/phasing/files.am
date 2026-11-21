@@ -20,6 +20,7 @@ CXX_FILES += \
 	phasing/uvm_objection.cpp \
 	phasing/uvm_phase.cpp \
 	phasing/uvm_phase_cb.cpp \
+	phasing/uvm_process.cpp \
 	phasing/uvm_process_phase.cpp \
 	phasing/uvm_runtime_phases.cpp \
 	phasing/uvm_topdown_phase.cpp

@@ -40,13 +40,29 @@ namespace uvm {
 //! Creates a new instance of #uvm_tree_printer
 //------------------------------------------------------------------------------
 
-uvm_tree_printer::uvm_tree_printer()
+uvm_tree_printer::uvm_tree_printer( const std::string& name )
+: uvm_printer(name)
 {
   knobs.size = 0;
   knobs.type_name = 0;
   knobs.header = 0;
   knobs.footer = 0;
   newline = "\n";
+}
+
+uvm_tree_printer::uvm_tree_printer( const std::string& name, no_inst_count_t )
+: uvm_printer(name, no_inst_count_t())
+{
+  knobs.size = 0;
+  knobs.type_name = 0;
+  knobs.header = 0;
+  knobs.footer = 0;
+  newline = "\n";
+}
+
+uvm_tree_printer* uvm_tree_printer::m_create_default()
+{
+  return new uvm_tree_printer("uvm_default_tree_printer", no_inst_count_t());
 }
 
 //------------------------------------------------------------------------------
@@ -172,7 +188,7 @@ std::string uvm_tree_printer::emit()
   if (newline.empty() || newline == " ")
     s = s + '\n';
 
-  m_rows.clear();
+  flush();
   return s;
 }
 

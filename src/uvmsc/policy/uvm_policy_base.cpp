@@ -29,6 +29,10 @@ uvm_policy::uvm_policy( const std::string& name )
 : uvm_object(name)
 {}
 
+uvm_policy::uvm_policy( const std::string& name, no_inst_count_t )
+: uvm_object(name, no_inst_count_t())
+{}
+
 uvm_policy::~uvm_policy()
 {
   m_policy_stack.clear();

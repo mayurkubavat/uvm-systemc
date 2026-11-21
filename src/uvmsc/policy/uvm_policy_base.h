@@ -72,6 +72,7 @@ class uvm_policy : public uvm_object
 
  protected:
   explicit uvm_policy( const std::string& name = "" );
+  uvm_policy( const std::string& name, no_inst_count_t );
 
  private:
   std::vector<uvm_object*> m_policy_stack;
