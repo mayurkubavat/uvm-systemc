@@ -1,0 +1,74 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=0 arg=[test]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=1 arg=[+UVM_DUMP_CMDLINE_ARGS]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=2 arg=[+UVM_VERBOSITY=UVM_HIGH]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=3 arg=[+UVM_VERBOSITY=UVM_LOW]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=4 arg=[+uvm_set_config_int=test.env,count,'h10]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=5 arg=[+uvm_set_config_int=*,width,-3]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=6 arg=[+UVM_SET_CONFIG_INT=test.env,depth,0b101]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=7 arg=[+uvm_set_config_int=test.env,bad]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=8 arg=[+uvm_set_config_int=test.env,bad,12zz]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=9 arg=[+uvm_set_config_int=test.env,wide,0xFFFFFFFFFF]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=10 arg=[+uvm_set_config_string=test.env,mode,fast]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=11 arg=[+uvm_set_config_string=test.env]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=12 arg=[+uvm_set_type_override=comp_base,comp_ovr]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=13 arg=[+uvm_set_type_override=comp_base,comp_ovr,2]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=14 arg=[+uvm_set_inst_override=comp_base,comp_inst_ovr,test.env.c2]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=15 arg=[+uvm_set_inst_override=comp_base,comp_inst_ovr]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=16 arg=[+uvm_set_inst_override=comp_base,comp_inst_ovr,]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=17 arg=[+UVM_TIMEOUT=50,NO]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=18 arg=[+UVM_TIMEOUT=nan]
+UVM_INFO @ 0 s: reporter [DUMPARGS] idx=19 arg=[+UVM_MAX_QUIT_COUNT=7,NO]
+UVM_WARNING @ 0 s: reporter [MULTVERB] Multiple (2) +UVM_VERBOSITY arguments provided on the command line.  'UVM_HIGH' will be used.  Provided list: UVM_HIGH, UVM_LOW.
+UVM_WARNING @ 0 s: reporter [MULTTIMOUT] Multiple (2) +UVM_TIMEOUT arguments provided on the command line.  '50,NO' will be used.  Provided list: 50,NO; nan.
+UVM_INFO @ 0 s: reporter [TIMOUTSET] '+UVM_TIMEOUT=50,NO' provided on the command line is being applied.
+UVM_INFO @ 0 s: reporter [INSTOVR] Applying instance override from the command line: +uvm_set_inst_override=comp_base,comp_inst_ovr,test.env.c2
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid setting for +uvm_set_inst_override=comp_base,comp_inst_ovr, setting must specify <requested_type>,<override_type>,<instance_path>
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid setting for +uvm_set_inst_override=comp_base,comp_inst_ovr,, setting must specify <requested_type>,<override_type>,<instance_path>
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying type override from the command line: +uvm_set_type_override=comp_base,comp_ovr
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid replace arg for +uvm_set_type_override=comp_base,comp_ovr,2 value must be 0 or 1
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_int=test.env,count,'h10
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_int=*,width,-3
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_int=test.env,depth,0b101
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test.env,bad" missing value: component is "test.env"  field is "bad"
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test.env,bad,12zz" : value "12zz" is not an integral value.
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_int=test.env,wide,0xFFFFFFFFFF
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_string=test.env,mode,fast
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test.env" missing field and value: component is "test.env"
+UVM_INFO @ 0 s: reporter [MAXQUITSET] '+UVM_MAX_QUIT_COUNT=7,NO' provided on the command line is being applied.
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+wide as uvm_bitstream_t = 1099511627775
+count = 16
+count as uvm_bitstream_t = 16
+width = -3
+depth = 5
+mode = fast
+test.env.c1 is a comp_ovr
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.c1 [VERB] message with verbosity UVM_HIGH
+test.env.c2 is a comp_inst_ovr
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.env.c2 [VERB] message with verbosity UVM_HIGH
+UVM_INFO @ 0 s: reporter [NOTIMOUTOVR] The global timeout setting of 50 ns is not overridable to 1 s due to a previous setting.
+UVM_INFO @ 0 s: reporter [NOMAXQUITOVR] The max quit count setting of 7 is not overridable to 3 due to a previous setting.
+max quit count = 7
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+Quit count :     0 of     7
+** Report counts by severity
+UVM_INFO      :  34
+UVM_WARNING   :   2
+UVM_ERROR     :   6
+UVM_FATAL     :   0
+** Report counts by id
+[DUMPARGS]             20
+[INSTOVR]               1
+[MAXQUITSET]            1
+[MULTTIMOUT]            1
+[MULTVERB]              1
+[NOMAXQUITOVR]          1
+[NOTIMOUTOVR]           1
+[RNTST]                 1
+[TIMOUTSET]             1
+[UVM_CMDLINE_PROC]     12
+[VERB]                  2
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

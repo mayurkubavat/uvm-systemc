@@ -1,4 +1,6 @@
 target_sources (uvm-systemc PRIVATE
+  uvm_cmdline_processor.cpp
+  uvm_cmdline_settings.cpp
   uvm_component.cpp
   uvm_component_name.cpp
   uvm_coreservice_t.cpp
@@ -14,6 +16,8 @@ target_sources (uvm-systemc PRIVATE
   uvm_transaction.cpp
   uvm_version.cpp
   uvm_base.h
+  uvm_cmdline_processor.h
+  uvm_cmdline_settings.h
   uvm_component.h
   uvm_component_name.h
   uvm_coreservice_t.h
@@ -34,6 +38,7 @@ target_sources (uvm-systemc PRIVATE
 
 install_headers (
   uvm_base.h
+  uvm_cmdline_processor.h
   uvm_component.h
   uvm_component_name.h
   uvm_coreservice_t.h
