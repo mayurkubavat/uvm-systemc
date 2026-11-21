@@ -21,6 +21,7 @@
 #define UVM_BASE_H_
 
 #include "uvmsc/base/uvm_root.h"
+#include "uvmsc/base/uvm_cmdline_processor.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
 #include "uvmsc/base/uvm_enum_wrapper.h"
