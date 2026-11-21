@@ -290,7 +290,9 @@ void uvm_config_db<T>::set( uvm_component* cntxt,
       for(int i = 0; i < m_waiters[field_name]->size(); i++)
       {
         w = m_waiters[field_name]->get(i);
-        if( uvm_re_match( uvm_glob_to_re(inst_name), w->inst_name ) )
+        // match the full path of the setting, as stored in the resource;
+        // uvm_re_match returns false for a match
+        if( !uvm_re_match( uvm_glob_to_re(loc_instname), w->inst_name ) )
           w->trigger.notify(sc_core::SC_ZERO_TIME);
       }
     }
@@ -420,16 +422,17 @@ void uvm_config_db<T>::wait_modified( uvm_component* cntxt,
   m_uvm_waiter* waiter = nullptr;
   std::string loc_inst_name = inst_name;
 
-  if(cntxt == nullptr)
-    cntxt = cs->get_root();
+  uvm_root* top = cs->get_root();
 
-  if(cntxt != cs->get_root())
-  {
-    if(!inst_name.empty())
+  if(cntxt == nullptr)
+    cntxt = top;
+
+  // build the instance name in the same way as set() and get() do
+  if(inst_name.empty())
+    loc_inst_name = cntxt->get_full_name();
+  else
+    if( (!cntxt->get_full_name().empty()) && (cntxt != top) )
       loc_inst_name = cntxt->get_full_name() + "." + inst_name;
-    else
-      loc_inst_name = cntxt->get_full_name();
-  }
 
   waiter = new m_uvm_waiter(loc_inst_name, field_name);
 
