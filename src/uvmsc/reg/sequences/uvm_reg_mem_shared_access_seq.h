@@ -96,6 +96,11 @@ class uvm_reg_shared_access_seq
 
   virtual void body()
   {
+    // The values depend on the global seed and on this sequence only,
+    // unless the user has set a seed.
+    if (!rand_reg_val.has_seed())
+      rand_reg_val.set_seed(uvm_create_random_seed(get_type_name(), get_full_name()));
+
     uvm_reg_data_t other_mask;
     std::vector<uvm_reg_data_t> wo_mask;
     std::vector<uvm_reg_field*> fields;
@@ -274,6 +279,11 @@ class uvm_mem_shared_access_seq
 
   virtual void body()
   {
+    // The values depend on the global seed and on this sequence only,
+    // unless the user has set a seed.
+    if (!rand_reg_val.has_seed())
+      rand_reg_val.set_seed(uvm_create_random_seed(get_type_name(), get_full_name()));
+
     int read_from;
     std::vector<uvm_reg_map*> maps;
     uvm_reg_data_t mask;
