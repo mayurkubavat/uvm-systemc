@@ -49,15 +49,15 @@ model                      mmap0_type     -     @<removed by verify-uvm.pl>
       endian                              ...   UVM_LITTLE_ENDIAN
       effective sequencer  uvc_sequencer  ...   test.uenv.uos
       ureg0                ureg0_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg1                ureg1_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg2                ureg2_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg3                ureg3_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg4                ureg4_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg5                ureg5_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg6                ureg6_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg7                ureg7_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg8                ureg8_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg9                ureg9_t        ...   @<removed by verify-uvm.pl>+ 0x0
+      ureg1                ureg1_t        ...   @<removed by verify-uvm.pl>+ 0x4
+      ureg2                ureg2_t        ...   @<removed by verify-uvm.pl>+ 0x8
+      ureg3                ureg3_t        ...   @<removed by verify-uvm.pl>+ 0xc
+      ureg4                ureg4_t        ...   @<removed by verify-uvm.pl>+ 0x10
+      ureg5                ureg5_t        ...   @<removed by verify-uvm.pl>+ 0x14
+      ureg6                ureg6_t        ...   @<removed by verify-uvm.pl>+ 0x18
+      ureg7                ureg7_t        ...   @<removed by verify-uvm.pl>+ 0x1c
+      ureg8                ureg8_t        ...   @<removed by verify-uvm.pl>+ 0x20
+      ureg9                ureg9_t        ...   @<removed by verify-uvm.pl>+ 0x24
   default_map              uvm_reg_map    -     @<removed by verify-uvm.pl>
     endian                                ...   UVM_LITTLE_ENDIAN
     effective sequencer    uvc_sequencer  ...   test.uenv.uos
@@ -65,15 +65,15 @@ model                      mmap0_type     -     @<removed by verify-uvm.pl>
       endian                              ...   UVM_LITTLE_ENDIAN
       effective sequencer  uvc_sequencer  ...   test.uenv.uos
       ureg0                ureg0_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg1                ureg1_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg2                ureg2_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg3                ureg3_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg4                ureg4_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg5                ureg5_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg6                ureg6_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg7                ureg7_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg8                ureg8_t        ...   @<removed by verify-uvm.pl>+ 0x0
-      ureg9                ureg9_t        ...   @<removed by verify-uvm.pl>+ 0x0
+      ureg1                ureg1_t        ...   @<removed by verify-uvm.pl>+ 0x4
+      ureg2                ureg2_t        ...   @<removed by verify-uvm.pl>+ 0x8
+      ureg3                ureg3_t        ...   @<removed by verify-uvm.pl>+ 0xc
+      ureg4                ureg4_t        ...   @<removed by verify-uvm.pl>+ 0x10
+      ureg5                ureg5_t        ...   @<removed by verify-uvm.pl>+ 0x14
+      ureg6                ureg6_t        ...   @<removed by verify-uvm.pl>+ 0x18
+      ureg7                ureg7_t        ...   @<removed by verify-uvm.pl>+ 0x1c
+      ureg8                ureg8_t        ...   @<removed by verify-uvm.pl>+ 0x20
+      ureg9                ureg9_t        ...   @<removed by verify-uvm.pl>+ 0x24
 -------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------
 Name                       Type           Size  Value
@@ -85,30 +85,35 @@ default_map                uvm_reg_map    -     @<removed by verify-uvm.pl>
     endian                                ...   UVM_LITTLE_ENDIAN
     effective sequencer    uvc_sequencer  ...   test.uenv.uos
     ureg0                  ureg0_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg1                  ureg1_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg2                  ureg2_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg3                  ureg3_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg4                  ureg4_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg5                  ureg5_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg6                  ureg6_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg7                  ureg7_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg8                  ureg8_t        ...   @<removed by verify-uvm.pl>+ 0x0
-    ureg9                  ureg9_t        ...   @<removed by verify-uvm.pl>+ 0x0
+    ureg1                  ureg1_t        ...   @<removed by verify-uvm.pl>+ 0x4
+    ureg2                  ureg2_t        ...   @<removed by verify-uvm.pl>+ 0x8
+    ureg3                  ureg3_t        ...   @<removed by verify-uvm.pl>+ 0xc
+    ureg4                  ureg4_t        ...   @<removed by verify-uvm.pl>+ 0x10
+    ureg5                  ureg5_t        ...   @<removed by verify-uvm.pl>+ 0x14
+    ureg6                  ureg6_t        ...   @<removed by verify-uvm.pl>+ 0x18
+    ureg7                  ureg7_t        ...   @<removed by verify-uvm.pl>+ 0x1c
+    ureg8                  ureg8_t        ...   @<removed by verify-uvm.pl>+ 0x20
+    ureg9                  ureg9_t        ...   @<removed by verify-uvm.pl>+ 0x24
 -------------------------------------------------------------------------------------------
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@test_seq [TEST_SEQ] <><><><><><><><><><><><><><><><><><><><><><><>
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@test_seq [TEST_SEQ]   Starting Test Sequence
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@test_seq [TEST_SEQ] <><><><><><><><><><><><><><><><><><><><><><><>
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@test_seq [TEST_SEQ] Backdoor mirror the shadow. Expect mismatch errors
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Register 'model.rfile0.ureg0' value read from DUT (0x12345678) does not match mirrored value (0xabcd)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Field destination (model.rfile0.ureg0[13:0]) mismatch read = 0x1678(size: 14) mirrored = 0x2bcd(size: 14)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Field frame_kind (model.rfile0.ureg0[15:14]) mismatch read = 0x1(size: 2) mirrored = 0x2(size: 2)
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Field rsvd (model.rfile0.ureg0[31:16]) mismatch read = 0x1234(size: 16) mirrored = 0x0(size: 16)
 ** UVM TEST PASSED **
 UVM TEST EXPECT 1 UVM_ERROR
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
 --- UVM Report Summary ---
 ** Report counts by severity
-UVM_INFO      :   5
+UVM_INFO      :   8
 UVM_WARNING   :   0
-UVM_ERROR     :   0
+UVM_ERROR     :   1
 UVM_FATAL     :   0
 ** Report counts by id
 [RNTST]                 1
+[RegModel]              4
 [TEST_SEQ]              4
 UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

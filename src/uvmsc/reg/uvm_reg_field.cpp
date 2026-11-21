@@ -25,6 +25,7 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
 #include <iomanip>
 #include <map>
 
@@ -360,10 +361,11 @@ bool uvm_reg_field::define_access( std::string name )
 std::string uvm_reg_field::get_access( uvm_reg_map* map ) const
 {
   std::string _access = m_access;
-  std::string _rights = m_parent->get_rights(map);
 
   if( map == uvm_reg_map::backdoor() )
     return _access;
+
+  std::string _rights = m_parent->get_rights(map);
 
   // Is the register restricted in this map?
   if (_rights == "RW")   // No restrictions
@@ -524,11 +526,15 @@ void uvm_reg_field::set( uvm_reg_data_t value,
   m_fname = fname;
   m_lineno = lineno;
 
-  if (value >> m_size)
+  if ((value & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
+    // the value in hexadecimal, without leading zeros
+    std::string hex = value.to_string(sc_dt::SC_HEX_US, false);
+    hex.erase(0, std::min(hex.find_first_not_of('0'), hex.size() - 1));
+
     std::ostringstream str;
     str << "Specified value (0x"
-        << value
+        << hex
         << ") greater than field '"
         << get_name()
         << "' size ("
@@ -892,7 +898,7 @@ void uvm_reg_field::poke( uvm_status_e& status, // output
   m_fname = fname;
   m_lineno = lineno;
 
-  if (value >> m_size)
+  if ((value & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
     UVM_WARNING("RegModel",
         "uvm_reg_field::poke(): Value exceeds size of field '" +
@@ -1519,7 +1525,7 @@ void uvm_reg_field::do_write( uvm_reg_item* rw )
 
   m_write_in_progress = true;
 
-  if (rw->value[0] >> m_size)
+  if ((rw->value[0] & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
     UVM_WARNING("RegModel",
       "uvm_reg_field::write(): Value greater than field '" +
@@ -1610,8 +1616,25 @@ void uvm_reg_field::do_write( uvm_reg_item* rw )
     rw->local_map->do_write(rw);
 
     if (system_map->get_auto_predict())
-      // TODO from UVM-SV: Call parent.m_sample();
+    {
+      uvm_status_e status = rw->status;
+      if (rw->status != UVM_NOT_OK)
+      {
+        uvm_reg_data_t field_mask = uvm_mask_size(m_size) << m_lsb;
+        uvm_reg_data_t byte_en = 0;
+        for (unsigned int i = 0; i < m_parent->get_n_bytes(); ++i)
+          byte_en[i] = (((field_mask >> (i * 8)) & 0xff) != 0) ? 1 : 0;
+        uvm_reg_data_t reg_val =
+            (m_parent->get_mirrored_value() & ~field_mask) |
+            ((rw->value[0] & uvm_mask_size(m_size)) << m_lsb);
+        m_parent->m_sample(reg_val, byte_en, 0, rw->map);
+        uvm_reg_block* blk = m_parent->get_parent();
+        if (blk != nullptr)
+          blk->m_sample(map_info->offset, 0, rw->map);
+      }
       do_predict(rw, UVM_PREDICT_WRITE);
+      rw->status = status;
+    }
 
     post_write(rw);
 
@@ -1688,8 +1711,25 @@ void uvm_reg_field::do_read( uvm_reg_item* rw )
     rw->local_map->do_read(rw);
 
     if (system_map->get_auto_predict())
-      // TODO from UVM-SV: Call parent.m_sample();
+    {
+      uvm_status_e status = rw->status;
+      if (rw->status != UVM_NOT_OK)
+      {
+        uvm_reg_data_t field_mask = uvm_mask_size(m_size) << m_lsb;
+        uvm_reg_data_t byte_en = 0;
+        for (unsigned int i = 0; i < m_parent->get_n_bytes(); ++i)
+          byte_en[i] = (((field_mask >> (i * 8)) & 0xff) != 0) ? 1 : 0;
+        uvm_reg_data_t reg_val =
+            (m_parent->get_mirrored_value() & ~field_mask) |
+            ((rw->value[0] & uvm_mask_size(m_size)) << m_lsb);
+        m_parent->m_sample(reg_val, byte_en, 1, rw->map);
+        uvm_reg_block* blk = m_parent->get_parent();
+        if (blk != nullptr)
+          blk->m_sample(map_info->offset, 1, rw->map);
+      }
       do_predict(rw, UVM_PREDICT_READ);
+      rw->status = status;
+    }
 
     post_read(rw);
 

@@ -1,0 +1,18 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test sample_test...
+field write: reg_samples=1 data=0xab11 be=0x2 is_read=0 blk_samples=1
+field read: reg_samples=2 val=0xab data=0xab11 be=0x2 is_read=1 blk_samples=2
+mem frontdoor samples=2 first_off=3 second_off=3
+predictor mem_delta=2 blk_delta=2 pred_off=2 pred_wr_is_read=0 pred_rd_is_read=1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER] 
+--- UVM Report Summary ---
+
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

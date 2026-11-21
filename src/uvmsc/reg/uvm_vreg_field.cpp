@@ -266,7 +266,7 @@ void uvm_vreg_field::write( unsigned long idx,
 
   m_parent->m_atomic_check(true);
 
-  if (value >> m_size)
+  if ((value & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
     std::ostringstream str;
     str << "Writing value 0x"
@@ -598,7 +598,7 @@ void uvm_vreg_field::poke( unsigned long idx,
 
   m_parent->m_atomic_check(true);
 
-  if (value >> m_size)
+  if ((value & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
     std::ostringstream str;
     str << "Writing value 0x"
