@@ -56,6 +56,7 @@ namespace uvm {
 //!                                  are used.
 //! +UVM_MAX_QUIT_COUNT=<count>,<YES|NO>
 //! +UVM_PHASE_TRACE
+//! +UVM_OBJECTION_TRACE
 //! +UVM_CONFIG_DB_TRACE
 //! +UVM_RESOURCE_DB_TRACE
 //! +UVM_DUMP_CMDLINE_ARGS
