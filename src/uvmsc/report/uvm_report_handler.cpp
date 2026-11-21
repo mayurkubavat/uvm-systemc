@@ -757,6 +757,59 @@ void uvm_report_handler::set_severity_id_file( uvm_severity severity,
 }
 
 //----------------------------------------------------------------------------
+// member function: m_route_id_to_file
+//
+// Implementation defined
+//
+// Make the reports with the given id be logged to file only (action
+// UVM_LOG) and return the previous id action and id file, so that
+// m_restore_id_route can put them back.
+//----------------------------------------------------------------------------
+
+uvm_report_handler::m_id_route_t uvm_report_handler::m_route_id_to_file( const std::string& id,
+                                                                         UVM_FILE file )
+{
+  m_id_route_t saved;
+
+  uvm_id_actions_array::const_iterator a = id_actions.find(id);
+  saved.has_action = (a != id_actions.end());
+  saved.action = saved.has_action ? a->second : UVM_NO_ACTION;
+
+  uvm_id_file_array::const_iterator f = id_file_handles.find(id);
+  saved.has_file = (f != id_file_handles.end());
+  saved.file = saved.has_file ? f->second : nullptr;
+
+  id_actions[id] = UVM_LOG;
+  id_file_handles[id] = file;
+
+  return saved;
+}
+
+//----------------------------------------------------------------------------
+// member function: m_restore_id_route
+//
+// Implementation defined
+//
+// Put back the id action and id file returned by m_route_id_to_file.
+// The file given to m_route_id_to_file is not kept, so the caller may
+// close it afterwards.
+//----------------------------------------------------------------------------
+
+void uvm_report_handler::m_restore_id_route( const std::string& id,
+                                             const m_id_route_t& saved )
+{
+  if (saved.has_action)
+    id_actions[id] = saved.action;
+  else
+    id_actions.erase(id);
+
+  if (saved.has_file)
+    id_file_handles[id] = saved.file;
+  else
+    id_file_handles.erase(id);
+}
+
+//----------------------------------------------------------------------------
 // member function: set_severity_override
 //
 //! Internal methods called by #uvm_report_object.

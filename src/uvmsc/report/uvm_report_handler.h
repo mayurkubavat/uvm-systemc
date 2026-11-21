@@ -69,6 +69,7 @@ class uvm_report_handler : public uvm_object
  public:
   friend class uvm_report_object;
   friend class uvm_report_catcher;
+  friend class uvm_default_report_server;
 
   UVM_OBJECT_UTILS(uvm_report_handler);
 
@@ -161,6 +162,21 @@ class uvm_report_handler : public uvm_object
                                  uvm_severity new_severity );
 
   void dump_state();
+
+  // Implementation-defined: log the reports with the given id to file
+  // only, and put the previous id action and id file back afterwards
+
+  struct m_id_route_t
+  {
+    bool has_action;
+    uvm_action action;
+    bool has_file;
+    UVM_FILE file;
+  };
+
+  m_id_route_t m_route_id_to_file( const std::string& id, UVM_FILE file );
+
+  void m_restore_id_route( const std::string& id, const m_id_route_t& saved );
 
   // internal variables
 
