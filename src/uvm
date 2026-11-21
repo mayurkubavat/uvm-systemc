@@ -30,6 +30,7 @@
 #include "uvmsc/macros/uvm_macros.h"
 #include "uvmsc/conf/uvm_conf.h"
 #include "uvmsc/tlm1/uvm_tlm1.h"
+#include "uvmsc/tlm2/uvm_tlm2.h"
 #include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/print/uvm_print.h"
 #include "uvmsc/policy/uvm_policy.h"
