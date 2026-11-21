@@ -86,6 +86,16 @@ uvm_component::uvm_component( uvm_component_name nm )
 
   set_name(std::string(nm));
 
+  // SystemC generates the module name object_<n> for an empty name; use
+  // it as leaf name (UVM-SV generates COMP_<n>). Other names are kept as
+  // given, also when SystemC corrects the module name, so that duplicate
+  // names are still detected by the parent and lookup finds the name.
+  if (get_name().empty())
+  {
+    uvm_object::set_name(this->basename());
+    m_set_full_name();
+  }
+
   start_report_handler(this->name());
 
   if (!top) {

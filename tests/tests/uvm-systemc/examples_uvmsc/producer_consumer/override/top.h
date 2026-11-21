@@ -45,7 +45,7 @@ class top : public uvm::uvm_env
 
     // need to register fifo_consumer to factory, otherwise type override
     // cannot find this object and also type is unknown
-    fifo_consumer<packet>::type_id::create("fifo_consumer<packet>", this);
+    fifo_consumer<packet>::type_id::create("fifo_consumer_packet", this);
 
     // set up type override for consumer templated by packet
     // replace ordinary consumer with fifo_consumer using one of the three methods below

@@ -98,6 +98,10 @@ class uvm_root : public uvm_component
   
   bool get_phase_all_done();
 
+  //! Applies the component visitor of the core service to the entire
+  //! component hierarchy, top-down
+  virtual void end_of_elaboration_phase( uvm_phase& phase );
+
   ~uvm_root(); // destructor
 
   sc_core::sc_object* m_hdl_obj; // TODO enable HDL access more elegant

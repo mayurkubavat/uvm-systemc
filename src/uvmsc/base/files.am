@@ -16,6 +16,7 @@ H_FILES += \
 	base/uvm_root.h \
 	base/uvm_run_test_callback.h \
 	base/uvm_transaction.h \
+	base/uvm_traversal.h \
 	base/uvm_void.h \
 	base/uvm_version.h
 
@@ -38,6 +39,7 @@ CXX_FILES += \
 	base/uvm_root.cpp \
 	base/uvm_run_test_callback.cpp \
 	base/uvm_transaction.cpp \
+	base/uvm_traversal.cpp \
 	base/uvm_version.cpp
 
 INCDIRS += base

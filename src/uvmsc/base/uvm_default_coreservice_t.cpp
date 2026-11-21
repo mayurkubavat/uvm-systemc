@@ -23,6 +23,7 @@
 #include "uvmsc/factory/uvm_factory.h"
 #include "uvmsc/factory/uvm_default_factory.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
+#include "uvmsc/base/uvm_traversal.h"
 #include "uvmsc/report/uvm_report_server.h"
 #include "uvmsc/report/uvm_default_report_server.h"
 #include "uvmsc/policy/uvm_tr_database.h"
@@ -133,12 +134,10 @@ uvm_root* uvm_default_coreservice_t::get_root() const
 // for instance for name checking)
 //----------------------------------------------------------------------------
 
-/* TODO uvm_visitor
-void uvm_default_coreservice_t::set_component_visitor(uvm_visitor<uvm_component> v) const
+void uvm_default_coreservice_t::set_component_visitor( uvm_visitor<uvm_component>* v )
 {
-  m_visitor=v;
+  m_visitor = v;
 }
-*/
 
 //----------------------------------------------------------------------------
 // member function: get_component_visitor (virtual)
@@ -147,18 +146,13 @@ void uvm_default_coreservice_t::set_component_visitor(uvm_visitor<uvm_component>
 // if unset(or ~null~) returns a <uvm_component_name_check_visitor> instance
 //----------------------------------------------------------------------------
 
-/* TODO uvm_visitor
-uvm_visitor<uvm_component> uvm_default_coreservice_t::get_component_visitor() const
+uvm_visitor<uvm_component>* uvm_default_coreservice_t::get_component_visitor() const
 {
-  if(m_visitor == nullptr)
-  {
-    uvm_component_name_check_visitor* v = new uvm_component_name_check_visitor("name-check-visitor");
-    m_visitor=v;
-  }
+  if (m_visitor == nullptr)
+    m_visitor = new uvm_component_name_check_visitor("name-check-visitor");
   return m_visitor;
 }
 
-*/
 } // namespace uvm
 
 
