@@ -24,6 +24,7 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
 #include <cstdlib>
 
 #include <systemc>
@@ -77,14 +78,15 @@ uvm_phase::uvm_phase( const std::string& name,
                       uvm_phase* parent) : uvm_object( name )
 {
   m_phase_type = phase_type;
-  m_phase_hopper = new uvm_phase_queue<uvm_phase*>();
+  if (m_phase_hopper == nullptr)
+    m_phase_hopper = new uvm_phase_queue<uvm_phase*>();
 
   /* TODO uvm_test_done_objection is deprecated???
   if (name == "run")
     phase_done = uvm_test_done_objection::get();
   else
   */
-    phase_done = new uvm_objection(name+"_objection");
+  phase_done = new uvm_objection(name+"_objection");
 
   m_parent = parent;
   m_imp = nullptr;
@@ -129,6 +131,76 @@ uvm_phase::uvm_phase( const std::string& name,
   m_jump_fwd = false;
   m_jump_bkwd = false;
   m_jump_phase = nullptr;
+}
+
+//----------------------------------------------------------------------
+// Destructor
+//----------------------------------------------------------------------
+
+uvm_phase::~uvm_phase()
+{
+  std::vector<uvm_phase*> owned_nodes;
+  owned_nodes.reserve(m_nodes.size());
+  for (m_nodesmapItT it = m_nodes.begin(); it != m_nodes.end(); ++it)
+    owned_nodes.push_back(it->first);
+  m_nodes.clear();
+
+  for (std::size_t i = 0; i < owned_nodes.size(); ++i)
+  {
+    owned_nodes[i]->m_parent = nullptr;
+    delete owned_nodes[i];
+  }
+
+  uvm_phase* end = (m_end_node != nullptr) ? m_end_node : this;
+  std::vector<uvm_phase*> ext_preds;
+  for (m_schedulemapItT it = m_predecessors.begin(); it != m_predecessors.end(); ++it)
+    if (it->first != this && it->first != m_end_node)
+      ext_preds.push_back(it->first);
+
+  std::vector<uvm_phase*> ext_succs;
+  for (m_schedulemapItT it = end->m_successors.begin(); it != end->m_successors.end(); ++it)
+    if (it->first != this && it->first != m_end_node)
+      ext_succs.push_back(it->first);
+
+  if (m_end_node != nullptr)
+  {
+    uvm_phase* term = m_end_node;
+    m_end_node = nullptr;
+    m_unlink_phase_node(term);
+    term->m_parent = nullptr;
+    delete term;
+  }
+
+  m_unlink_phase_node(this);
+
+  if (m_parent != nullptr)
+  {
+    m_parent->m_nodes.erase(this);
+    m_parent = nullptr;
+  }
+
+  std::vector<bool> pred_empty(ext_preds.size(), false);
+  for (std::size_t i = 0; i < ext_preds.size(); ++i)
+    pred_empty[i] = ext_preds[i]->m_successors.empty();
+
+  std::vector<bool> succ_empty(ext_succs.size(), false);
+  for (std::size_t j = 0; j < ext_succs.size(); ++j)
+    succ_empty[j] = ext_succs[j]->m_predecessors.empty();
+
+  for (std::size_t i = 0; i < ext_preds.size(); ++i)
+  {
+    for (std::size_t j = 0; j < ext_succs.size(); ++j)
+    {
+      if (ext_preds[i] != ext_succs[j] && (pred_empty[i] || succ_empty[j]))
+      {
+        ext_preds[i]->m_successors[ext_succs[j]] = true;
+        ext_succs[j]->m_predecessors[ext_preds[i]] = true;
+      }
+    }
+  }
+
+  delete phase_done;
+  phase_done = nullptr;
 }
 
 //----------------------------------------------------------------------
@@ -2256,8 +2328,32 @@ bool uvm_phase::m_is_domain()
 
 uvm_phase::m_schedulemapT& uvm_phase::m_executing_phases()
 {
-  static m_schedulemapT executing_phases;
-  return executing_phases;
+  static m_schedulemapT* executing_phases = new m_schedulemapT();
+  return *executing_phases;
+}
+
+void uvm_phase::m_unlink_phase_node( uvm_phase* node )
+{
+  for (m_schedulemapItT it = node->m_predecessors.begin();
+       it != node->m_predecessors.end(); ++it)
+    it->first->m_successors.erase(node);
+  node->m_predecessors.clear();
+
+  for (m_schedulemapItT it = node->m_successors.begin();
+       it != node->m_successors.end(); ++it)
+    it->first->m_predecessors.erase(node);
+  node->m_successors.clear();
+
+  for (phase_listItT it = node->m_sync.begin();
+       it != node->m_sync.end(); ++it)
+  {
+    phase_listT& peer_sync = (*it)->m_sync;
+    peer_sync.erase(std::remove(peer_sync.begin(), peer_sync.end(), node),
+                    peer_sync.end());
+  }
+  node->m_sync.clear();
+
+  m_executing_phases().erase(node);
 }
 
 //----------------------------------------------------------------------

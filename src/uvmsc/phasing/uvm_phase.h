@@ -71,6 +71,8 @@ class uvm_phase : public uvm_object
                       uvm_phase_type phase_type = UVM_PHASE_SCHEDULE,
                       uvm_phase* parent = nullptr );
 
+  virtual ~uvm_phase();
+
   uvm_phase_type get_phase_type() const;
 
   //-------------
@@ -242,6 +244,8 @@ class uvm_phase : public uvm_object
   bool m_is_domain();
 
   static m_schedulemapT& m_executing_phases();
+
+  static void m_unlink_phase_node( uvm_phase* node );
 
   static uvm_phase* m_phase_nodes(const std::string& name, uvm_phase* phase = nullptr);
 
