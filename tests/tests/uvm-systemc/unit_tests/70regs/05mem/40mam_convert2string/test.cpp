@@ -59,8 +59,8 @@ class test : public uvm_test
     std::cout << img;
 
     if (img != "Allocated memory regions:\n"
-               "   ['h0000000000000200:'h00000000000002ff]\n"
-               "   ['h0000000000000010:'h000000000000001f]\n")
+               "   ['h0000000000000010:'h000000000000001f]\n"
+               "   ['h0000000000000200:'h00000000000002ff]\n")
       UVM_ERROR("MAMSTR", "unexpected image of the allocated regions");
 
     // an overlapping reservation names the region it overlaps with

@@ -1,0 +1,43 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+no_reg_tests=1
+UVM_INFO @ 0 s: reporter@@rst_seq [STARTING_SEQ]
+Starting rst_seq sequence...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@rst_seq [uvm_reg_hw_reset_seq] Verifying reset value of register blk.idx in map "blk.map"...
+UVM_INFO @ 1 ns: reporter@@bash_seq [STARTING_SEQ]
+Starting bash_seq sequence...
+UVM_INFO <removed by verify-uvm.pl> @ 1 ns: reporter@@bash_seq.reg_single_bit_bash_seq [uvm_reg_bit_bash_seq] Verifying bits in register blk.idx  in map 'blk.map'...
+valid_ind_ok=1
+oob_errors=2 tbl0=0x0
+unconf_ok=1 unconf_errs=8
+null_idx_ok=1 null_errs=8
+ftdr_ok=1 frval1=0x12345678
+UVM_INFO <removed by verify-uvm.pl> @ 267 ns: reporter [RegModel] Field f (blk.tbl_2[31:0]) mismatch read = 0xdeadc0de(size: 32) mirrored = 0xcafebabe(size: 32)
+cor_ok=1 cor_errs=1
+UVM_WARNING <removed by verify-uvm.pl> @ 267 ns: reporter [RegModel] Register 'bad_idx_blk.bad_elem' is not contained within map 'bad_idx_blk.map' (called from get_frontdoor())
+bad_fd_ok=1 bad_fd_errs=1
+standalone_ok=1 col_errs=1 reg64=0xbeef0002cafe0001
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 267 ns: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :   21
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 267 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   7
+UVM_WARNING   :   1
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[RegModel]              2
+[STARTING_SEQ]          2
+[UVM/REPORT/CATCHER]    1
+[uvm_reg_bit_bash_seq]  1
+[uvm_reg_hw_reset_seq]  1
+UVM_INFO @ 267 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

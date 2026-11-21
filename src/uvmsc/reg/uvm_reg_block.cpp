@@ -2066,92 +2066,42 @@ void uvm_reg_block::do_unpack( uvm_packer& packer )
 
 std::string uvm_reg_block::convert2string() const
 {
-  /* TODO
   std::ostringstream image;
-  std::vector<std::string> maps;
-  std::vector<std::string> blk_maps;
-  bool single_map;
-  uvm_endianness_e endian;
-  std::string prefix = "  ";
+  std::vector<uvm_reg_map*> maps;
+  std::vector<uvm_reg*> regs;
+  std::vector<uvm_mem*> mems;
+  std::vector<uvm_vreg*> vregs;
+  std::vector<uvm_reg_block*> blks;
 
+  image << "Block " << get_full_name();
 
-  single_map = true;
-  if (map.empty())
+  get_maps(maps);
+  for (unsigned int i = 0; i < maps.size(); ++i)
   {
-    this->get_maps(maps);
-    if( maps.size() > 1 )
-      single_map = false;
+    uvm_endianness_e endian = maps[i]->get_endian(UVM_NO_HIER);
+    image << std::endl
+          << "  Map '" << maps[i]->get_full_name() << "' -- "
+          << maps[i]->get_n_bytes(UVM_NO_HIER) << " bytes ("
+          << uvm_endianness_name[endian] << ")";
   }
 
-  std::ostringstream image;
-  if (single_map)
-  {
-    image << prefix << "Block " << this->get_full_name();
+  get_registers(regs, UVM_NO_HIER);
+  for (unsigned int i = 0; i < regs.size(); ++i)
+    image << std::endl << regs[i]->convert2string();
 
-    if (!map.empty())
-      image << "." << map;
+  get_memories(mems, UVM_NO_HIER);
+  for (unsigned int i = 0; i < mems.size(); ++i)
+    image << std::endl << mems[i]->convert2string();
 
-    endian = this->get_endian(map);
+  get_virtual_registers(vregs, UVM_NO_HIER);
+  for (unsigned int i = 0; i < vregs.size(); ++i)
+    image << std::endl << static_cast<const uvm_object*>(vregs[i])->convert2string();
 
-    image << " -- "
-          << this->get_n_bytes(map)
-          << " bytes ("
-          << uvm_endianness_name[endian]
-          << ")";
+  get_blocks(blks, UVM_NO_HIER);
+  for (unsigned int i = 0; i < blks.size(); ++i)
+    image << std::endl << blks[i]->convert2string();
 
-    for( blks_itt it = blks.begin(); it != blks.end(); it++ )
-    {
-      std::string img;
-      img = (*it).first.convert2string( prefix + "   " + blk_maps[i]);
-
-      image << std::endl << img;
-    }
-
-  }
-  else
-  {
-    image << prefix
-        << "Block "
-        << this->get_full_name();
-
-    for( maps_itt it = maps.begin(); it != maps.end(); it++ )
-    {
-      endian = this->get_endian( (*it).first );
-
-      image << std::endl
-            << prefix
-            << "   Map '"
-            << (*it).first
-            << "' -- " << this->get_n_bytes( (*it).first )
-            << " bytes ("
-            << uvm_endianness_name[endian]
-            << ")";
-
-      this->get_blocks(blks, blk_maps, maps[i]);
-
-      for( blks_itt it = blks.begin(); it != blks.end(); it++ )
-      {
-        std::string img;
-        img = (*it).first.convert2string( prefix +  "      " +
-            blk_maps[j]); // TODO - what is blk_maps?
-        image << std::endl << img;
-      }
-
-      this->get_subsys(sys, blk_maps, maps[i]);
-
-      foreach (sys[j])
-      {
-        std::string img;
-        img = sys[j].convert2string({prefix, "      "},
-            blk_maps[j]); // TODO - what is blk_maps?
-        image << std::endl << img;
-      }
-    }
-  }
   return image.str();
-  */
-
-  return ""; // dummy return for now
 }
 
 //----------------------------------------------------------------------

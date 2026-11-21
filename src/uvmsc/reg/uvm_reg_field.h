@@ -183,8 +183,8 @@ class uvm_reg_field : public uvm_object
 
   uvm_check_e get_compare() const;
 
-  bool is_indv_accessible( uvm_path_e path,
-                           uvm_reg_map* local_map) const;
+  virtual bool is_indv_accessible( uvm_path_e path,
+                                   uvm_reg_map* local_map) const;
 
   bool predict( uvm_reg_data_t value,
                 uvm_reg_byte_en_t be = -1,

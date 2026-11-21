@@ -1,0 +1,17 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x0:0x3]...
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Register 'top_blk.r_unmapped' is not registered with any map
+non_empty=1 all_parts_ok=1
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   2
+UVM_WARNING   :   1
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[RegModel]              2
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

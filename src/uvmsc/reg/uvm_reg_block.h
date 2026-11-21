@@ -303,6 +303,8 @@ class uvm_reg_block : public uvm_object
 
   ~uvm_reg_block(); // destructor
 
+  virtual std::string convert2string() const;
+
  private:
 
   void m_sample( uvm_reg_addr_t addr,
@@ -339,8 +341,6 @@ class uvm_reg_block : public uvm_object
   void do_pack( uvm_packer& packer ) const;
 
   void do_unpack( uvm_packer& packer );
-
-  std::string convert2string() const;
 
   void m_init_address_maps();
 
