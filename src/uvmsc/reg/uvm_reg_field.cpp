@@ -29,6 +29,7 @@
 #include <iomanip>
 #include <map>
 
+#include "uvmsc/policy/uvm_comparer.h"
 #include "uvmsc/reg/uvm_reg_field.h"
 #include "uvmsc/reg/uvm_reg_model.h"
 #include "uvmsc/reg/uvm_reg_item.h"
@@ -2124,8 +2125,16 @@ uvm_object* uvm_reg_field::clone()
 
 void uvm_reg_field::do_copy( const uvm_object& rhs )
 {
-  UVM_WARNING("RegModel","RegModel field copy not yet implemented");
-  // TODO just a set(rhs.get()) ?
+  const uvm_reg_field* rhs_ = dynamic_cast<const uvm_reg_field*>(&rhs);
+  if (rhs_ == nullptr)
+  {
+    UVM_WARNING("RegModel", "Attempted to copy non-uvm_reg_field into uvm_reg_field");
+    return;
+  }
+  const uvm_reg_data_t mask = uvm_mask_size(m_size);
+  m_desired = rhs_->m_desired & mask;
+  m_mirrored = rhs_->m_mirrored & mask;
+  m_value = rhs_->m_value & mask;
 }
 
 
@@ -2138,9 +2147,20 @@ void uvm_reg_field::do_copy( const uvm_object& rhs )
 bool uvm_reg_field::do_compare( const uvm_object& rhs,
                                 const uvm_comparer* comparer ) const
 {
-  UVM_WARNING("RegModel","RegModel field compare not yet implemented");
-  // TODO just a return (get() == rhs.get()) ?
-  return false;
+  const uvm_reg_field* rhs_ = dynamic_cast<const uvm_reg_field*>(&rhs);
+  if (rhs_ == nullptr)
+    return false;
+  if (comparer != nullptr)
+  {
+    const int len = static_cast<int>(m_size > 0 ? m_size : 1);
+    sc_dt::sc_bv_base lhs_bv(len);
+    sc_dt::sc_bv_base rhs_bv(len);
+    lhs_bv = m_desired;
+    rhs_bv = rhs_->m_desired;
+    return comparer->compare_field(
+        get_name(), uvm_bitstream_t(lhs_bv), uvm_bitstream_t(rhs_bv), m_size);
+  }
+  return m_desired == rhs_->m_desired;
 }
 
 //----------------------------------------------------------------------

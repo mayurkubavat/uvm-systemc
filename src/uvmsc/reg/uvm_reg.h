@@ -65,6 +65,7 @@ class uvm_reg : public uvm_object
  public:
   friend class uvm_reg_block;
   friend class uvm_reg_field;
+  friend class uvm_reg_fifo;
   friend class uvm_reg_map;
   friend class uvm_reg_indirect_data; // TODO change access policy instead?
   friend class uvm_reg_indirect_ftdr_seq;
