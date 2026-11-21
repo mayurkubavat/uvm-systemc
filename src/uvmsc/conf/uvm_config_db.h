@@ -383,15 +383,17 @@ bool uvm_config_db<T>::exists( uvm_component* cntxt,
                                bool spell_chk )
 {
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
+  uvm_root* top = cs->get_root();
 
   std::string loc_inst_name = inst_name;
   if(cntxt == nullptr)
-    cntxt = cs->get_root();
+    cntxt = top;
 
+  // build the scope in the same way as set() and get() do
   if(inst_name.empty())
     loc_inst_name = cntxt->get_full_name();
   else
-    if(!cntxt->get_full_name().empty())
+    if( (!cntxt->get_full_name().empty()) && (cntxt != top) )
       loc_inst_name = cntxt->get_full_name() + "." + inst_name;
 
   return (uvm_resource_db<T>::get_by_name(loc_inst_name, field_name, spell_chk) != nullptr);
