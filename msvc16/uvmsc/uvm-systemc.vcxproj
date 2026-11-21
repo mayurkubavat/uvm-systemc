@@ -171,6 +171,7 @@
     <ClCompile Include="..\..\src\uvmsc\base\uvm_default_coreservice_t.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_barrier.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_event.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\base\uvm_heartbeat.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_event_callback.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_enum_wrapper.cpp" />
     <ClCompile Include="..\..\src\uvmsc\base\uvm_globals.cpp" />
@@ -260,6 +261,7 @@
     <ClInclude Include="..\..\src\uvmsc\base\uvm_default_coreservice_t.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_barrier.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_event.h" />
+    <ClInclude Include="..\..\src\uvmsc\base\uvm_heartbeat.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_event_callback.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_enum_wrapper.h" />
     <ClInclude Include="..\..\src\uvmsc\base\uvm_export_base.h" />

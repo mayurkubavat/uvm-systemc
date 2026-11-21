@@ -9,6 +9,7 @@ H_FILES += \
 	base/uvm_event_callback.h \
 	base/uvm_barrier.h \
 	base/uvm_event.h \
+	base/uvm_heartbeat.h \
 	base/uvm_export_base.h \
 	base/uvm_globals.h \
 	base/uvm_mutex.h \
@@ -36,6 +37,7 @@ CXX_FILES += \
 	base/uvm_event_callback.cpp \
 	base/uvm_barrier.cpp \
 	base/uvm_event.cpp \
+	base/uvm_heartbeat.cpp \
 	base/uvm_globals.cpp \
 	base/uvm_mutex.cpp \
 	base/uvm_object.cpp \
