@@ -1,0 +1,27 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x2:0x9]...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x10:0x11]...
+empty_get=0 size=0
+after_update_size=2
+after_write_size=3 front=0x11
+pop0=0x11 rem=2
+pop1=0x22 rem=1
+pop2=0x33 rem=0
+vreg_mem4=vr_a vreg_mem3=null vreg_map17=vr_b
+UVM_INFO <removed by verify-uvm.pl> @ 12 ns: reporter [MISCMP] Miscompare for f: lhs = 0x0xus00000000000000a5 : rhs = 0x0xus000000000000005a
+field_copy=0x5a eq_same=1 eq_diff=0
+UVM_INFO <removed by verify-uvm.pl> @ 12 ns: reporter [UVM/REPORT/SERVER] 
+--- UVM Report Summary ---
+
+** Report counts by severity
+UVM_INFO      :   4
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[MISCMP]                1
+[RNTST]                 1
+[RegModel]              2
+
+UVM_INFO @ 12 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

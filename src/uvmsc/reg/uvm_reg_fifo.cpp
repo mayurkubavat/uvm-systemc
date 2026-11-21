@@ -52,6 +52,7 @@ uvm_reg_fifo::uvm_reg_fifo( const std::string& name,
   m_size = size;
   m_value = nullptr;
   m_set_cnt = 0;
+  m_pending_set_writes = 0;
 }
 
 //----------------------------------------------------------------------
@@ -200,7 +201,10 @@ void uvm_reg_fifo::update( uvm_status_e&      status,
         // commented in UVM-SV
         //uvm_reg_data_t val = get();
         //super.update(status,path,map,parent,prior,extension,fname,lineno);
+        ++m_pending_set_writes;
         write(status, fifo[i], path, map, parent, prior, extension, fname, lineno);
+        if (status == UVM_NOT_OK && m_pending_set_writes > 0)
+          --m_pending_set_writes;
       }
   }
   m_update_in_progress = false;
@@ -226,8 +230,19 @@ void uvm_reg_fifo::update( uvm_status_e&      status,
 
 uvm_reg_data_t uvm_reg_fifo::get( const std::string& fname, int lineno ) const
 {
-  //return fifo.pop_front();
+  (void)fname;
+  (void)lineno;
+  if (fifo.empty())
+    return 0;
   return fifo[0];
+}
+
+void uvm_reg_fifo::reset( const std::string& kind )
+{
+  fifo.clear();
+  m_set_cnt = 0;
+  m_pending_set_writes = 0;
+  uvm_reg::reset(kind);
 }
 
 //----------------------------------------------------------------------
@@ -252,7 +267,53 @@ void uvm_reg_fifo::do_predict( uvm_reg_item*     rw,
                                uvm_predict_e     kind,
                                uvm_reg_byte_en_t be )
 {
-  // TODO do_predict
+  uvm_reg::do_predict(rw, kind, be);
+
+  if (rw == nullptr || rw->status == UVM_NOT_OK)
+    return;
+
+  switch (kind)
+  {
+    case UVM_PREDICT_WRITE:
+    case UVM_PREDICT_DIRECT:
+    {
+      if (m_pending_set_writes > 0)
+      {
+        --m_pending_set_writes;
+      }
+      else if (fifo.size() < m_size && !m_update_in_progress)
+      {
+        fifo.push_back(m_value->m_value);
+      }
+      break;
+    }
+
+    case UVM_PREDICT_READ:
+    {
+      if (fifo.empty())
+        break;
+      uvm_reg_data_t value =
+          (rw->value.empty() ? uvm_reg_data_t(0) : rw->value[0]) &
+          uvm_mask_size(get_n_bits());
+      uvm_reg_data_t mirror_val = fifo.front();
+      fifo.erase(fifo.begin());
+      if (m_value != nullptr &&
+          m_value->get_compare() == UVM_CHECK &&
+          mirror_val != value)
+      {
+        std::ostringstream str;
+        str << "Read value from DUT FIFO '" << get_full_name()
+            << "' (0x" << std::hex << value.to_uint64()
+            << ") does not match mirrored frontmost value (0x"
+            << mirror_val.to_uint64() << ")";
+        UVM_WARNING("RegModel", str.str());
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
 }
 
 //----------------------------------------------------------------------
