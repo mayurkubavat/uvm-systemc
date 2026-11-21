@@ -1,0 +1,24 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+exists: glob=1 regex=1 spell=1 miss=0
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/RESOURCE/GETRECORD] --- resource get records ---
+
+reuse: q_a_size=1 val_a=10
+delim: v1=111 v2=222
+10 ns: rsrc wait_modified woke
+20 ns: cfg_alpha woke
+30 ns: reg_01 woke
+40 ns: other woke
+90 ns: wait_loop completed 50 iterations
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 93 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   2
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[UVM/RESOURCE/GETRECORD]                                      1
+UVM_INFO @ 93 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

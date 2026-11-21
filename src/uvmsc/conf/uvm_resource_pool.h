@@ -34,6 +34,7 @@ namespace uvm {
 // forward class references
 class uvm_resource_base;
 class get_t;
+template <typename T> class uvm_config_db;
 
 //----------------------------------------------------------------------
 // Class: uvm_resource_pool
@@ -44,6 +45,7 @@ class get_t;
 class uvm_resource_pool
 {
   friend class uvm_root;
+  template <typename T> friend class uvm_config_db;
 
  public:
 
@@ -76,6 +78,8 @@ class uvm_resource_pool
   // Group: Lookup
   //--------------------------------------------------------------------------
 
+  // Note: queues returned by lookup_* and find_unused_resources are owned
+  // by uvm_resource_pool (tracked in rsrc_list) and must not be deleted by callers.
   uvm_resource_types::rsrc_q_t* lookup_name( const std::string& scope,
                                              const std::string& name,
                                              uvm_resource_base* type_handle,
@@ -142,6 +146,21 @@ class uvm_resource_pool
 
   static void cleanup();
 
+  void m_lookup_name( uvm_resource_types::rsrc_q_t& q,
+                      const std::string& scope,
+                      const std::string& name,
+                      uvm_resource_base* type_handle,
+                      bool rpterr = true ) const;
+
+  void m_lookup_type( uvm_resource_types::rsrc_q_t& q,
+                      const std::string& scope,
+                      uvm_resource_base* type_handle ) const;
+
+  void m_lookup_regex_names( uvm_resource_types::rsrc_q_t& result_q,
+                             const std::string& scope,
+                             const std::string& name,
+                             uvm_resource_base* type_handle = nullptr ) const;
+
   // data members
 
   static bool m_has_wildcard_names;
@@ -161,7 +180,7 @@ class uvm_resource_pool
   typedef get_record_listT::const_iterator get_record_list_cItT;
   get_record_listT get_record;  // history (list) of gets
 
-  std::vector<uvm_resource_types::rsrc_q_t* > rsrc_list;
+  mutable std::vector<uvm_resource_types::rsrc_q_t* > rsrc_list;
 
  protected:
   uvm_resource_pool();

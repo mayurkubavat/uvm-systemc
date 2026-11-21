@@ -1,0 +1,40 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO @ 0 s: reporter [OBJ_INF] obj info
+UVM_WARNING @ 0 s: reporter [OBJ_WRN] obj warning
+UVM_ERROR @ 0 s: reporter [OBJ_ERR] obj error
+UVM_FATAL @ 0 s: reporter [OBJ_FTL] obj fatal
+UVM_INFO @ 0 s: reporter@@item [SEQ_INF] seq info
+UVM_WARNING @ 0 s: reporter@@item [SEQ_WRN] seq warning
+UVM_ERROR @ 0 s: reporter@@item [SEQ_ERR] seq error
+UVM_FATAL @ 0 s: reporter@@item [SEQ_FTL] seq fatal
+UVM_INFO @ 0 s: reporter@@ctx_low [GLB_CTX] glb ctx low
+UVM_INFO @ 0 s: reporter@@ctx_info [GLB_INF] glb info high
+UVM_WARNING @ 0 s: reporter@@ctx_warn [GLB_WRN] glb warn high
+UVM_ERROR @ 0 s: reporter@@ctx_err [GLB_ERR] glb err high
+UVM_FATAL @ 0 s: reporter@@ctx_ftl [GLB_FTL] glb fatal high
+counts: warn=3 err=3 fatal=3
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   5
+UVM_WARNING   :   3
+UVM_ERROR     :   3
+UVM_FATAL     :   3
+** Report counts by id
+[GLB_CTX]               1
+[GLB_ERR]               1
+[GLB_FTL]               1
+[GLB_INF]               1
+[GLB_WRN]               1
+[OBJ_ERR]               1
+[OBJ_FTL]               1
+[OBJ_INF]               1
+[OBJ_WRN]               1
+[RNTST]                 1
+[SEQ_ERR]               1
+[SEQ_FTL]               1
+[SEQ_INF]               1
+[SEQ_WRN]               1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

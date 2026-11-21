@@ -65,12 +65,12 @@ class uvm_set_before_get_dap : public uvm_set_get_dap_base<T>
 
   virtual void set( const T& value );
   virtual bool try_set( const T& value );
-  virtual T get() const;
-  virtual bool try_get( T& value ) const; 
+  virtual T get();
+  virtual bool try_get( T& value ); 
 
   // Group: Introspection
 
-  virtual void do_copy( const uvm_object& rhs ) const;
+  virtual void do_copy( const uvm_object& rhs );
   virtual void do_pack( uvm_packer& packer ) const;
   virtual void do_unpack( uvm_packer& packer );
 
@@ -95,7 +95,7 @@ class uvm_set_before_get_dap : public uvm_set_get_dap_base<T>
 
 template <typename T>
 uvm_set_before_get_dap<T>::uvm_set_before_get_dap( const std::string& name )
-: uvm_set_get_dap_base<T>(name), m_value(0), m_set(false)
+: uvm_set_get_dap_base<T>(name), m_value(), m_set(false)
 {}
 
 
@@ -135,7 +135,7 @@ bool uvm_set_before_get_dap<T>::try_set( const T& value )
 //----------------------------------------------------------------------------
 
 template <typename T>
-T uvm_set_before_get_dap<T>::get() const
+T uvm_set_before_get_dap<T>::get()
 {
   if (!m_set)
   {
@@ -158,7 +158,7 @@ T uvm_set_before_get_dap<T>::get() const
 //----------------------------------------------------------------------------
 
 template <typename T>
-bool uvm_set_before_get_dap<T>::try_get( T& value ) const
+bool uvm_set_before_get_dap<T>::try_get( T& value )
 {
   if (!m_set)
    return false;
@@ -179,7 +179,7 @@ bool uvm_set_before_get_dap<T>::try_get( T& value ) const
 //----------------------------------------------------------------------------
 
 template <typename T>
-void uvm_set_before_get_dap<T>::do_copy( const uvm_object& rhs ) const
+void uvm_set_before_get_dap<T>::do_copy( const uvm_object& rhs )
 {
   UVM_ERROR("UVM/SET_BEFORE_GET_DAP/CPY",
     "do_copy is not supported for uvm_set_before_get_dap<T>");

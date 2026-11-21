@@ -76,7 +76,7 @@ class uvm_simple_lock_dap : public uvm_set_get_dap_base<T>
    
    // Group: Introspection
 
-  virtual void do_copy( const uvm_object& rhs ) const;
+  virtual void do_copy( const uvm_object& rhs );
   virtual void do_pack( uvm_packer& packer ) const;
   virtual void do_unpack( uvm_packer& packer );
 
@@ -101,7 +101,7 @@ class uvm_simple_lock_dap : public uvm_set_get_dap_base<T>
 
 template <typename T>
 uvm_simple_lock_dap<T>::uvm_simple_lock_dap( const std::string& name )
-: uvm_set_get_dap_base<T>(name), m_value(0), m_locked(false)
+: uvm_set_get_dap_base<T>(name), m_value(), m_locked(false)
 {}
 
 //----------------------------------------------------------------------------
@@ -223,7 +223,7 @@ bool uvm_simple_lock_dap<T>::is_locked() const
 //----------------------------------------------------------------------------
 
 template <typename T>
-void uvm_simple_lock_dap<T>::do_copy( const uvm_object& rhs ) const
+void uvm_simple_lock_dap<T>::do_copy( const uvm_object& rhs )
 {
   UVM_ERROR("UVM/SIMPLE_LOCK_DAP/CPY",
     "do_copy is not supported for uvm_simple_lock_dap<T>");
