@@ -1,0 +1,62 @@
+SystemC Simulation
+node top_down:  r a a1 a2 b b1
+node bottom_up: a1 a2 a b1 b r
+node by_level:  r a b a1 a2 b1
+node assigned top_down:  r a a1 a2 b b1
+node assigned bottom_up: a1 a2 a b1 b r
+node assigned by_level:  r a b a1 a2 b1
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+top_down: begin_v
+top_down: test.env
+top_down: test.env.a1
+top_down: test.env.a1.drv
+top_down: test.env.a1.mon
+top_down: test.env.a2
+top_down: test.env.a2.drv
+top_down: test.env.a2.mon
+top_down: test.env.sb
+top_down: end_v
+bottom_up: begin_v
+bottom_up: test.env.a1.drv
+bottom_up: test.env.a1.mon
+bottom_up: test.env.a1
+bottom_up: test.env.a2.drv
+bottom_up: test.env.a2.mon
+bottom_up: test.env.a2
+bottom_up: test.env.sb
+bottom_up: test.env
+bottom_up: end_v
+by_level: begin_v
+by_level: test.env
+by_level: test.env.a1
+by_level: test.env.a2
+by_level: test.env.sb
+by_level: test.env.a1.drv
+by_level: test.env.a1.mon
+by_level: test.env.a2.drv
+by_level: test.env.a2.mon
+by_level: end_v
+no_begin_end: test.env.a1
+no_begin_end: test.env.a1.drv
+no_begin_end: test.env.a1.mon
+base: begin_v
+base: test.env.a2.drv
+base: test.env.a2.mon
+base: test.env.a2
+base: end_v
+name constraint: /^[][[:alnum:](){}_:-]([][[:alnum:](){} _:-]*[][[:alnum:](){}_:-])?$/
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "bad+name" of the component "test.bad+name" violates the uvm component name constraints
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "a1" of the component "test.env.a1" violates the uvm component name constraints
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "a2" of the component "test.env.a2" violates the uvm component name constraints
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [UVM/COMP/NAME] the name "bad+name" of the component "test.bad+name" violates the uvm component name constraints
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   4
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[UVM/COMP/NAME]         4
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

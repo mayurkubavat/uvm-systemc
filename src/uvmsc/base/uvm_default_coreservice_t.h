@@ -31,7 +31,7 @@ namespace uvm {
 class uvm_factory;
 class uvm_report_server;
 class uvm_root;
-//class uvm_visitor;
+template <typename NODE> class uvm_visitor;
 class uvm_component;
 class uvm_tr_database;
 
@@ -59,8 +59,8 @@ class uvm_default_coreservice_t : public uvm_coreservice_t
 
   virtual uvm_root* get_root() const;
 
-//  virtual void set_component_visitor( uvm_visitor<uvm_component> v );
-//  virtual uvm_visitor<uvm_component> get_component_visitor() const;
+  virtual void set_component_visitor( uvm_visitor<uvm_component>* v );
+  virtual uvm_visitor<uvm_component>* get_component_visitor() const;
 
  private:
   uvm_default_coreservice_t():factory(nullptr),report_server(nullptr){};
@@ -69,7 +69,7 @@ class uvm_default_coreservice_t : public uvm_coreservice_t
   mutable uvm_factory* factory;
 //  mutable uvm_tr_database* tr_database;
   mutable uvm_report_server* report_server;
-//  mutable uvm_visitor<uvm_component> m_visitor;
+  mutable uvm_visitor<uvm_component>* m_visitor = nullptr;
 
 }; // class uvm_default_coreservice_t
 
