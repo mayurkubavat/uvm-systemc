@@ -1,0 +1,19 @@
+SystemC Simulation
+global seed in sc_main = 4711
+UVM_WARNING @ 0 s: reporter [MULTSEED] Multiple (2) +UVM_SEED arguments provided on the command line.  '4711' will be used.  Provided list: 4711; 12.
+UVM_INFO @ 0 s: reporter [SEEDSET] '+UVM_SEED=4711' provided on the command line is being applied; the global seed is 4711.
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+global seed = 4711
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   2
+UVM_WARNING   :   1
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[MULTSEED]              1
+[RNTST]                 1
+[SEEDSET]               1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

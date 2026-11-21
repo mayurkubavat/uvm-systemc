@@ -55,6 +55,10 @@ namespace uvm {
 //!                                  or s). Without unit, nanoseconds
 //!                                  are used.
 //! +UVM_MAX_QUIT_COUNT=<count>,<YES|NO>
+//! +UVM_SEED=<seed>|random          global seed, see uvm_set_random_seed.
+//!                                  With "random" a new seed is used in
+//!                                  each run; it is reported so that
+//!                                  the run can be repeated.
 //! +UVM_PHASE_TRACE
 //! +UVM_OBJECTION_TRACE
 //! +UVM_CONFIG_DB_TRACE
