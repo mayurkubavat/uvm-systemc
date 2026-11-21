@@ -1,0 +1,14 @@
+SystemC Simulation
+little endian, 16 bits: packed 28 bits, value 0xbeef, head 0x9, tail 0x5a ok
+little endian, 64 bits: packed 76 bits, value 0x123456789abcdef, head 0x9, tail 0x5a ok
+little endian, 72 bits: packed 84 bits, value 0x100f1e2d3c4b5a6978, head 0x9, tail 0x5a ok
+little endian, 128 bits: packed 140 bits, value 0xfedcba98765432100f1e2d3c4b5a6978, head 0x9, tail 0x5a ok
+little endian, 192 bits: packed 204 bits, value 0x123456789abcdeffedcba98765432100f1e2d3c4b5a6978, head 0x9, tail 0x5a ok
+big    endian, 16 bits: packed 28 bits, value 0xbeef, head 0x9, tail 0x5a ok
+big    endian, 64 bits: packed 76 bits, value 0x123456789abcdef, head 0x9, tail 0x5a ok
+big    endian, 72 bits: packed 84 bits, value 0x100f1e2d3c4b5a6978, head 0x9, tail 0x5a ok
+big    endian, 128 bits: packed 140 bits, value 0xfedcba98765432100f1e2d3c4b5a6978, head 0x9, tail 0x5a ok
+big    endian, 192 bits: packed 204 bits, value 0x123456789abcdeffedcba98765432100f1e2d3c4b5a6978, head 0x9, tail 0x5a ok
+big    endian, 4096 bits: packed 4108 bits, value 0x80000000..., head 0x9, tail 0x5a ok
+little endian, 4096 bits: packed 4108 bits, value 0x80000000..., head 0x9, tail 0x5a ok
+** UVM TEST PASSED **
