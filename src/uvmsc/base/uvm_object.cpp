@@ -36,10 +36,36 @@
 #include "uvmsc/print/uvm_printer_globals.h"
 #include "uvmsc/policy/uvm_packer.h"
 #include "uvmsc/policy/uvm_recorder.h"
+#include "uvmsc/policy/uvm_copier.h"
+#include "uvmsc/policy/uvm_field_op.h"
 #include "uvmsc/report/uvm_report_object.h"
 
 namespace uvm {
 
+namespace {
+
+class copier_flush_guard
+{
+ public:
+  copier_flush_guard( uvm_copier* copier, bool active )
+  : m_copier(copier), m_active(active)
+  {}
+
+  ~copier_flush_guard()
+  {
+    if (m_active && m_copier != nullptr)
+      m_copier->flush();
+  }
+
+ private:
+  copier_flush_guard( const copier_flush_guard& );
+  copier_flush_guard& operator=( const copier_flush_guard& );
+
+  uvm_copier* m_copier;
+  bool m_active;
+};
+
+} // namespace
 
 // global for instance count
 int g_inst_count = 0;
@@ -434,9 +460,18 @@ void uvm_object::do_record( const uvm_recorder& recorder )
 //! the #do_copy method.
 //----------------------------------------------------------------------------
 
-void uvm_object::copy( const uvm_object& rhs )
+void uvm_object::copy( const uvm_object& rhs, uvm_copier* copier )
 {
-  do_copy(rhs);
+  if (this == &rhs)
+    return;
+
+  const bool using_default = (copier == nullptr);
+  if (using_default)
+    copier = uvm_copier::get_default();
+
+  const bool top_level = (copier->get_active_object() == nullptr);
+  copier_flush_guard flush_guard(copier, using_default && top_level);
+  copier->copy_object(*this, rhs);
 }
 
 //----------------------------------------------------------------------------
@@ -450,6 +485,19 @@ void uvm_object::copy( const uvm_object& rhs )
 void uvm_object::do_copy( const uvm_object& rhs )
 {
   uvm_report_warning("DOCPY", "member function do_copy not implemented in " + get_type_name(), UVM_HIGH);
+}
+
+//----------------------------------------------------------------------------
+// member function: do_execute_op (virtual)
+//
+//! Executes a field operation described by ~op~ per IEEE 1800.2-2020
+//! section 5.3.13. Base implementation is a silent no-op so derived
+//! classes fall through to their do_* user hooks unless disabled.
+//----------------------------------------------------------------------------
+
+void uvm_object::do_execute_op( uvm_field_op* op )
+{
+  (void)op;
 }
 
 //----------------------------------------------------------------------------

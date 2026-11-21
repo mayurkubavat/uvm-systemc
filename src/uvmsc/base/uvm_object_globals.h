@@ -35,6 +35,7 @@ class uvm_table_printer;
 class uvm_line_printer;
 class uvm_tree_printer;
 class uvm_comparer;
+class uvm_copier;
 
 //----------------------------------------------------------------------
 // Macro: UVM_DEFAULT_TIMEOUT
@@ -467,6 +468,23 @@ typedef enum {
   UVM_ABSTRACT
 } uvm_field_enum;
 
+//----------------------------------------------------------------------
+// Enum: uvm_field_op_type
+//
+// Specifies the field operation type passed to uvm_field_op::set()
+// and uvm_object::do_execute_op().
+//----------------------------------------------------------------------
+
+typedef enum {
+  UVM_COPY    = 0x01,
+  UVM_COMPARE = 0x02,
+  UVM_PRINT   = 0x04,
+  UVM_RECORD  = 0x08,
+  UVM_PACK    = 0x10,
+  UVM_UNPACK  = 0x20,
+  UVM_SET     = 0x40
+} uvm_field_op_type;
+
 
 //----------------------------------------------------------------------
 // Define: UVM_MAX_STREAMBITS
@@ -537,6 +555,7 @@ typedef const std::string& uvm_object_name;
 //----------------------------------------------------------------------
 
 extern uvm_comparer* uvm_default_comparer; // uvm_comparer::init();
+extern uvm_copier* uvm_default_copier;
 
 
 } /* namespace uvm */
