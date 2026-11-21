@@ -190,6 +190,7 @@
     <ClCompile Include="..\..\src\uvmsc\conf\uvm_resource_options.cpp" />
     <ClCompile Include="..\..\src\uvmsc\conf\uvm_resource_pool.cpp" />
     <ClCompile Include="..\..\src\uvmsc\dpi\uvm_hdl.cpp" />
+    <ClCompile Include="..\..\src\uvmsc\dpi\uvm_hdl_polling.cpp" />
     <ClCompile Include="..\..\src\uvmsc\factory\uvm_default_factory.cpp" />
     <ClCompile Include="..\..\src\uvmsc\factory\uvm_factory_override.cpp" />
     <ClCompile Include="..\..\src\uvmsc\misc\uvm_misc.cpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_resource_pool.h" />
     <ClInclude Include="..\..\src\uvmsc\conf\uvm_resource_types.h" />
     <ClInclude Include="..\..\src\uvmsc\dpi\uvm_hdl.h" />
+    <ClInclude Include="..\..\src\uvmsc\dpi\uvm_hdl_polling.h" />
     <ClInclude Include="..\..\src\uvmsc\factory\uvm_component_registry.h" />
     <ClInclude Include="..\..\src\uvmsc\factory\uvm_default_factory.h" />
     <ClInclude Include="..\..\src\uvmsc\factory\uvm_factory.h" />

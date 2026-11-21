@@ -1,8 +1,10 @@
 H_FILES += \
-	dpi/uvm_hdl.h
+	dpi/uvm_hdl.h \
+	dpi/uvm_hdl_polling.h
 
 CXX_FILES += \
-	dpi/uvm_hdl.cpp
+	dpi/uvm_hdl.cpp \
+	dpi/uvm_hdl_polling.cpp
 
 INCDIRS += dpi
 

@@ -637,5 +637,20 @@ void uvm_root::m_unregister_test( const std::string& test_name )
   }
 }
 
-} // namespace uvm
+//----------------------------------------------------------------------------
+// member function: m_spawn
+//
+// Implementation defined
+//----------------------------------------------------------------------------
 
+sc_core::sc_process_handle uvm_root::m_spawn( std::function<void()> func, const char* name )
+{
+#if defined(IEEE_1666_SYSTEMC) && IEEE_1666_SYSTEMC >= 202301L
+  auto scope = sc_core::sc_module::get_hierarchy_scope();
+  return sc_core::sc_spawn(func, sc_core::sc_gen_unique_name(name));
+#else
+  return sc_core::sc_spawn(func, sc_core::sc_gen_unique_name(name));
+#endif
+}
+
+} // namespace uvm
