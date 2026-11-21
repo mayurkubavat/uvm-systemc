@@ -51,8 +51,8 @@ class uvm_default_coreservice_t : public uvm_coreservice_t
   virtual uvm_factory* get_factory() const;
   virtual void set_factory( uvm_factory* f );
 
-//  virtual uvm_tr_database* get_default_tr_database() const;
-//  virtual void set_default_tr_database( uvm_tr_database* db );
+  virtual uvm_tr_database* get_default_tr_database() const;
+  virtual void set_default_tr_database( uvm_tr_database* db );
 
   virtual uvm_report_server* get_report_server() const;
   virtual void set_report_server( uvm_report_server* server );
@@ -63,11 +63,11 @@ class uvm_default_coreservice_t : public uvm_coreservice_t
   virtual uvm_visitor<uvm_component>* get_component_visitor() const;
 
  private:
-  uvm_default_coreservice_t():factory(nullptr),report_server(nullptr){};
+  uvm_default_coreservice_t():factory(nullptr),tr_database(nullptr),report_server(nullptr){};
   virtual ~uvm_default_coreservice_t(){};
 
   mutable uvm_factory* factory;
-//  mutable uvm_tr_database* tr_database;
+  mutable uvm_tr_database* tr_database;
   mutable uvm_report_server* report_server;
   mutable uvm_visitor<uvm_component>* m_visitor = nullptr;
 

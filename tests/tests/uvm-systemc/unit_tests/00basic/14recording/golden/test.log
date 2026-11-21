@@ -1,0 +1,80 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+handle without recording: 0
+recorder of the burst found by its handle: 1
+no recorder for the handle after the end: 1
+the transaction is active: 1, its handle: 1
+a recorder which is not freed stays: 1
+recorders in the stream: 1
+the stream frees its recorders: 1
+ending transactions after their stream was freed is harmless
+recording enabled: mon 1, q 0
+UVM_INFO <removed by verify-uvm.pl> @ 35 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 35 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
+database closed: 1
+  CREATE_STREAM @<removed by verify-uvm.pl> ns {NAME:bus T:TVM SCOPE:test.mon STREAM:h1}
+    OPEN_RECORDER @<removed by verify-uvm.pl> ns {TXH:h2 STREAM:h1 NAME:burst TIME:10 ns TYPE="Begin_No_Parent, Link"}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:label VALUE:burst   RADIX:UVM_STRING BITS=13}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:desc VALUE:a burst of one beat   RADIX:UVM_STRING BITS=27}
+    OPEN_RECORDER @<removed by verify-uvm.pl> ns {TXH:h3 STREAM:h1 NAME:beat TIME:15 ns TYPE="Begin_End, Link"}
+  LINK @<removed by verify-uvm.pl> ns {TXH1:h2 TXH2:h3 RELATION=child}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h3 NAME:inst_id VALUE:<id>   RADIX:UVM_DEC BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h3 NAME:addr VALUE:44   RADIX:UVM_HEX BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h3 NAME:data VALUE:8   RADIX:UVM_DEC BITS=16}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h3 NAME:kind VALUE:write   RADIX:UVM_STRING BITS=13}
+    CLOSE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h3 TIME=20 ns}
+    FREE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h3}
+    OPEN_RECORDER @<removed by verify-uvm.pl> ns {TXH:h4 STREAM:h1 NAME:idle TIME:20 ns TYPE="Event"}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h4 NAME:label VALUE:idle   RADIX:UVM_STRING BITS=12}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h4 NAME:desc VALUE:the bus is idle   RADIX:UVM_STRING BITS=23}
+    CLOSE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h4 TIME=20 ns}
+    FREE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h4}
+    OPEN_RECORDER @<removed by verify-uvm.pl> ns {TXH:h5 STREAM:h1 NAME:parity TIME:20 ns TYPE="Error"}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h5 NAME:label VALUE:parity   RADIX:UVM_STRING BITS=14}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h5 NAME:desc VALUE:a parity error   RADIX:UVM_STRING BITS=22}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h5 NAME:inst_id VALUE:<id>   RADIX:UVM_DEC BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h5 NAME:addr VALUE:44   RADIX:UVM_HEX BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h5 NAME:data VALUE:8   RADIX:UVM_DEC BITS=16}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h5 NAME:kind VALUE:write   RADIX:UVM_STRING BITS=13}
+    CLOSE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h5 TIME=20 ns}
+    FREE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h5}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:inst_id VALUE:<id>   RADIX:UVM_DEC BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:addr VALUE:40   RADIX:UVM_HEX BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:data VALUE:7   RADIX:UVM_DEC BITS=16}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:kind VALUE:write   RADIX:UVM_STRING BITS=13}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:inst_id VALUE:<id>   RADIX:UVM_DEC BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:inner.addr VALUE:0   RADIX:UVM_HEX BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:inner.data VALUE:0   RADIX:UVM_DEC BITS=16}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h2 NAME:inner.kind VALUE:write   RADIX:UVM_STRING BITS=13}
+    CLOSE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h2 TIME=25 ns}
+    FREE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h2}
+  CREATE_STREAM @<removed by verify-uvm.pl> ns {NAME:self T:TVM SCOPE:test.mon STREAM:h6}
+    OPEN_RECORDER @<removed by verify-uvm.pl> ns {TXH:h7 STREAM:h6 NAME:packet TIME:30 ns TYPE="Begin_No_Parent, Link"}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h7 NAME:inst_id VALUE:<id>   RADIX:UVM_DEC BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h7 NAME:addr VALUE:80   RADIX:UVM_HEX BITS=32}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h7 NAME:data VALUE:0   RADIX:UVM_DEC BITS=16}
+      SET_ATTR @<removed by verify-uvm.pl> ns {TXH:h7 NAME:kind VALUE:write   RADIX:UVM_STRING BITS=13}
+    CLOSE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h7 TIME=35 ns}
+  CLOSE_STREAM @<removed by verify-uvm.pl> ns {NAME:self T:TVM SCOPE:test.mon STREAM:h6}
+  FREE_STREAM @<removed by verify-uvm.pl> ns {NAME:self T:TVM SCOPE:test.mon STREAM:h6}
+    FREE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h7}
+  CREATE_STREAM @<removed by verify-uvm.pl> ns {NAME:short T:TVM SCOPE:test.mon STREAM:h8}
+    OPEN_RECORDER @<removed by verify-uvm.pl> ns {TXH:h9 STREAM:h8 NAME:early TIME:35 ns TYPE="Begin_No_Parent, Link"}
+  CLOSE_STREAM @<removed by verify-uvm.pl> ns {NAME:short T:TVM SCOPE:test.mon STREAM:h8}
+    CLOSE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h9 TIME=35 ns}
+  FREE_STREAM @<removed by verify-uvm.pl> ns {NAME:short T:TVM SCOPE:test.mon STREAM:h8}
+    FREE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h9}
+  CREATE_STREAM @<removed by verify-uvm.pl> ns {NAME:short_self T:TVM SCOPE:test.mon STREAM:h10}
+    OPEN_RECORDER @<removed by verify-uvm.pl> ns {TXH:h11 STREAM:h10 NAME:packet TIME:35 ns TYPE="Begin_No_Parent, Link"}
+  CLOSE_STREAM @<removed by verify-uvm.pl> ns {NAME:short_self T:TVM SCOPE:test.mon STREAM:h10}
+    CLOSE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h11 TIME=35 ns}
+  FREE_STREAM @<removed by verify-uvm.pl> ns {NAME:short_self T:TVM SCOPE:test.mon STREAM:h10}
+    FREE_RECORDER @<removed by verify-uvm.pl> ns {TXH:h11}

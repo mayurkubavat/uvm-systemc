@@ -1,13 +1,17 @@
 SystemC Simulation
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVMTOP] UVM testbench topology:
---------------------------------------------
-Name         Type                Size  Value
---------------------------------------------
-top          top                 -     -
-  consumer   consumer<T>         -     -
-  producer1  uvm::uvm_component  -     -
-  producer2  uvm::uvm_component  -     -
---------------------------------------------
+-------------------------------------------------------
+Name                  Type                Size  Value
+-------------------------------------------------------
+top                   top                 -     -
+  consumer            consumer<T>         -     -
+    recording_detail  uvm_verbosity       32    UVM_LOW
+  producer1           uvm::uvm_component  -     -
+    recording_detail  uvm_verbosity       32    UVM_LOW
+  producer2           uvm::uvm_component  -     -
+    recording_detail  uvm_verbosity       32    UVM_LOW
+  recording_detail    uvm_verbosity       32    UVM_LOW
+-------------------------------------------------------
 UVM_INFO @ 0 s: reporter [RNTST] Running test ...
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: top.producer1 [producer1] Starting.
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: top.producer1 [producer1] Sending producer1-0
