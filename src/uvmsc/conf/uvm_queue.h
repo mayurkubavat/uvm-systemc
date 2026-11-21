@@ -64,7 +64,7 @@ public:
 
   virtual int size() const;
 
-//  virtual void insert( int index, const T& item );
+  virtual void insert( int index, const T& item );
 
   virtual void do_delete( int index = -1 );
 
@@ -209,9 +209,8 @@ int uvm_queue<T>::size() const
 //! Inserts the item at the given \p index in the queue.
 //------------------------------------------------------------------------------
 
-/* TODO insert item in queue
 template <typename T>
-void uvm_queue<T>::insert ( int index, T item )
+void uvm_queue<T>::insert( int index, const T& item )
 {
   if (index >= size() || index < 0)
   {
@@ -225,7 +224,6 @@ void uvm_queue<T>::insert ( int index, T item )
   for (int i = 0; i<index; i++) queue_it++;
   queue.insert(queue_it,item);
 }
-*/
 
 //------------------------------------------------------------------------------
 // member function: do_delete (was called delete in UVM-SV)
@@ -252,7 +250,7 @@ void uvm_queue<T>::do_delete( int index )
   else
   {
     queue_it = queue.begin();
-    for (int i=0; i<index; i++) queue_it++; //TODO check whether i=0 is correct as initialization
+    for (int i=0; i<index; i++) queue_it++;
     queue.erase(queue_it);
   }
 }
@@ -276,7 +274,7 @@ T uvm_queue<T>::pop_front()
     return val;
   }
   else
-    return T(); // TODO shouldn't it be T();
+    return T();
 }
 
 
@@ -292,13 +290,12 @@ T uvm_queue<T>::pop_back()
 {
   if (queue.size() != 0 )
   {
-    queue_it = queue.end();
-    T val = *queue_it;
+    T val = queue.back();
     queue.pop_back();
     return val;
   }
   else
-    return T(); // TODO shouldn't it be T();
+    return T();
 }
 
 
