@@ -53,6 +53,7 @@ class uvm_reg_field;
 class uvm_reg_indirect_data : public uvm_reg
 {
 public:
+  friend class uvm_reg;
   template <typename BUSTYPE> friend class uvm_reg_predictor;
 
   //--------------------------------------------------------------------

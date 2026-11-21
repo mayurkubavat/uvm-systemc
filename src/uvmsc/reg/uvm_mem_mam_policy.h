@@ -86,6 +86,12 @@ class uvm_mem_mam_policy
     in_use.clear();
   }
 
+  virtual ~uvm_mem_mam_policy() = default;
+
+  virtual void pre_randomize() {}
+  virtual void post_randomize() {}
+  virtual bool randomize() { return true; }
+
 }; // uvm_mem_mam_policy
 
 } // namespace uvm

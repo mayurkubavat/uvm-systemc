@@ -23,6 +23,7 @@
 #ifndef UVM_MEM_MAM_H_
 #define UVM_MEM_MAM_H_
 
+#include <random>
 #include <string>
 #include <vector>
 
@@ -58,8 +59,7 @@ class uvm_mem_mam
   //! Specifies how to allocate a memory region
   //!
   //! GREEDY   - Consume new, previously unallocated memory
-  //! THRIFTY  - Reused previously released memory as much as possible
-  //!            (not yet implemented)
+  //! THRIFTY  - Reuse previously released memory as much as possible
   //!--------------------------------------------------------------------
 
   typedef enum {GREEDY, THRIFTY} alloc_mode_e;
@@ -145,6 +145,10 @@ class uvm_mem_mam
   m_in_use_t m_in_use;
 
   int m_for_each_idx;
+  std::string m_name;
+  std::mt19937_64 m_rng;
+  bool m_rng_seeded;
+  unsigned int m_rng_global_seed;
   std::string m_fname;
   int m_lineno;
 

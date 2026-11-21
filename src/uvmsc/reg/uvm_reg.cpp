@@ -27,6 +27,7 @@
 #include <string>
 
 #include "uvmsc/reg/uvm_reg.h"
+#include "uvmsc/reg/uvm_reg_indirect_data.h"
 #include "uvmsc/reg/uvm_reg_block.h"
 #include "uvmsc/reg/uvm_hdl_path_concat.h"
 #include "uvmsc/reg/uvm_reg_model.h"
@@ -136,7 +137,8 @@ void uvm_reg::configure( uvm_reg_block* blk_parent,
                          const std::string& hdl_path )
 {
   m_parent = blk_parent;
-  m_parent->add_reg(this);
+  if (m_parent != nullptr)
+    m_parent->add_reg(this);
   m_regfile_parent = regfile_parent;
 
   if (!hdl_path.empty())
@@ -316,6 +318,9 @@ std::string uvm_reg::get_rights( uvm_reg_map* map ) const
     return "RW";
 
   info = map->get_reg_map_info(this);
+  if (info == nullptr)
+    return "RW";
+
   return info->rights;
 }
 
@@ -421,6 +426,8 @@ uvm_reg_addr_t uvm_reg::get_offset( uvm_reg_map* map ) const
     return -1;
 
   map_info = map->get_reg_map_info(this);
+  if (map_info == nullptr)
+    return -1;
 
   if (map_info->unmapped)
   {
@@ -498,6 +505,8 @@ int uvm_reg::get_addresses( std::vector<uvm_reg_addr_t>& addr, const uvm_reg_map
     return -1;
 
   map_info = lmap->get_reg_map_info(this);
+  if (map_info == nullptr)
+    return -1;
 
   if (map_info->unmapped)
   {
@@ -1078,7 +1087,17 @@ void uvm_reg::mirror( uvm_status_e& status,
    m_lineno = lineno;
 
    if (path == UVM_DEFAULT_PATH)
+   {
+     if (m_parent == nullptr)
+     {
+       UVM_ERROR(get_type_name(),
+           "Register '" + get_full_name() + "' has no parent block (called from mirror())");
+       status = UVM_NOT_OK;
+       m_atomic_check_lock(false);
+       return;
+     }
      path = m_parent->get_default_path();
+   }
 
    if (path == UVM_BACKDOOR && (bkdr != nullptr || has_hdl_path()))
      map = uvm_reg_map::backdoor();
@@ -1086,7 +1105,11 @@ void uvm_reg::mirror( uvm_status_e& status,
      map = get_local_map(map, "read()");
 
    if (map == nullptr)
+   {
+     status = UVM_NOT_OK;
+     m_atomic_check_lock(false);
      return;
+   }
 
    // Remember what we think the value is before it gets updated
    if (check == UVM_CHECK)
@@ -1128,21 +1151,21 @@ bool uvm_reg::predict( uvm_reg_data_t value,
                        const std::string&  fname,
                        int lineno )
 {
-  uvm_reg_item* rw = new uvm_reg_item();
+  uvm_reg_item rw;
 
   // make sure we have reserved space to store an initial value
-  if (rw->value.size() == 0)
-    rw->value.resize(1);
+  if (rw.value.size() == 0)
+    rw.value.resize(1);
 
-  rw->value[0] = value;
-  rw->path = path;
-  rw->map = map;
-  rw->fname = fname;
-  rw->lineno = lineno;
+  rw.value[0] = value;
+  rw.path = path;
+  rw.map = map;
+  rw.fname = fname;
+  rw.lineno = lineno;
 
-  do_predict(rw, kind, be);
+  do_predict(&rw, kind, be);
 
-  return (rw->status == UVM_NOT_OK) ? false : true;
+  return (rw.status == UVM_NOT_OK) ? false : true;
 }
 
 //----------------------------------------------------------------------
@@ -1222,6 +1245,8 @@ uvm_reg_frontdoor* uvm_reg::get_frontdoor( uvm_reg_map* map ) const
     return nullptr;
 
   map_info = map->get_reg_map_info(this);
+  if (map_info == nullptr)
+    return nullptr;
 
   return map_info->frontdoor;
 }
@@ -1320,8 +1345,14 @@ void uvm_reg::clear_hdl_path( const std::string& kind )
   if (lkind.empty()) {
     if (m_regfile_parent != nullptr)
       lkind = m_regfile_parent->get_default_hdl_path();
-    else
+    else if (m_parent != nullptr)
       lkind = m_parent->get_default_hdl_path();
+    else
+    {
+      UVM_WARNING("RegModel",
+          "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+      return;
+    }
   }
 
   if (m_hdl_paths_pool.find(lkind) == m_hdl_paths_pool.end())
@@ -1431,8 +1462,14 @@ bool uvm_reg::has_hdl_path( const std::string& kind ) const
   {
     if (m_regfile_parent != nullptr)
       kindl = m_regfile_parent->get_default_hdl_path();
-    else
+    else if (m_parent != nullptr)
       kindl = m_parent->get_default_hdl_path();
+    else
+    {
+      UVM_WARNING("RegModel",
+          "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+      return false;
+    }
   }
 
   return (m_hdl_paths_pool.find(kindl) != m_hdl_paths_pool.end() ); // exists
@@ -1463,8 +1500,14 @@ void uvm_reg::get_hdl_path( std::vector<uvm_hdl_path_concat>& paths,
   {
      if (m_regfile_parent != nullptr)
         lkind = m_regfile_parent->get_default_hdl_path();
-     else
+     else if (m_parent != nullptr)
         lkind = m_parent->get_default_hdl_path();
+     else
+     {
+        UVM_WARNING("RegModel",
+            "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+        return;
+     }
   }
 
   if (!has_hdl_path(lkind))
@@ -1525,8 +1568,14 @@ void uvm_reg::get_full_hdl_path( std::vector<uvm_hdl_path_concat>& paths,
   {
     if (m_regfile_parent != nullptr)
       lkind = m_regfile_parent->get_default_hdl_path();
-    else
+    else if (m_parent != nullptr)
       lkind = m_parent->get_default_hdl_path();
+    else
+    {
+      UVM_WARNING("RegModel",
+          "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+      return;
+    }
   }
 
   if (!has_hdl_path(lkind))
@@ -1546,8 +1595,14 @@ void uvm_reg::get_full_hdl_path( std::vector<uvm_hdl_path_concat>& paths,
 
   if (m_regfile_parent != nullptr)
     m_regfile_parent->get_full_hdl_path(parent_paths, lkind, separator);
-  else
+  else if (m_parent != nullptr)
     m_parent->get_full_hdl_path(parent_paths, lkind, separator);
+  else
+  {
+    for (unsigned int i = 0; i < hdl_paths.size(); i++)
+      paths.push_back(hdl_paths[i]);
+    return;
+  }
 
   for(unsigned int i = 0; i < hdl_paths.size(); i++)
   {
@@ -2341,12 +2396,15 @@ uvm_reg_map* uvm_reg::get_default_map( const std::string& caller ) const
   {
     uvm_reg_map* map = (*it).first;
     uvm_reg_block* blk = map->get_parent();
-    uvm_reg_map* default_map = blk->get_default_map();
-    if (default_map != nullptr)
+    if (blk != nullptr)
     {
-      uvm_reg_map* local_map = get_local_map(default_map, "get_default_map()");
-      if (local_map != nullptr)
-        return local_map;
+      uvm_reg_map* default_map = blk->get_default_map();
+      if (default_map != nullptr)
+      {
+        uvm_reg_map* local_map = get_local_map(default_map, "get_default_map()");
+        if (local_map != nullptr)
+          return local_map;
+      }
     }
   }
 
@@ -2499,7 +2557,16 @@ bool uvm_reg::m_check_access( uvm_reg_item* rw,
                               const std::string& caller )
 {
   if (rw->path == UVM_DEFAULT_PATH)
+  {
+    if (m_parent == nullptr)
+    {
+      UVM_ERROR(get_type_name(),
+          "Register '" + get_full_name() + "' has no parent block (called from " + caller + ")");
+      rw->status = UVM_NOT_OK;
+      return false;
+    }
     rw->path = m_parent->get_default_path();
+  }
 
   if (rw->path == UVM_BACKDOOR)
   {
@@ -2522,12 +2589,17 @@ bool uvm_reg::m_check_access( uvm_reg_item* rw,
     {
       UVM_ERROR(get_type_name(),
           "No transactor available to physically access register on map '" +
-          rw->map->get_full_name() + "'");
-          rw->status = UVM_NOT_OK;
+          ((rw->map == nullptr) ? (rw->local_map ? rw->local_map->get_full_name() : "<null>") : rw->map->get_full_name()) + "'");
+      rw->status = UVM_NOT_OK;
       return false;
     }
 
     map_info = rw->local_map->get_reg_map_info(this);
+    if (map_info == nullptr)
+    {
+      rw->status = UVM_NOT_OK;
+      return false;
+    }
 
     if (map_info->frontdoor == nullptr && map_info->unmapped)
     {
@@ -2651,7 +2723,10 @@ void uvm_reg::do_write( uvm_reg_item* rw )
   m_lineno = rw->lineno;
 
   if (!m_check_access(rw, map_info, "write()") )
+  {
+    delete cbs;
     return;
+  }
 
   m_atomic_check_lock(true);
 
@@ -2705,6 +2780,7 @@ void uvm_reg::do_write( uvm_reg_item* rw )
   {
     m_write_in_progress = false;
     m_atomic_check_lock(false);
+    delete cbs;
     return;
   }
 
@@ -2728,6 +2804,8 @@ void uvm_reg::do_write( uvm_reg_item* rw )
       if (rw->status == UVM_NOT_OK)
       {
         m_write_in_progress = false;
+        m_atomic_check_lock(false);
+        delete cbs;
         return;
       }
 
@@ -2781,7 +2859,8 @@ void uvm_reg::do_write( uvm_reg_item* rw )
         if (rw->status != UVM_NOT_OK)
         {
           sample(value, -1, 0, rw->map);
-          m_parent->m_sample(map_info->offset, 0, rw->map);
+          if (m_parent != nullptr)
+            m_parent->m_sample(map_info->offset, 0, rw->map);
         }
 
         status = rw->status; // do_predict will override rw.status, so we save it here
@@ -2872,7 +2951,10 @@ void uvm_reg::do_read( uvm_reg_item* rw )
   m_lineno  = rw->lineno;
 
   if (!m_check_access(rw, map_info, "read()"))
+  {
+    delete cbs;
     return;
+  }
 
   m_read_in_progress = true;
 
@@ -2905,6 +2987,7 @@ void uvm_reg::do_read( uvm_reg_item* rw )
   if (rw->status != UVM_IS_OK)
   {
     m_read_in_progress = false;
+    delete cbs;
     return;
   }
 
@@ -2916,8 +2999,26 @@ void uvm_reg::do_read( uvm_reg_item* rw )
       uvm_reg_backdoor* bkdr = get_backdoor();
 
       uvm_reg_map* map = uvm_reg_map::backdoor();
+      uvm_reg_indirect_data* ireg = dynamic_cast<uvm_reg_indirect_data*>(this);
+      uvm_reg* check_reg = this;
+      bool has_exp = false;
       if (map->get_check_on_read())
-        exp = get();
+      {
+        if (ireg != nullptr)
+        {
+          check_reg = ireg->get_indirect_reg();
+          if (check_reg != nullptr)
+          {
+            exp = check_reg->get();
+            has_exp = true;
+          }
+        }
+        else
+        {
+          exp = get();
+          has_exp = true;
+        }
+      }
 
       if (bkdr != nullptr)
         bkdr->read(rw);
@@ -2978,10 +3079,11 @@ void uvm_reg::do_read( uvm_reg_item* rw )
 
         rw->value[0] &= ~wo_mask;
 
-        if (map->get_check_on_read() &&
-            rw->status != UVM_NOT_OK)
+        if (has_exp &&
+            rw->status != UVM_NOT_OK &&
+            check_reg != nullptr)
         {
-          do_check(exp, rw->value[0], map);
+          check_reg->do_check(exp, rw->value[0], map);
         }
 
         do_predict(rw, UVM_PREDICT_READ);
@@ -2992,11 +3094,29 @@ void uvm_reg::do_read( uvm_reg_item* rw )
     case UVM_FRONTDOOR:
     {
       uvm_reg_map* system_map = rw->local_map->get_root_map();
+      uvm_reg_indirect_data* ireg = dynamic_cast<uvm_reg_indirect_data*>(this);
+      uvm_reg* check_reg = this;
+      bool has_exp = false;
 
       m_is_busy = true;
 
       if (rw->local_map->get_check_on_read())
-        exp = get();
+      {
+        if (ireg != nullptr)
+        {
+          check_reg = ireg->get_indirect_reg();
+          if (check_reg != nullptr)
+          {
+            exp = check_reg->get();
+            has_exp = true;
+          }
+        }
+        else
+        {
+          exp = get();
+          has_exp = true;
+        }
+      }
 
       // ...VIA USER FRONTDOOR
       if (map_info->frontdoor != nullptr)
@@ -3017,16 +3137,18 @@ void uvm_reg::do_read( uvm_reg_item* rw )
       if (system_map->get_auto_predict())
       {
         uvm_status_e status;
-        if (rw->local_map->get_check_on_read() &&
-            rw->status != UVM_NOT_OK)
+        if (has_exp &&
+            rw->status != UVM_NOT_OK &&
+            check_reg != nullptr)
         {
-          do_check(exp, rw->value[0], system_map);
+          check_reg->do_check(exp, rw->value[0], system_map);
         }
 
         if (rw->status != UVM_NOT_OK)
         {
           sample(rw->value[0], -1, 1, rw->map);
-          m_parent->m_sample(map_info->offset, 1, rw->map);
+          if (m_parent != nullptr)
+            m_parent->m_sample(map_info->offset, 1, rw->map);
         }
 
         status = rw->status; // do_predict will override rw.status, so we save it here
