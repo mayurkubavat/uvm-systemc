@@ -116,7 +116,7 @@ class uvm_reg_predictor : public uvm_component,
   uvm_reg_adapter* adapter;
 
  private:
-  typedef std::map<uvm_reg*, uvm_predict_s*> m_pending_t;
+  typedef std::map<uvm_reg_inst_key<uvm_reg>, uvm_predict_s*> m_pending_t;
   typedef m_pending_t::iterator m_pending_itt;
   m_pending_t m_pending;
 

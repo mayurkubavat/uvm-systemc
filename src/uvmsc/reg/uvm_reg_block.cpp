@@ -1126,6 +1126,62 @@ void uvm_reg_block::sample_values()
 }
 
 //----------------------------------------------------------------------
+// member function: randomize
+//
+//! Randomizes the registers of the block and of its sub-blocks, see
+//! uvm_reg::randomize. Calls pre_randomize before and post_randomize
+//! after they have been randomized. Returns false if a register could
+//! not be randomized.
+//!
+//! In UVM-SystemVerilog the block is randomized with the built-in
+//! method randomize of the language.
+//----------------------------------------------------------------------
+
+bool uvm_reg_block::randomize()
+{
+  bool ok = true;
+  std::vector<uvm_reg_block*> blks;
+  std::vector<uvm_reg*> regs;
+
+  pre_randomize();
+
+  get_blocks(blks, UVM_NO_HIER);
+  for (unsigned int i = 0; i < blks.size(); i++)
+    if (!blks[i]->randomize())
+      ok = false;
+
+  get_registers(regs, UVM_NO_HIER);
+  for (unsigned int i = 0; i < regs.size(); i++)
+    if (!regs[i]->randomize())
+      ok = false;
+
+  post_randomize();
+
+  return ok;
+}
+
+//----------------------------------------------------------------------
+// member function: pre_randomize
+//
+//! Called by randomize before the sub-blocks and registers are
+//! randomized. Does nothing; may be extended.
+//----------------------------------------------------------------------
+
+void uvm_reg_block::pre_randomize()
+{}
+
+//----------------------------------------------------------------------
+// member function: post_randomize
+//
+//! Called by randomize after the sub-blocks and registers have been
+//! randomized. Does nothing; may be extended, for example to make the
+//! values of several registers meet a constraint.
+//----------------------------------------------------------------------
+
+void uvm_reg_block::post_randomize()
+{}
+
+//----------------------------------------------------------------------
 // Group: Access
 //----------------------------------------------------------------------
 
@@ -1772,6 +1828,9 @@ uvm_reg_block::~uvm_reg_block()
 {
   m_hdl_paths_pool.clear();
   m_root_hdl_paths.clear();
+
+  // the list of root blocks shall not refer to a block which is gone
+  m_roots.erase(this);
 }
 
 //----------------------------------------------------------------------
