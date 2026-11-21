@@ -33,6 +33,7 @@
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
+#include "uvmsc/base/uvm_traversal.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 #include "uvmsc/phasing/uvm_phase.h"
 #include "uvmsc/phasing/uvm_common_phases.h"
@@ -365,6 +366,24 @@ void uvm_root::print_topology( uvm_printer* printer )
 void uvm_root::enable_print_topology( bool enable )
 {
   m_enable_print_topology = enable;
+}
+
+//----------------------------------------------------------------------
+// member function: end_of_elaboration_phase (virtual)
+//
+//! Implementation defined
+//! Traverses the entire component hierarchy top-down with the component
+//! visitor of the core service. By default, this is the visitor
+//! uvm_component_name_check_visitor, which checks the component names.
+//----------------------------------------------------------------------
+
+void uvm_root::end_of_elaboration_phase( uvm_phase& phase )
+{
+  uvm_component_proxy p("proxy");
+  uvm_top_down_visitor_adapter<uvm_component> adapter("adapter");
+  uvm_coreservice_t* cs = uvm_coreservice_t::get();
+  uvm_visitor<uvm_component>* v = cs->get_component_visitor();
+  adapter.accept(this, v, &p);
 }
 
 

@@ -33,8 +33,7 @@ class uvm_default_factory;
 class uvm_report_server;
 class uvm_default_report_server;
 class uvm_root;
-//class uvm_visitor;
-//class uvm_component_name_check_visitor;
+template <typename NODE> class uvm_visitor;
 class uvm_component;
 //class uvm_tr_database;
 //class uvm_text_tr_database;
@@ -65,8 +64,10 @@ class uvm_coreservice_t
 //  virtual uvm_tr_database* get_default_tr_database() = 0;
 //  virtual void set_default_tr_database( uvm_tr_database db ) = 0;
 
-//  virtual void set_component_visitor( uvm_visitor<uvm_component> v ) = 0;
-//  virtual uvm_visitor<uvm_component> get_component_visitor() const = 0;
+  // As in IEEE 1800.2, these member functions are pure virtual; a class
+  // derived from uvm_coreservice_t shall implement them.
+  virtual void set_component_visitor( uvm_visitor<uvm_component>* v ) = 0;
+  virtual uvm_visitor<uvm_component>* get_component_visitor() const = 0;
 
   virtual uvm_root* get_root() const = 0;
 
