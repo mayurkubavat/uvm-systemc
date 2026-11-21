@@ -22,7 +22,9 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "uvmsc/reg/uvm_mem_region.h"
@@ -478,10 +480,13 @@ uvm_mem_region::uvm_mem_region( unsigned long start_offset,
 
 std::string uvm_mem_region::convert2string()
 {
-  // TODO seems incomplete...
-  // $sformat(convert2string, "['h%h:'h%h]",
-  //          this.Xstart_offsetX, this.Xend_offsetX);
-  return "";
+  // as UVM-SV: "['h%h:'h%h]" on the 64-bit offsets
+  std::ostringstream str;
+  str << "['h" << std::hex << std::setfill('0') << std::setw(16)
+      << (unsigned long long)m_start_offset
+      << ":'h" << std::setw(16)
+      << (unsigned long long)m_end_offset << "]";
+  return str.str();
 }
 
 } // namespace uvm
