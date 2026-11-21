@@ -7,6 +7,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_sequence.h
   uvm_sequence_base.h
   uvm_sequence_item.h
+  uvm_sequence_library.h
   uvm_sequencer.h
   uvm_sequencer_analysis_fifo.h
   uvm_sequencer_base.h
@@ -19,6 +20,7 @@ install_headers (
   uvm_sequence.h
   uvm_sequence_base.h
   uvm_sequence_item.h
+  uvm_sequence_library.h
   uvm_sequencer.h
   uvm_sequencer_analysis_fifo.h
   uvm_sequencer_base.h
