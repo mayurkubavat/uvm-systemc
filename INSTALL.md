@@ -33,6 +33,11 @@ cmake -S . -B objdir \
 cmake --build objdir --target check-tests
 ```
 
+Set `-DUVM_SYSTEMC_ENABLE_FC4SC=ON` in addition to include the FC4SC
+functional coverage example (`examples/uvmsc/simple/coverage/fc4sc`) in the
+regression. FC4SC is found as a CMake package via `CMAKE_PREFIX_PATH`, or as
+a source checkout via `-DFC4SC_HOME=/path/to/fc4sc`.
+
 The regular expression backend defaults to POSIX, matching the configure
 script. Select another backend with
 `-DUVM_SYSTEMC_REGEX=c++11` or `-DUVM_SYSTEMC_REGEX=pcre`. The CMake options
