@@ -776,7 +776,7 @@ void uvm_reg::write( uvm_status_e& status,
 
    m_atomic_check_lock(true);
 
-   set(value);
+   uvm_reg::set(value);
 
    rw = uvm_reg_item::type_id::create("write_item", nullptr, get_full_name());
 

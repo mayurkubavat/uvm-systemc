@@ -1,0 +1,44 @@
+SystemC Simulation
+-------------------------------------------------------
+Name         Type  Size  Value
+-------------------------------------------------------
+early        item  -     @<removed by verify-uvm.pl>
+  uns_all64  int   64    18446744073709551615
+  wide_uns   int   100   633825300114114700748351602688
+  wide_hex   int   100   0x41
+  wide_oct   int   100   'o101
+  t          time  64    5
+  wide_t     time  100   18446744073709551615
+-------------------------------------------------------
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+-------------------------------------------------------
+Name         Type  Size  Value
+-------------------------------------------------------
+a            item  -     @<removed by verify-uvm.pl>
+  uns_all64  int   64    18446744073709551615
+  wide_uns   int   100   633825300114114700748351602688
+  wide_hex   int   100   0x41
+  wide_oct   int   100   'o101
+  t          time  64    5 ns
+  wide_t     time  100   18446744073709551615 ns
+-------------------------------------------------------
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for bin_8: lhs = 'b1 : rhs = 'b10
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for oct_8: lhs = 'o11 : rhs = 'o12
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for hex_8: lhs = 'h9 : rhs = 'ha
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for dec_8: lhs = 9 : rhs = 10
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for enum_8: lhs = 9 : rhs = 10
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for bin_70: lhs = 'b1 : rhs = 'b10
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for oct_70: lhs = 'o11 : rhs = 'o12
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for hex_70: lhs = 'h9 : rhs = 'ha
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [MISCMP] Miscompare for dec_70: lhs = 9 : rhs = 10
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :  10
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[MISCMP]                9
+[RNTST]                 1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
