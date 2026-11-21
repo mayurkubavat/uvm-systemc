@@ -20,6 +20,9 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <set>
+#include <typeindex>
+
 #include <systemc>
 
 #include "uvmsc/seq/uvm_sequence_item.h"
@@ -245,6 +248,62 @@ int uvm_sequence_item::get_depth() const
 bool uvm_sequence_item::is_item() const
 {
   return true;
+}
+
+//----------------------------------------------------------------------
+// member function: m_uvm_randomize (virtual)
+//
+// Implementation defined
+//
+// Randomizes the item or sequence where UVM in SystemVerilog calls
+// randomize(): in uvm_sequencer_param_base::send_request if the argument
+// rerandomize is set, in the macros UVM_DO and its variants, and on the
+// default sequence of a phase before the sequencer starts it.
+//
+// The macros UVM_OBJECT_UTILS and UVM_OBJECT_PARAM_UTILS override it to
+// call the public member function randomize() of the class, if it has
+// one which returns a value convertible to bool, for example one which
+// calls a constraint solver such as CRAVE. Otherwise, and in classes
+// without these macros, it does nothing and returns true.
+//----------------------------------------------------------------------
+
+bool uvm_sequence_item::m_uvm_randomize()
+{
+  return true;
+}
+
+//----------------------------------------------------------------------
+// function: m_uvm_randomize_warning
+//
+// Implementation defined
+//
+// Warns once for each type that a randomize() of the class is not
+// called, see m_uvm_randomize_object in uvm_object_defines.h.
+//----------------------------------------------------------------------
+
+void m_uvm_randomize_warning( const uvm_object* obj,
+                              const std::type_info& type,
+                              m_uvm_randomize_issue issue )
+{
+  static std::set<std::pair<std::type_index, int> > warned;
+
+  if (!warned.insert(std::make_pair(std::type_index(type), (int)issue)).second)
+    return;
+
+  std::ostringstream msg;
+  if (issue == M_UVM_RANDOMIZE_NOT_USABLE)
+    msg << "The member randomize of class " << obj->get_type_name()
+        << " is not called to randomize its objects. Declare it as a public"
+        << " member function without arguments, which returns bool or an"
+        << " integral type, and which is not ambiguous.";
+  else
+    msg << "The class of object " << obj->get_name() << " is derived from " << obj->get_type_name()
+        << " without UVM_OBJECT_UTILS or UVM_OBJECT_PARAM_UTILS, so it is"
+        << " randomized with the randomize() of " << obj->get_type_name()
+        << ". A randomize() which it declares is only called if it overrides"
+        << " a virtual one.";
+
+  uvm_report_warning("RNDNOTCALLED", msg.str(), UVM_NONE);
 }
 
 //----------------------------------------------------------------------

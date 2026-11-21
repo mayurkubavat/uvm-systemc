@@ -235,8 +235,7 @@ void uvm_sequencer_base::start_phase_sequence( uvm_phase& phase )
   //seq.reseed(); // TODO: randomization
   seq->set_starting_phase(&phase); //NEW!
 
-  /* TODO randomize
-  if (!seq->do_not_randomize && !seq->randomize())
+  if (!seq->do_not_randomize && !seq->m_uvm_randomize())
   {
     std::ostringstream msg;
     msg << "Randomization failed for default sequence '"
@@ -245,7 +244,6 @@ void uvm_sequencer_base::start_phase_sequence( uvm_phase& phase )
     uvm_report_warning("STRDEFSEQ", msg.str());
     return;
   }
-  */
 
   // launch default sequence as new process
   sc_core::sc_spawn(sc_bind(&uvm_sequencer_base::m_start_default_seq_proc, this, seq));

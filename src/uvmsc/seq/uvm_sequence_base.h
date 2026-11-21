@@ -185,6 +185,11 @@ public:
   sc_core::sc_event response_queue_event;
   //uvm_phase* starting_phase; //OLD-remove
 
+  //! If set, the sequence is not randomized when it is started by
+  //! the macros UVM_DO and its variants or as the default sequence
+  //! of a phase.
+  bool do_not_randomize;
+
 private:
   int m_wait_for_grant_semaphore;
   int m_next_transaction_id;

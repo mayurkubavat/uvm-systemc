@@ -1,0 +1,24 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [SEEDSET] '+UVM_SEED=4711' provided on the command line is being applied; the global seed is 4711.
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+seed 4711
+items with UVM_DO
+items with send_request
+items meet their constraints: ok
+number of items meets its constraint: ok
+items received with UVM_DO and send_request: ok
+items are randomized: ok
+UVM_INFO <removed by verify-uvm.pl> @ 200 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   2
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[SEEDSET]               1
+UVM_INFO @ 200 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished
+randomization succeeds: ok
+the same seed generates the same values: ok
+another seed generates other values: ok

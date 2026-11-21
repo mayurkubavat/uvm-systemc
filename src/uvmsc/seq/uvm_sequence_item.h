@@ -156,6 +156,8 @@ class uvm_sequence_item: public uvm_transaction
 
   virtual void do_print( const uvm_printer& printer ) const;
 
+  virtual bool m_uvm_randomize();
+
 
 protected:
 
