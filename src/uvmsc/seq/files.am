@@ -1,4 +1,5 @@
 H_FILES += \
+	seq/uvm_push_sequencer.h \
 	seq/uvm_seq.h \
 	seq/uvm_sequence.h \
 	seq/uvm_sequence_base.h \
