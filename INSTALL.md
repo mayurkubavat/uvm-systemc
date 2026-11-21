@@ -33,6 +33,22 @@ cmake -S . -B objdir \
 cmake --build objdir --target check-tests
 ```
 
+Set `-DUVM_SYSTEMC_ENABLE_CRAVE=ON` in addition to build and run the
+constrained random examples in `examples/uvmsc/simple/crave` as part of the
+regression suite. They need an installation of [CRAVE][crave] with its
+UVM-SystemC layer (`crave2uvm`), built with the same C++ standard and against
+the same SystemC installation, in `CMAKE_PREFIX_PATH`:
+
+```sh
+cmake -S . -B objdir \
+  -DCMAKE_PREFIX_PATH="/path/to/systemc;/path/to/crave" \
+  -DENABLE_REGRESSION=ON -DUVM_SYSTEMC_ENABLE_CRAVE=ON
+cmake --build objdir --target all-tests
+ctest --test-dir objdir -L crave
+```
+
+[crave]: https://github.com/accellera-official/crave
+
 The regular expression backend defaults to POSIX, matching the configure
 script. Select another backend with
 `-DUVM_SYSTEMC_REGEX=c++11` or `-DUVM_SYSTEMC_REGEX=pcre`. The CMake options

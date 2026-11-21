@@ -528,7 +528,22 @@ endif ()
 option (ENABLE_REGRESSION
         "Enable the in-tree UVM-SystemC regression tests." OFF)
 
+option (UVM_SYSTEMC_ENABLE_CRAVE
+        "Add the CRAVE constrained random examples to the regression tests." OFF)
+
+if (UVM_SYSTEMC_ENABLE_CRAVE AND NOT ENABLE_REGRESSION)
+  message (WARNING "UVM_SYSTEMC_ENABLE_CRAVE has no effect without "
+                   "ENABLE_REGRESSION.")
+endif ()
+
 if (ENABLE_REGRESSION)
+  if (UVM_SYSTEMC_ENABLE_CRAVE)
+    # CRAVE and its UVM-SystemC layer (crave2uvm) are not part of this
+    # package, see https://github.com/accellera-official/crave
+    find_package (crave2uvm REQUIRED CONFIG)
+    message (STATUS "Using CRAVE (${crave2uvm_DIR})")
+  endif ()
+
   include (CTest)
   add_subdirectory (tests)
 endif ()
@@ -550,6 +565,7 @@ message (STATUS "  ENABLE_PROFILING                = ${ENABLE_PROFILING}")
 message (STATUS "  UVM_SYSTEMC_REGEX               = ${UVM_SYSTEMC_REGEX}")
 message (STATUS "  SystemC compatibility check     = ${UVM_SYSTEMC_SYSTEMC_COMPAT_CHECK}")
 message (STATUS "  ENABLE_REGRESSION               = ${ENABLE_REGRESSION}")
+message (STATUS "  UVM_SYSTEMC_ENABLE_CRAVE        = ${UVM_SYSTEMC_ENABLE_CRAVE}")
 message (STATUS "  INSTALL_TO_LIB_BUILD_TYPE_DIR   = ${INSTALL_TO_LIB_BUILD_TYPE_DIR}")
 message (STATUS "  INSTALL_TO_LIB_TARGET_ARCH_DIR  = ${INSTALL_TO_LIB_TARGET_ARCH_DIR}")
 message (STATUS "  INSTALL_LIB_TARGET_ARCH_SYMLINK = ${INSTALL_LIB_TARGET_ARCH_SYMLINK}")
