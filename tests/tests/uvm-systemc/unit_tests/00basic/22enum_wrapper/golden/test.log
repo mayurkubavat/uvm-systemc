@@ -8,6 +8,8 @@ color_e "RED": found 0
 color_e "GREEN": found 1
 color_e "BLUE": found 2
 color_e "": not found, unchanged 1
+first_e "FIRST": found 0
+second_e "SECOND": found 0
 unknown_e "ONE": not found, unchanged 1
 unknown_e "ONE": found 0
 add green: 1

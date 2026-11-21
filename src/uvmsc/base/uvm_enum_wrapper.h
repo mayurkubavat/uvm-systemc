@@ -214,13 +214,21 @@ struct uvm_enum_registrar
 //
 //! Registers the enumerators given after the enumeration type T with
 //! uvm_enum_wrapper<T>, under their own names, without qualifiers.
-//! The macro can be used at namespace scope or in a function body, at
-//! most once per line.
+//! The macro can be used at namespace scope or in a function body, also
+//! several times on one line or on the same line of different headers.
 //----------------------------------------------------------------------
+
+// the name of the registrar object is unique in the translation unit
+// with __COUNTER__, which GCC, Clang and MSVC provide
+#ifdef __COUNTER__
+#define UVM_ENUM_REGISTER_ID_ __COUNTER__
+#else
+#define UVM_ENUM_REGISTER_ID_ __LINE__
+#endif
 
 #define UVM_ENUM_REGISTER(T, ...) \
   static ::uvm::uvm_enum_registrar<T> \
-    UVM_ENUM_REGISTER_NAME_(uvm_enum_registrar_, __LINE__)(#__VA_ARGS__, { __VA_ARGS__ });
+    UVM_ENUM_REGISTER_NAME_(uvm_enum_registrar_, UVM_ENUM_REGISTER_ID_)(#__VA_ARGS__, { __VA_ARGS__ });
 
 #define UVM_ENUM_REGISTER_NAME_(A, B) UVM_ENUM_REGISTER_CONCAT_(A, B)
 #define UVM_ENUM_REGISTER_CONCAT_(A, B) A##B

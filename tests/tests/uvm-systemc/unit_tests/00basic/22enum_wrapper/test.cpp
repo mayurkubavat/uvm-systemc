@@ -37,6 +37,12 @@ enum class color_e { RED, GREEN, BLUE };
 
 enum class unknown_e { ONE, TWO };
 
+// two registrations on one line, as from two headers which register on
+// the same line number
+enum first_e { FIRST };
+enum second_e { SECOND };
+UVM_ENUM_REGISTER(first_e, FIRST) UVM_ENUM_REGISTER(second_e, SECOND)
+
 // registration at namespace scope, with qualified names
 UVM_ENUM_REGISTER(my_pkg::mode_e, my_pkg::MODE_IDLE, my_pkg::MODE_RUN, my_pkg::MODE_STOP)
 UVM_ENUM_REGISTER(color_e, color_e::RED, color_e::GREEN, color_e::BLUE)
@@ -63,6 +69,9 @@ int sc_main(int, char*[])
   check<color_e>("color_e", "GREEN", color_e::RED);
   check<color_e>("color_e", "BLUE", color_e::RED);
   check<color_e>("color_e", "", color_e::GREEN);
+
+  check<first_e>("first_e", "FIRST", FIRST);
+  check<second_e>("second_e", "SECOND", SECOND);
 
   // no names registered for this type
   check<unknown_e>("unknown_e", "ONE", unknown_e::TWO);
