@@ -81,6 +81,9 @@ uvm_component::uvm_component( uvm_component_name nm )
   // prevent recursive registration of uvm_root module
   bool top = ( strstr(nm, "uvm_top") != nullptr );
 
+  // uvm_top has no parent
+  m_comp_parent = nullptr;
+
   set_name(std::string(nm));
 
   // SystemC generates the module name object_<n> for an empty name; use
@@ -706,8 +709,10 @@ void uvm_component::define_domain( uvm_domain& domain )
 
   if (m_schedule == nullptr)
   {
+    // The schedule becomes part of the domain, and other components and
+    // the common domain refer to it, so it lives as long as the domain
+    // and is not deleted with this component.
     m_schedule = new uvm_phase("uvm_sched", UVM_PHASE_SCHEDULE);
-    m_schedule_list.push_back(m_schedule); // TODO keep track of added schedules (to be deleted afterwards)
     uvm_domain::add_uvm_phases(m_schedule);
     domain.add(m_schedule);
 
@@ -1722,10 +1727,23 @@ int uvm_component::m_record_tr( const std::string& stream_name,
 
 uvm_component::~uvm_component()
 {
-  // clean memory of dynamically added elements
-  while(!m_schedule_list.empty())
-    delete m_schedule_list.back(), m_schedule_list.pop_back();
+  // the parent shall not refer to a child which is gone
+  if (m_comp_parent != nullptr)
+  {
+    std::map<std::string, uvm_component*>::iterator it =
+      m_comp_parent->m_children.find(get_name());
 
+    if (it != m_comp_parent->m_children.end() && it->second == this)
+      m_comp_parent->m_children.erase(it);
+
+    m_comp_parent->m_children_by_handle.erase(this);
+  }
+
+  // children which outlive this component no longer have a parent
+  for (m_children_mapcItT it = m_children.begin(); it != m_children.end(); it++)
+    it->second->m_comp_parent = nullptr;
+
+  // clean memory of dynamically added elements
   while(!m_config_object_wrapper_list.empty())
     delete m_config_object_wrapper_list.back(), m_config_object_wrapper_list.pop_back();
 }
