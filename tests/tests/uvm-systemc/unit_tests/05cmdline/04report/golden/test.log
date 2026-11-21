@@ -1,0 +1,76 @@
+SystemC Simulation
+UVM_WARNING @ 0 s: reporter [ILLVERB] Illegal verbosity value 'bogus', converted to default of UVM_MEDIUM.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Invalid verbosity found, setting '+uvm_set_verbosity=test.c1,_ALL_,UVM_BOGUS,build' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Invalid number of arguments found, expected 4 or 5, setting '+uvm_set_verbosity=test.c1,_ALL_,UVM_LOW' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Too many arguments found for <phase>, expected only 4, setting '+uvm_set_verbosity=test.c1,_ALL_,UVM_LOW,run,10' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Too few arguments found for <time>, expected 5, setting '+uvm_set_verbosity=test.c1,_ALL_,UVM_LOW,time' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Invalid time found, setting '+uvm_set_verbosity=test.c1,_ALL_,UVM_LOW,time,soon' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Invalid component found, setting '+uvm_set_verbosity=,_ALL_,UVM_LOW,run' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Invalid time found, setting '+uvm_set_verbosity=test.c1,_ALL_,UVM_LOW,time,0x20' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Bad severity argument "UVM_BAD", setting '+uvm_set_action=test.c1,NOISY,UVM_BAD,UVM_DISPLAY' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Bad action argument "UVM_SHOUT", setting '+uvm_set_action=test.c1,NOISY,UVM_INFO,UVM_SHOUT' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Invalid component found, setting '+uvm_set_action=/[/,NOISY,UVM_INFO,UVM_NO_ACTION' will be ignored.
+UVM_WARNING @ 0 s: reporter [INVLCMDARGS] Invalid number of arguments found, expected 4, setting '+uvm_set_severity=test.c1,DEMOTE,UVM_ERROR' will be ignored.
+UVM_INFO @ 0 s: reporter [MAXQUITSET] '+UVM_MAX_QUIT_COUNT=100' provided on the command line is being applied.
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c1 [FULL] build: verbosity UVM_FULL
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c1 [MYID] build: verbosity UVM_HIGH
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c1 [WARN] build: warning
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c1 [DEMOTE] build: error
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c2 [NOISY] build: verbosity UVM_NONE
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c2 [WARN] build: warning
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: test.c2 [DEMOTE] build: error
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c3 [NOISY] build: verbosity UVM_NONE
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c3 [WARN] build: warning
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c1 [FULL] connect: verbosity UVM_FULL
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c1 [MYID] connect: verbosity UVM_HIGH
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c1 [WARN] connect: warning
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c1 [DEMOTE] connect: error
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c2 [NOISY] connect: verbosity UVM_NONE
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c2 [WARN] connect: warning
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: test.c2 [DEMOTE] connect: error
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c3 [NOISY] connect: verbosity UVM_NONE
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c3 [WARN] connect: warning
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c1 [FULL] run: verbosity UVM_FULL
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c1 [MYID] run: verbosity UVM_HIGH
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c1 [WARN] run: warning
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c1 [DEMOTE] run: error
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c2 [MYID] run: verbosity UVM_HIGH
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c2 [NOISY] run: verbosity UVM_NONE
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c2 [WARN] run: warning
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: test.c2 [DEMOTE] run: error
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test.c3 [NOISY] run: verbosity UVM_NONE
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test.c3 [WARN] run: warning
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: test.c1 [FULL] run after 20 ns: verbosity UVM_FULL
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: test.c1 [MYID] run after 20 ns: verbosity UVM_HIGH
+UVM_WARNING <removed by verify-uvm.pl> @ 20 ns: test.c1 [WARN] run after 20 ns: warning
+UVM_WARNING <removed by verify-uvm.pl> @ 20 ns: test.c1 [DEMOTE] run after 20 ns: error
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: test.c3 [MYID] run after 20 ns: verbosity UVM_HIGH
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: test.c3 [NOISY] run after 20 ns: verbosity UVM_NONE
+UVM_WARNING <removed by verify-uvm.pl> @ 20 ns: test.c3 [WARN] run after 20 ns: warning
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: test.c2 [MYID] run after 20 ns: verbosity UVM_HIGH
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: test.c2 [NOISY] run after 20 ns: verbosity UVM_NONE
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: test.c2 [WARN] run after 20 ns: warning
+UVM_ERROR <removed by verify-uvm.pl> @ 20 ns: test.c2 [DEMOTE] run after 20 ns: error
+simulation ended at 20 ns
+quit count = 8
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 20 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+Quit count :     8 of   100
+** Report counts by severity
+UVM_INFO      :  25
+UVM_WARNING   :  24
+UVM_ERROR     :   4
+UVM_FATAL     :   0
+** Report counts by id
+[DEMOTE]                8
+[FULL]                  4
+[ILLVERB]               1
+[INVLCMDARGS]          11
+[MAXQUITSET]            1
+[MYID]                  7
+[NOISY]                 8
+[RNTST]                 1
+[WARN]                 12
+UVM_INFO @ 20 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

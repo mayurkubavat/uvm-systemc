@@ -31,6 +31,7 @@
 #include "uvmsc/base/uvm_object_globals.h"
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_globals.h"
+#include "uvmsc/base/uvm_cmdline_settings.h"
 #include "uvmsc/base/uvm_root.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
@@ -532,7 +533,8 @@ void uvm_objection::m_objection_init()
 
   m_events.clear();
   m_cleared = false;
-  m_trace_mode = false;
+  // +UVM_OBJECTION_TRACE on the command line turns on tracing
+  m_trace_mode = uvm_cmdline_settings::has_arg("+UVM_OBJECTION_TRACE");
   m_hier_mode = true;
 
   m_ctxt = nullptr;

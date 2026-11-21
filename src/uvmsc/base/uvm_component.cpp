@@ -35,6 +35,7 @@
 
 #include "uvmsc/base/uvm_root.h"
 #include "uvmsc/base/uvm_component.h"
+#include "uvmsc/base/uvm_cmdline_settings.h"
 #include "uvmsc/base/uvm_component_name.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/factory/uvm_factory.h"
@@ -116,6 +117,10 @@ uvm_component::uvm_component( uvm_component_name nm )
       uvm_domain::get_common_domain();
       m_domain = uvm_domain::get_uvm_domain();
     }
+
+    // apply the report settings given on the command line
+    uvm_cmdline_settings::init(uvm_coreservice_t::get()->get_root());
+    uvm_cmdline_settings::apply_report_settings(this);
 
   }
   else
@@ -1576,7 +1581,7 @@ void uvm_component::end_of_simulation()
 
 void uvm_component::m_apply_verbosity_settings( uvm_phase* phase )
 {
-  // TODO
+  uvm_cmdline_settings::apply_verbosity_settings(this, phase->get_name());
 }
 
 //----------------------------------------------------------------------------
