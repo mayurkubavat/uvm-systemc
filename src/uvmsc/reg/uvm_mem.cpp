@@ -1449,7 +1449,8 @@ void uvm_mem::backdoor_write( uvm_reg_item* rw )
 uvm_status_e uvm_mem::backdoor_read_func( uvm_reg_item* rw )
 {
   std::vector<uvm_hdl_path_concat> paths;
-  uvm_hdl_data_t val;
+  // the type which backdoor_write() deposits
+  uvm_reg_data_t val;
   bool ok = true;
 
   get_full_hdl_path(paths, rw->bd_kind);

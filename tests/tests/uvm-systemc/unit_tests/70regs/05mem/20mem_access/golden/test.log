@@ -117,6 +117,14 @@ Mem[4] = 02726252423222120
 Mem[5] = 02f2e2d2c2b2a2928
 Mem[6] = 03736353433323130
 Mem[7] = 03f3e3d3c3b3a3938
+Backdoor read Mem[0] UVM_IS_OK = 00706050403020100
+Backdoor read Mem[1] UVM_IS_OK = 00f0e0d0c0b0a0908
+Backdoor read Mem[2] UVM_IS_OK = 01716151413121110
+Backdoor read Mem[3] UVM_IS_OK = 01f1e1d1c1b1a1918
+Backdoor read Mem[4] UVM_IS_OK = 02726252423222120
+Backdoor read Mem[5] UVM_IS_OK = 02f2e2d2c2b2a2928
+Backdoor read Mem[6] UVM_IS_OK = 03736353433323130
+Backdoor read Mem[7] UVM_IS_OK = 03f3e3d3c3b3a3938
 ** UVM TEST PASSED **
 UVM_INFO <removed by verify-uvm.pl> @ 8 us: reporter [UVM/REPORT/CATCHER]
 --- UVM Report catcher Summary ---
