@@ -2407,15 +2407,14 @@ std::string uvm_reg_map::convert2string() const
 //----------------------------------------------------------------------
 // member function: clone
 //
-// TODO: not implemented yet
+//! An address map cannot be cloned. Reports a fatal error and
+//! returns nullptr.
 //----------------------------------------------------------------------
 
 uvm_object* uvm_reg_map::clone()
 {
-  //uvm_rag_map* me; // TODO reg_map clone
-  //me = new this;
-  //return me;
-  return nullptr; // dummy
+  UVM_FATAL("UVM/REGMAP/NOCLONE", "uvm_reg_map does not support clone()");
+  return nullptr;
 }
 
 //----------------------------------------------------------------------
