@@ -11,6 +11,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_common_phases.h
   uvm_domain.h
   uvm_objection.h
+  uvm_objection_callback.h
   uvm_phase.h
   uvm_phase_queue.h
   uvm_phasing.h
@@ -24,6 +25,7 @@ install_headers (
   uvm_common_phases.h
   uvm_domain.h
   uvm_objection.h
+  uvm_objection_callback.h
   uvm_phase.h
   uvm_phase_queue.h
   uvm_phasing.h
