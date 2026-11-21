@@ -1801,11 +1801,9 @@ void uvm_reg::include_coverage( const std::string& scope,
                                 uvm_reg_cvr_t models,
                                 uvm_object* accessor )
 {
-  /* TODO support of regular data in resource database
   uvm_reg_cvr_rsrc_db::set( "uvm_reg::"+ scope,
                             "include_coverage",
                             models, accessor);
-                            */
 }
 
 //----------------------------------------------------------------------
