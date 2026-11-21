@@ -1,0 +1,27 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+get 'in_env' in 'test.env': 1
+get 'in_env' in 'test.env.agent0': 1
+get 'in_env' in 'test.other': not found
+get 'only_env' in 'test.env': 2
+get 'only_env' in 'test.env.agent0': not found
+get 'agent' in 'test.env.agent1.drv': 3
+get 'agent' in 'test.env.agentx': not found
+get 'glob' in 'test.env.agent0': 4
+get 'glob' in 'top.test.env': not found
+20 ns: test.a was notified
+40 ns: test.a was notified of speed
+50 ns: test.b was notified of speed
+70 ns: uvm_top was notified of level
+resource with empty scope found in '': 1, in 'test.a': 0
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 80 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 80 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

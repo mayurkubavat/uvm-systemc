@@ -1,0 +1,30 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_FATAL <removed by verify-uvm.pl> @ 0 s: test [PROMOTE_FATAL] promoted fatal without exit
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: test [PROMOTE_ERR] promoted error without count
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test [TRC_CHK] emit while m_tracing is false
+tracing_after=0 quit_cnt=1 err_cnt=1 ftl_cnt=1
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    0
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+Quit count :     1 of     5
+** Report counts by severity
+UVM_INFO      :   3
+UVM_WARNING   :   0
+UVM_ERROR     :   1
+UVM_FATAL     :   1
+** Report counts by id
+[PROMOTE_ERR]           1
+[PROMOTE_FATAL]         1
+[RNTST]                 1
+[TRC_CHK]               1
+[UVM/REPORT/CATCHER]    1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

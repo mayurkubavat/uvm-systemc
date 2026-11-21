@@ -1,0 +1,18 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+ w_* [/^test\.ag$/] : (int) 77
+ k_used [/^test\.ag$/] : (int) 42
+ k_unused [/^test\.ag$/] : (int) 99
+ is_active [/^test\.ag$/] : (int) 0
+func_ok=1 heap_ok=1
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 200 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 200 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

@@ -253,6 +253,7 @@ void uvm_report_catcher::set_message( const std::string& message )
 void uvm_report_catcher::set_action( uvm_action action )
 {
   uvm_report_catcher_data::get().m_modified_report_message->set_action(action);
+  uvm_report_catcher_data::get().m_set_action_called = true;
 }
 
 //------------------------------------------------------------------------------
@@ -584,6 +585,7 @@ bool uvm_report_catcher::process_all_report_catchers( uvm_report_message* rm )
     return true;
 
   in_catcher = true;
+  bool prev_tracing = uvm_callbacks_base::m_tracing;
   uvm_callbacks_base::m_tracing = false;  //turn off cb tracing so catcher stuff doesn't print
 
   orig_severity = rm->get_severity();
@@ -656,7 +658,7 @@ bool uvm_report_catcher::process_all_report_catchers( uvm_report_message* rm )
   }
 
   in_catcher = false;
-  uvm_callbacks_base::m_tracing = true;  // turn tracing stuff back on
+  uvm_callbacks_base::m_tracing = prev_tracing;  // restore callback tracing state
 
   return thrown;
 }

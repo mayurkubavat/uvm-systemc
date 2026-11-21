@@ -30,18 +30,18 @@ test                        uvm_report_handler  -     @<removed by verify-uvm.pl
   sev_id_overrides          array               2     -
     [UVM_INFO:ID8]          uvm_severity        32    UVM_ERROR
     [UVM_ERROR:ID9]         uvm_severity        32    UVM_WARNING
-  default_file_handle       int                 32    0x1
+  default_file_handle       UVM_FILE            64    stdout
   id_file_handles           uvm_pool            2     -
-    [ID3]                   UVM_FILE            32    0x1
-    [ID7]                   UVM_FILE            32    0x1
+    [ID3]                   UVM_FILE            64    stdout
+    [ID7]                   UVM_FILE            64    stdout
   severity_file_handles     array               4     -
-    [UVM_INFO]              UVM_FILE            32    0x1
-    [UVM_WARNING]           UVM_FILE            32    0x1
-    [UVM_ERROR]             UVM_FILE            32    0x1
-    [UVM_FATAL]             UVM_FILE            32    0x1
+    [UVM_INFO]              UVM_FILE            64    stdout
+    [UVM_WARNING]           UVM_FILE            64    <null>
+    [UVM_ERROR]             UVM_FILE            64    <null>
+    [UVM_FATAL]             UVM_FILE            64    stdout
   severity_id_file_handles  array               2     -
-    [UVM_WARNING:ID207]     UVM_FILE            32    0x1
-    [UVM_ERROR:ID0]         UVM_FILE            32    0x1
+    [UVM_WARNING:ID207]     UVM_FILE            64    stdout
+    [UVM_ERROR:ID0]         UVM_FILE            64    stdout
 ------------------------------------------------------------------------------
 END OF GOLD FILE
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]

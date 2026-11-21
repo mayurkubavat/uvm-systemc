@@ -1,0 +1,33 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/GET_TO_LOCK_DAP/CPY] do_copy is not supported for uvm_get_to_lock_dap<T>
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/SIMPLE_LOCK_DAP/CPY] do_copy is not supported for uvm_simple_lock_dap<T>
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/SET_BEFORE_GET_DAP/CPY] do_copy is not supported for uvm_set_before_get_dap<T>
+cpy_counts: gtl=1 sld=1 sbg=1 docpy=0
+str_ok=1 cfg_ok=1
+gtl_cfg=(7dap_cfg) 42:init [LOCKED]
+sld_cfg=(7dap_cfg) 42:init [UNLOCKED]
+sbg_cfg=(7dap_cfg) 99:set [SET]
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    3
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    0
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   5
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[UVM/GET_TO_LOCK_DAP/CPY]                                      1
+[UVM/REPORT/CATCHER]    1
+[UVM/SET_BEFORE_GET_DAP/CPY]                                      1
+[UVM/SIMPLE_LOCK_DAP/CPY]                                      1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

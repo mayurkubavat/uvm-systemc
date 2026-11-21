@@ -349,25 +349,24 @@ void uvm_resource_pool::dump_get_records() const
 //! \p scope.
 //----------------------------------------------------------------------
 
-uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_name(
+void uvm_resource_pool::m_lookup_name(
+  uvm_resource_types::rsrc_q_t& q,
   const std::string& scope,
   const std::string& name,
   uvm_resource_base* type_handle,
   bool rpterr) const
 {
   uvm_resource_types::rsrc_q_t* rq;
-  uvm_resource_types::rsrc_q_t* q = new uvm_resource_types::rsrc_q_t();
-  // uvm_resource_base* rsrc;
   uvm_resource_base* r;
 
   // resources with empty names are anonymous and do not exist in the name map
   if(name.empty())
-    return q;
+    return;
 
   // Does an entry in the name map exist with the specified name?
   // If not, then we're done
   if((rpterr && !spell_check(name)) || (!rpterr && (rtab.find(name)==rtab.end()) ))
-    return q;
+    return;
 
   rq = rtab.find(name)->second; // rq = rtab[name];
 
@@ -377,9 +376,19 @@ uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_name(
     // does the scope and type match?
     if( r->match_scope(scope) &&
         ((type_handle == nullptr) || (r->get_type_handle() == type_handle)))
-      q->push_back(r);
+      q.push_back(r);
   }
+}
 
+uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_name(
+  const std::string& scope,
+  const std::string& name,
+  uvm_resource_base* type_handle,
+  bool rpterr) const
+{
+  uvm_resource_types::rsrc_q_t* q = new uvm_resource_types::rsrc_q_t();
+  rsrc_list.push_back(q); // store to delete later
+  m_lookup_name(*q, scope, name, type_handle, rpterr);
   return q;
 }
 
@@ -433,6 +442,9 @@ uvm_resource_base* uvm_resource_pool::get_highest_precedence( uvm_resource_types
 // TODO: use reference as argument, not pointer
 void uvm_resource_pool::sort_by_precedence( uvm_resource_types::rsrc_q_t* q)
 {
+  if (q == nullptr)
+    return;
+
   typedef std::map<int,uvm_resource_types::rsrc_q_t* > all_listT;
   typedef all_listT::iterator all_listItT;
   all_listT all;
@@ -457,6 +469,7 @@ void uvm_resource_pool::sort_by_precedence( uvm_resource_types::rsrc_q_t* q)
       r = (*it).second->get(j);
       q->push_front(r);
     }
+    delete (*it).second;
   }
 }
 
@@ -476,18 +489,18 @@ uvm_resource_base* uvm_resource_pool::get_by_name( const std::string& scope,
                                                    uvm_resource_base* type_handle,
                                                    bool rpterr )
 {
-  uvm_resource_types::rsrc_q_t* q;
+  uvm_resource_types::rsrc_q_t q;
   uvm_resource_base* rsrc;
 
-  q = lookup_name(scope, name, type_handle, rpterr);
+  m_lookup_name(q, scope, name, type_handle, rpterr);
 
-  if(q->size() == 0)
+  if(q.size() == 0)
   {
     push_get_record(name, scope, nullptr);
     return nullptr;
   }
 
-  rsrc = get_highest_precedence(q);
+  rsrc = get_highest_precedence(&q);
   push_get_record(name, scope, rsrc);
   return rsrc;
 }
@@ -500,15 +513,15 @@ uvm_resource_base* uvm_resource_pool::get_by_name( const std::string& scope,
 //! queue is empty.
 //----------------------------------------------------------------------
 
-uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_type( const std::string& scope,
-                                                              uvm_resource_base* type_handle) const
+void uvm_resource_pool::m_lookup_type( uvm_resource_types::rsrc_q_t& q,
+                                       const std::string& scope,
+                                       uvm_resource_base* type_handle) const
 {
-  uvm_resource_types::rsrc_q_t* q = new uvm_resource_types::rsrc_q_t();
   uvm_resource_types::rsrc_q_t* rq;
   uvm_resource_base* r;
 
   if(type_handle == nullptr || (ttab.find(type_handle)==ttab.end()) )
-    return q;
+    return;
 
   rq = ttab.find(type_handle)->second; // rq = ttab[type_handle];
 
@@ -516,9 +529,16 @@ uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_type( const std::string&
   {
     r = rq->get(i);
     if(r->match_scope(scope))
-      q->push_back(r);
+      q.push_back(r);
   }
+}
 
+uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_type( const std::string& scope,
+                                                              uvm_resource_base* type_handle) const
+{
+  uvm_resource_types::rsrc_q_t* q = new uvm_resource_types::rsrc_q_t();
+  rsrc_list.push_back(q); // store to delete later
+  m_lookup_type(*q, scope, type_handle);
   return q;
 }
 
@@ -532,18 +552,18 @@ uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_type( const std::string&
 uvm_resource_base* uvm_resource_pool::get_by_type( const std::string& scope,
                                                    uvm_resource_base* type_handle )
 {
-  uvm_resource_types::rsrc_q_t* q;
+  uvm_resource_types::rsrc_q_t q;
   uvm_resource_base* rsrc;
 
-  q = lookup_type(scope, type_handle);
+  m_lookup_type(q, scope, type_handle);
 
-  if(q->size() == 0)
+  if(q.size() == 0)
   {
     push_get_record("<type>", scope, nullptr);
     return nullptr;
   }
 
-  rsrc = q->get(0);
+  rsrc = q.get(0);
   push_get_record("<type>", scope, rsrc);
   return rsrc;
 }
@@ -559,29 +579,26 @@ uvm_resource_base* uvm_resource_pool::get_by_type( const std::string& scope,
 //! explicit values.
 //----------------------------------------------------------------------
 
-uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_regex_names(
+void uvm_resource_pool::m_lookup_regex_names(
+  uvm_resource_types::rsrc_q_t& result_q,
   const std::string& scope,
   const std::string& name,
-  uvm_resource_base* type_handle)
+  uvm_resource_base* type_handle) const
 {
   uvm_resource_types::rsrc_q_t* rq;
-  uvm_resource_types::rsrc_q_t* result_q;
   uvm_resource_base* r;
   std::string re;
 
   //For the simple case where no wildcard names exist, then we can
-  //just return the queue associated with name.
+  //just search the queue associated with name.
 
   if(!m_has_wildcard_names)
   {
-    result_q = lookup_name(scope, name, type_handle, false);
-    return result_q;
+    m_lookup_name(result_q, scope, name, type_handle, false);
+    return;
   }
 
-  result_q = new uvm_resource_types::rsrc_q_t();
-  rsrc_list.push_back(result_q); // store to delete later
-
-  for ( rtab_mapItT it = rtab.begin(); it != rtab.end(); it++ )
+  for ( rtab_mapcItT it = rtab.begin(); it != rtab.end(); it++ )
   {
     re = (*it).first;
     rq = (*it).second;
@@ -594,9 +611,19 @@ uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_regex_names(
         if(r->match_scope(scope) &&
           // does the type match?
           ((type_handle == nullptr) || (r->get_type_handle() == type_handle)))
-          result_q->push_back(r);
+          result_q.push_back(r);
     }
   }
+}
+
+uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_regex_names(
+  const std::string& scope,
+  const std::string& name,
+  uvm_resource_base* type_handle)
+{
+  uvm_resource_types::rsrc_q_t* result_q = new uvm_resource_types::rsrc_q_t();
+  rsrc_list.push_back(result_q); // store to delete later
+  m_lookup_regex_names(*result_q, scope, name, type_handle);
   return result_q;
 }
 
@@ -619,6 +646,7 @@ uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_regex(
 
   regex = uvm_glob_to_re(re);
   result_q = new uvm_resource_types::rsrc_q_t();
+  rsrc_list.push_back(result_q); // store to delete later
 
   for( rtab_mapItT it = rtab.begin(); it != rtab.end(); it++ )
   {
@@ -656,6 +684,7 @@ uvm_resource_types::rsrc_q_t* uvm_resource_pool::lookup_scope(
 
   uvm_resource_types::rsrc_q_t* q;
   q = new uvm_resource_types::rsrc_q_t();
+  rsrc_list.push_back(q); // store to delete later
 
   // iterate in reverse order for the special case of autoconfig
   // of arrays. The array name with no [] needs to be higher priority.
@@ -809,6 +838,7 @@ uvm_resource_types::rsrc_q_t* uvm_resource_pool::find_unused_resources() const
 {
   uvm_resource_types::rsrc_q_t* rq;
   uvm_resource_types::rsrc_q_t* q = new uvm_resource_types::rsrc_q_t();
+  rsrc_list.push_back(q); // store to delete later
   uvm_resource_base* r;
   uvm_resource_types::access_t a;
   int reads;
@@ -852,14 +882,14 @@ void uvm_resource_pool::print_resources( uvm_resource_types::rsrc_q_t* rq,
                                          bool audit ) const
 {
   uvm_resource_base* r;
-  uvm_line_printer* printer = new uvm_line_printer();
+  uvm_line_printer printer;
   int size = 0;
 
-  printer->knobs.separator.clear(); // no separators used
-  printer->knobs.full_name = 0;
-  printer->knobs.identifier = 0;
-  printer->knobs.type_name = 0;
-  printer->knobs.reference = 0;
+  printer.knobs.separator.clear(); // no separators used
+  printer.knobs.full_name = 0;
+  printer.knobs.identifier = 0;
+  printer.knobs.type_name = 0;
+  printer.knobs.reference = 0;
 
   if(rq != nullptr)
     size = rq->size();
@@ -873,12 +903,10 @@ void uvm_resource_pool::print_resources( uvm_resource_types::rsrc_q_t* rq,
   for(int i = 0; i < size; i++)
   {
     r = rq->get(i);
-    r->print(printer);
+    r->print(&printer);
     if(audit == true)
       r->print_accessors();
   }
-
-  delete printer;
 }
 
 //--------------------------------------------------------------------

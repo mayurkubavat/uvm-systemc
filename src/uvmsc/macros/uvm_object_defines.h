@@ -161,12 +161,13 @@ bool m_uvm_randomize_object( T* obj, std::integral_constant<bool, NAMED> )
             uvm::uvm_severity severity,                                                                   \
             const std::string& id,                                                                        \
             const std::string& message,                                                                   \
-            int verbosity = uvm::UVM_MEDIUM,                                                              \
+            int verbosity = -1,                                                                           \
             const std::string& filename = "",                                                             \
             int line = 0,                                                                                 \
             const std::string& context_name = "",                                                         \
             bool report_enabled_checked = false ) const {                                                 \
-        ((typename __PSI_TYPE::uvm_sequence_item*)this)->uvm_report_info(                                 \
+        ((typename __PSI_TYPE::uvm_sequence_item*)this)->uvm_report(                                      \
+                severity,                                                                                 \
                 id,                                                                                       \
                 message,                                                                                  \
                 verbosity,                                                                                \
@@ -182,12 +183,12 @@ bool m_uvm_randomize_object( T* obj, std::integral_constant<bool, NAMED> )
             uvm::uvm_severity severity,                                                                   \
             const std::string& id,                                                                        \
             const std::string& message,                                                                   \
-            int verbosity = uvm::UVM_NONE,                                                                \
+            int verbosity = -1,                                                                           \
             const std::string& filename = "",                                                             \
             int line = 0,                                                                                 \
             const std::string& context_name = "",                                                         \
             bool report_enabled_checked = false ) const {                                                 \
-        uvm::uvm_report_info(id,message,verbosity,filename,line,context_name,report_enabled_checked);     \
+        uvm::uvm_report(severity,id,message,verbosity,filename,line,context_name,report_enabled_checked); \
     }                                                                                                     \
                                                                                                           \
     /* uvm_report_info */                                                                                 \
