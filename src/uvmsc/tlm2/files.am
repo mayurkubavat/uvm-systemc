@@ -1,0 +1,18 @@
+H_FILES += \
+	tlm2/uvm_tlm2.h \
+	tlm2/uvm_tlm2_defines.h \
+	tlm2/uvm_tlm2_ifs.h \
+	tlm2/uvm_tlm2_imps.h \
+	tlm2/uvm_tlm_b_sockets.h \
+	tlm2/uvm_tlm_gp.h \
+	tlm2/uvm_tlm_nb_sockets.h \
+	tlm2/uvm_tlm_sc_bridges.h \
+	tlm2/uvm_tlm_time.h
+
+CXX_FILES += \
+	tlm2/uvm_tlm_gp.cpp \
+	tlm2/uvm_tlm_time.cpp
+
+INCDIRS += tlm2
+
+## Taf!

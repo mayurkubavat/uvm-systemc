@@ -24,6 +24,7 @@ include reg/files.am
 include report/files.am
 include seq/files.am
 include tlm1/files.am
+include tlm2/files.am
 	
 localincludedir = $(includedir)/uvmsc
 nobase_localinclude_HEADERS = $(H_FILES)
