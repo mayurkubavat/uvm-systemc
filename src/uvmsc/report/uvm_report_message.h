@@ -71,8 +71,7 @@ class uvm_report_message_element_base
   uvm_action m_action;
   std::string m_name;
 
- protected:
-   ~uvm_report_message_element_base();
+  virtual ~uvm_report_message_element_base();
 
 }; // class uvm_report_message_element_base
 
@@ -89,6 +88,8 @@ class uvm_report_message_int_element
  public:
   typedef uvm_report_message_int_element this_type;
 
+  virtual ~uvm_report_message_int_element() {}
+
   virtual uvm_bitstream_t get_value( int& size, uvm_radix_enum& radix ) const;
 
   virtual void set_value( uvm_bitstream_t value,
@@ -101,8 +102,6 @@ class uvm_report_message_int_element
   virtual uvm_report_message_element_base* do_clone();
 
  private:
-  ~uvm_report_message_int_element();
-
   uvm_bitstream_t m_val;
   int             m_size;
   uvm_radix_enum  m_radix;
@@ -122,6 +121,8 @@ class uvm_report_message_string_element
  public:
   typedef uvm_report_message_string_element this_type;
 
+  virtual ~uvm_report_message_string_element() {}
+
   virtual const std::string get_value() const;
 
   virtual void set_value( const std::string& value );
@@ -135,8 +136,6 @@ class uvm_report_message_string_element
   virtual uvm_report_message_element_base* do_clone();
 
 private:
-  ~uvm_report_message_string_element();
-
   std::string  m_val;
 
 }; // class uvm_report_message_string_element
@@ -154,6 +153,8 @@ class uvm_report_message_object_element
 public:
   typedef uvm_report_message_object_element this_type;
 
+  virtual ~uvm_report_message_object_element() {}
+
   virtual uvm_object* get_value() const;
 
   virtual void set_value( uvm_object* value );
@@ -167,7 +168,6 @@ public:
   virtual uvm_report_message_element_base* do_clone();
 
 private:
-  ~uvm_report_message_object_element();
   uvm_object* m_obj;
 
 }; // class uvm_report_message_object_element
@@ -188,6 +188,9 @@ class uvm_report_message_element_container : public uvm_object
   UVM_OBJECT_UTILS(uvm_report_message_element_container);
 
   uvm_report_message_element_container( uvm_object_name name = "element_container" );
+  uvm_report_message_element_container( const uvm_report_message_element_container& rhs );
+  uvm_report_message_element_container& operator=( const uvm_report_message_element_container& rhs );
+  virtual ~uvm_report_message_element_container();
 
   virtual unsigned int size() const;
 
@@ -241,6 +244,9 @@ class uvm_report_message : public uvm_object
 public:
 
   uvm_report_message(const std::string& name = "uvm_report_message");
+  uvm_report_message(const uvm_report_message& rhs);
+  uvm_report_message& operator=(const uvm_report_message& rhs);
+  virtual ~uvm_report_message();
 
   static uvm_report_message* new_report_message(const std::string& name = "uvm_report_message");
 

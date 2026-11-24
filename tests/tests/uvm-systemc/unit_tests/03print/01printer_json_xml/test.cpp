@@ -339,11 +339,31 @@ class printer_json_xml_test : public uvm_test
       check(out1.find("leaf") != std::string::npos && out2.find("leaf") != std::string::npos,
             "copy-constructed printer preserves rows and element tree safely");
 
-      // Exercise uvm_report_message_element_container::do_print (uvm_printer lprinter = printer;)
+      // Exercise uvm_report_message_element_container::do_print without printer slicing
       uvm_report_message_element_container cont("cont");
+      cont.add_string("tag", "hello", UVM_DISPLAY | UVM_LOG);
+      cont.add_int("code", 42, 32, UVM_DEC, UVM_DISPLAY | UVM_LOG);
       std::string cont_s = cont.sprint();
-      check(!cont_s.empty(),
-            "uvm_report_message_element_container::sprint() works with uvm_printer copy");
+      uvm_json_printer cont_jp("cont_jp");
+      std::string cont_json = cont.sprint(&cont_jp);
+      uvm_xml_printer cont_xp("cont_xp");
+      std::string cont_xml = cont.sprint(&cont_xp);
+      check(cont_s.find("tag") != std::string::npos && cont_s.find("hello") != std::string::npos &&
+            cont_json.find("\"tag\"") != std::string::npos && cont_json.find("\"hello\"") != std::string::npos &&
+            cont_xml.find("name=\"tag\"") != std::string::npos,
+            "uvm_report_message_element_container::do_print preserves dynamic printer without slicing");
+      uvm_report_message_element_container cont_copy(cont);
+      cont.do_delete(0);
+      check(cont.size() == 1 && cont_copy.size() == 2,
+            "uvm_report_message_element_container copy and do_delete manage element lifetime safely");
+      {
+        uvm_report_message local_msg("local_msg");
+        local_msg.add_string("k", "v", UVM_DISPLAY | UVM_LOG);
+        uvm_report_message copy_msg(local_msg);
+        std::string msg_json = copy_msg.sprint(&cont_jp);
+        check(msg_json.find("\"k\"") != std::string::npos && msg_json.find("\"v\"") != std::string::npos,
+              "uvm_report_message::sprint(&json_printer) emits container elements cleanly");
+      }
     }
 
     // 4. uvm_object::sprint() UVM_PRINT uvm_field_op hook
