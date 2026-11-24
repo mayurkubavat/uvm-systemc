@@ -1,16 +1,22 @@
 H_FILES += \
 	policy/uvm_comparer.h \
+	policy/uvm_copier.h \
+	policy/uvm_field_op.h \
 	policy/uvm_links.h \
 	policy/uvm_packer.h \
 	policy/uvm_policy.h \
+	policy/uvm_policy_base.h \
 	policy/uvm_recorder.h \
 	policy/uvm_tr_database.h \
 	policy/uvm_tr_stream.h
 
 CXX_FILES += \
 	policy/uvm_comparer.cpp \
+	policy/uvm_copier.cpp \
+	policy/uvm_field_op.cpp \
 	policy/uvm_links.cpp \
 	policy/uvm_packer.cpp \
+	policy/uvm_policy_base.cpp \
 	policy/uvm_recorder.cpp \
 	policy/uvm_tr_database.cpp \
 	policy/uvm_tr_stream.cpp

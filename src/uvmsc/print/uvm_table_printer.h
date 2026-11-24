@@ -23,8 +23,11 @@
 #ifndef UVM_TABLE_PRINTER_H_
 #define UVM_TABLE_PRINTER_H_
 
+#include <string>
 #include <systemc>
 
+#include "uvmsc/factory/uvm_object_registry.h"
+#include "uvmsc/macros/uvm_object_defines.h"
 #include "uvmsc/print/uvm_printer.h"
 
 
@@ -42,10 +45,13 @@ namespace uvm {
 class uvm_table_printer : public uvm_printer
 {
  public:
+  UVM_OBJECT_UTILS(uvm_table_printer);
 
-  uvm_table_printer();
+  explicit uvm_table_printer( const std::string& name = "uvm_table_printer" );
 
-  std::string emit() override;
+  virtual std::string emit();
+
+  static uvm_table_printer* m_create_default();
 
   // Variables: m_max_*
   //
@@ -59,6 +65,8 @@ class uvm_table_printer : public uvm_printer
 
   void calculate_max_widths();
 
+ private:
+  uvm_table_printer( const std::string& name, no_inst_count_t );
 };
 
 //////////////

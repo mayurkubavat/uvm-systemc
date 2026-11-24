@@ -45,12 +45,15 @@ class uvm_status_container;
 class uvm_object_wrapper;
 class uvm_recorder;
 class uvm_comparer;
+class uvm_copier;
+class uvm_field_op;
 
 // instance count
 extern int g_inst_count;
 
 extern uvm_packer* uvm_default_packer;
 extern uvm_comparer* uvm_default_comparer;
+extern uvm_copier* uvm_default_copier;
 
 
 // TODO typesdefs for intstream, bytestream, etc.
@@ -145,9 +148,11 @@ public:
   // Group: Copying
   //--------------------------------------------------------------------------
 
-  void copy( const uvm_object& rhs );
+  void copy( const uvm_object& rhs, uvm_copier* copier = nullptr );
 
   virtual void do_copy( const uvm_object& rhs );
+
+  virtual void do_execute_op( uvm_field_op* op );
 
   //--------------------------------------------------------------------------
   // Group: Comparing
@@ -222,6 +227,9 @@ public:
   void m_unpack_post( uvm_packer*& packer );
 
  protected:
+  struct no_inst_count_t {};
+  uvm_object( uvm_object_name name, no_inst_count_t );
+
   virtual bool m_register_cb();
 
   // data members below

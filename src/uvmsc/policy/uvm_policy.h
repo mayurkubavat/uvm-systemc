@@ -20,6 +20,9 @@
 #ifndef UVM_POLICY_H_
 #define UVM_POLICY_H_
 
+#include "uvmsc/policy/uvm_policy_base.h"
+#include "uvmsc/policy/uvm_copier.h"
+#include "uvmsc/policy/uvm_field_op.h"
 #include "uvmsc/policy/uvm_recorder.h"
 #include "uvmsc/policy/uvm_links.h"
 #include "uvmsc/policy/uvm_tr_database.h"

@@ -74,8 +74,7 @@ void uvm_report_server::do_copy( const uvm_object& rhs )
       set_id_count(q[i],rhs_->get_id_count(q[i]));
   }
 
-  //TODO Transaction recording copy
-  //set_message_database(rhs_->get_message_database());
+  set_message_database(rhs_->get_message_database());
   set_max_quit_count(rhs_->get_max_quit_count());
   set_quit_count(rhs_->get_quit_count());
 }

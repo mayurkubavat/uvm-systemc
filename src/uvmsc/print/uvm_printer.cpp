@@ -23,17 +23,166 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <map>
 #include <sstream>
 
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_object.h"
 #include "uvmsc/print/uvm_printer.h"
+#include "uvmsc/print/uvm_printer_globals.h"
 #include "uvmsc/misc/uvm_status_container.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/misc/uvm_scope_stack.h"
 
 namespace uvm {
+
+namespace {
+
+class active_object_guard
+{
+ public:
+  active_object_guard( uvm_policy* policy, uvm_object* obj )
+  : m_policy(policy)
+  {
+    if (m_policy != nullptr)
+      m_policy->push_active_object(obj);
+  }
+
+  ~active_object_guard()
+  {
+    if (m_policy != nullptr)
+      m_policy->pop_active_object();
+  }
+
+ private:
+  active_object_guard( const active_object_guard& );
+  active_object_guard& operator=( const active_object_guard& );
+
+  uvm_policy* m_policy;
+};
+
+class printer_cycle_guard
+{
+ public:
+  explicit printer_cycle_guard( const uvm_object* obj )
+  : m_obj(obj)
+  {
+    if (m_obj != nullptr && uvm_object::__m_uvm_status_container != nullptr)
+      uvm_object::__m_uvm_status_container->cycle_check[m_obj] = true;
+  }
+
+  ~printer_cycle_guard()
+  {
+    if (m_obj != nullptr && uvm_object::__m_uvm_status_container != nullptr)
+      uvm_object::__m_uvm_status_container->cycle_check.erase(m_obj);
+  }
+
+ private:
+  printer_cycle_guard( const printer_cycle_guard& );
+  printer_cycle_guard& operator=( const printer_cycle_guard& );
+
+  const uvm_object* m_obj;
+};
+
+class printer_scope_guard
+{
+ public:
+  printer_scope_guard( uvm_scope_stack* scope,
+                       const std::string& name,
+                       const char* up_sep )
+  : m_scope(scope), m_up_sep(up_sep)
+  {
+    if (m_scope != nullptr)
+      m_scope->down(name);
+  }
+
+  ~printer_scope_guard()
+  {
+    if (m_scope != nullptr)
+      m_scope->up(m_up_sep);
+  }
+
+ private:
+  printer_scope_guard( const printer_scope_guard& );
+  printer_scope_guard& operator=( const printer_scope_guard& );
+
+  uvm_scope_stack* m_scope;
+  const char* m_up_sep;
+};
+
+class element_pop_guard
+{
+ public:
+  explicit element_pop_guard( const uvm_printer* printer )
+  : m_printer(printer)
+  {}
+
+  ~element_pop_guard()
+  {
+    if (m_printer != nullptr)
+      m_printer->pop_element();
+  }
+
+ private:
+  element_pop_guard( const element_pop_guard& );
+  element_pop_guard& operator=( const element_pop_guard& );
+
+  const uvm_printer* m_printer;
+};
+
+class print_object_rollback_guard
+{
+ public:
+  print_object_rollback_guard( std::vector<uvm_printer_element*>& elem_stack,
+                               std::list<bool>& array_stack,
+                               uvm_scope_stack& scope )
+  : m_elem_stack(elem_stack),
+    m_array_stack(array_stack),
+    m_scope(scope),
+    m_elem_depth(elem_stack.size()),
+    m_array_depth(array_stack.size()),
+    m_scope_depth(scope.m_stack.size())
+  {}
+
+  ~print_object_rollback_guard()
+  {
+    while (m_elem_stack.size() > m_elem_depth)
+      m_elem_stack.pop_back();
+    while (m_array_stack.size() > m_array_depth)
+      m_array_stack.pop_back();
+    while (m_scope.m_stack.size() > m_scope_depth)
+      m_scope.m_stack.pop_back();
+    m_scope.m_arg.clear();
+  }
+
+ private:
+  print_object_rollback_guard( const print_object_rollback_guard& );
+  print_object_rollback_guard& operator=( const print_object_rollback_guard& );
+
+  std::vector<uvm_printer_element*>& m_elem_stack;
+  std::list<bool>& m_array_stack;
+  uvm_scope_stack& m_scope;
+  std::size_t m_elem_depth;
+  std::size_t m_array_depth;
+  std::size_t m_scope_depth;
+};
+
+void record_clone_map( const uvm_printer_element* src,
+                       uvm_printer_element* dst,
+                       std::map<const uvm_printer_element*, uvm_printer_element*>& ptr_map )
+{
+  if (src == nullptr || dst == nullptr)
+    return;
+  ptr_map[src] = dst;
+  const std::vector<uvm_printer_element*>& sc = src->get_children();
+  const std::vector<uvm_printer_element*>& dc = dst->get_children();
+  const std::size_t count = (sc.size() < dc.size()) ? sc.size() : dc.size();
+  for (std::size_t i = 0; i < count; ++i)
+    record_clone_map(sc[i], dc[i], ptr_map);
+}
+
+} // namespace
 
 //----------------------------------------------------------------------
 // Class implementation: uvm_printer
@@ -102,6 +251,9 @@ void uvm_printer::print_field( const std::string& name,
   row_info.val = val_str;
 
   m_rows.push_back(row_info);
+  m_push_element(row_info.name, row_info.type_name, row_info.size, row_info.val,
+                 uvm_printer_element::ELEMENT_FIELD);
+  pop_element();
 }
 
 //----------------------------------------------------------------------
@@ -166,6 +318,9 @@ void uvm_printer::print_field_int( const std::string& name,
   row_info.val = val_str;
 
   m_rows.push_back(row_info);
+  m_push_element(row_info.name, row_info.type_name, row_info.size, row_info.val,
+                 uvm_printer_element::ELEMENT_FIELD);
+  pop_element();
 }
 
 
@@ -200,6 +355,9 @@ void uvm_printer::print_real( const std::string& name,
   row_info.val = str_val.str();
 
   m_rows.push_back(row_info);
+  m_push_element(row_info.name, row_info.type_name, row_info.size, row_info.val,
+                 uvm_printer_element::ELEMENT_FIELD);
+  pop_element();
 }
 
 //----------------------------------------------------------------------
@@ -231,17 +389,20 @@ void uvm_printer::print_object( const std::string& name,
 
   const uvm_object* objp = &obj;
 
+  print_object_rollback_guard rollback_guard(m_element_stack, m_array_stack, m_scope);
   print_object_header(name, obj, scope_separator);
+  element_pop_guard elem_guard(this);
 
   if( (knobs.depth == -1 || (knobs.depth > m_scope.depth())) &&
         (objp->__m_uvm_status_container->cycle_check.find(objp) == objp->__m_uvm_status_container->cycle_check.end()) // not exists
     )
   {
-    objp->__m_uvm_status_container->cycle_check[objp] = true;
-    if(name.empty() && objp != nullptr)
-      m_scope.down(objp->get_name());
-    else
-      m_scope.down(name);
+    printer_cycle_guard cyc_guard(objp);
+    active_object_guard act_guard(const_cast<uvm_printer*>(this),
+                                  const_cast<uvm_object*>(objp));
+    const std::string scope_name = (name.empty() && objp != nullptr) ? objp->get_name() : name;
+    const char* up_sep = (!name.empty() && name[0] == '[') ? "[" : ".";
+    printer_scope_guard sc_guard(&m_scope, scope_name, up_sep);
 
     // Handle children of the comp
     comp = dynamic_cast<const uvm_component*>(objp);
@@ -252,7 +413,7 @@ void uvm_printer::print_object( const std::string& name,
         do
         {
           child_comp = comp->get_child(lname);
-          if(child_comp->print_enabled)
+          if(child_comp != nullptr && child_comp->print_enabled)
             this->print_object("", *child_comp);
         }
         while (comp->get_next_child(lname));
@@ -260,13 +421,6 @@ void uvm_printer::print_object( const std::string& name,
 
     // print members of object
     objp->sprint(const_cast<uvm_printer*>(this));
-
-    if( !name.empty() && name[0] == '[' )
-      m_scope.up("[");
-    else
-      m_scope.up(".");
-
-    objp->__m_uvm_status_container->cycle_check.erase( objp->__m_uvm_status_container->cycle_check.find(objp) );
   }
 }
 
@@ -314,6 +468,8 @@ void uvm_printer::print_object_header( const std::string& name,
   row_info.val = knobs.reference ? uvm_object_value_str(objp) : "-";
 
   m_rows.push_back(row_info);
+  m_push_element(row_info.name, row_info.type_name, row_info.size, row_info.val,
+                 uvm_printer_element::ELEMENT_OBJECT);
 }
 
 //----------------------------------------------------------------------
@@ -343,6 +499,9 @@ void uvm_printer::print_string( const std::string& name,
   row_info.val = (value.empty() ? "\"\"" : value);
 
   m_rows.push_back(row_info);
+  m_push_element(row_info.name, row_info.type_name, row_info.size, value,
+                 uvm_printer_element::ELEMENT_FIELD);
+  pop_element();
 }
 
 //----------------------------------------------------------------------
@@ -389,6 +548,11 @@ void uvm_printer::print_generic( const std::string& name,
   row_info.val = (value.empty() ? "\"\"" : value);
 
   m_rows.push_back(row_info);
+  const uvm_printer_element::element_kind_e kind =
+    (name == "..." && size == -2) ? uvm_printer_element::ELEMENT_ARRAY_RANGE
+                                  : uvm_printer_element::ELEMENT_FIELD;
+  m_push_element(row_info.name, row_info.type_name, row_info.size, value, kind);
+  pop_element();
 }
 
 //----------------------------------------------------------------------
@@ -482,9 +646,11 @@ void uvm_printer::print_array_header( const std::string& name,
   row_info.val = "-";
 
   m_rows.push_back(row_info);
+  m_push_element(row_info.name, row_info.type_name, row_info.size, row_info.val,
+                 uvm_printer_element::ELEMENT_ARRAY);
 
   m_scope.down(name);
-  const_cast<uvm_printer *>(this)->m_array_stack.push_back(true);
+  m_array_stack.push_back(true);
 }
 
 //----------------------------------------------------------------------
@@ -522,10 +688,12 @@ void uvm_printer::print_array_range( int min, int max ) const
 
 void uvm_printer::print_array_footer( int size ) const
 {
+  (void)size;
   if(m_array_stack.size())
   {
     m_scope.up();
-    const_cast<uvm_printer *>(this)->m_array_stack.pop_front();
+    m_array_stack.pop_front();
+    pop_element();
   }
 }
 
@@ -538,9 +706,39 @@ void uvm_printer::print_array_footer( int size ) const
 // Constructor
 //----------------------------------------------------------------------
 
-uvm_printer::uvm_printer()
+uvm_printer::uvm_printer( const std::string& name )
+: uvm_policy(name)
+{}
+
+uvm_printer::uvm_printer( const std::string& name, no_inst_count_t )
+: uvm_policy(name, no_inst_count_t())
+{}
+
+uvm_printer::uvm_printer( const uvm_printer& rhs )
+: uvm_policy(rhs),
+  knobs(rhs.knobs),
+  m_scope(rhs.m_scope),
+  m_string(rhs.m_string),
+  m_rows(rhs.m_rows),
+  m_array_stack(rhs.m_array_stack)
 {
-  uvm_scope_stack m_scope;
+  m_copy_elements(rhs);
+}
+
+uvm_printer& uvm_printer::operator=( const uvm_printer& rhs )
+{
+  if (this == &rhs)
+    return *this;
+
+  m_cleanup_elements();
+  uvm_policy::operator=(rhs);
+  knobs = rhs.knobs;
+  m_scope = rhs.m_scope;
+  m_string = rhs.m_string;
+  m_rows = rhs.m_rows;
+  m_array_stack = rhs.m_array_stack;
+  m_copy_elements(rhs);
+  return *this;
 }
 
 //----------------------------------------------------------------------
@@ -549,6 +747,118 @@ uvm_printer::uvm_printer()
 
 uvm_printer::~uvm_printer()
 {
+  m_cleanup_elements();
+}
+
+void uvm_printer::flush()
+{
+  m_cleanup_elements();
+  m_rows.clear();
+  m_array_stack.clear();
+  m_string.clear();
+  m_scope.m_stack.clear();
+  m_scope.m_arg.clear();
+  uvm_policy::flush();
+}
+
+void uvm_printer::m_cleanup_elements() const
+{
+  for (std::size_t i = 0; i < m_top_elements.size(); ++i)
+    delete m_top_elements[i];
+  m_top_elements.clear();
+  m_element_stack.clear();
+}
+
+void uvm_printer::m_copy_elements( const uvm_printer& rhs )
+{
+  std::map<const uvm_printer_element*, uvm_printer_element*> ptr_map;
+  m_top_elements.reserve(rhs.m_top_elements.size());
+  for (std::size_t i = 0; i < rhs.m_top_elements.size(); ++i)
+  {
+    if (rhs.m_top_elements[i] != nullptr)
+    {
+      uvm_printer_element* clone = new uvm_printer_element(*rhs.m_top_elements[i]);
+      record_clone_map(rhs.m_top_elements[i], clone, ptr_map);
+      m_top_elements.push_back(clone);
+    }
+  }
+  m_element_stack.reserve(rhs.m_element_stack.size());
+  for (std::size_t i = 0; i < rhs.m_element_stack.size(); ++i)
+  {
+    std::map<const uvm_printer_element*, uvm_printer_element*>::const_iterator it =
+      ptr_map.find(rhs.m_element_stack[i]);
+    if (it != ptr_map.end())
+      m_element_stack.push_back(it->second);
+  }
+}
+
+void uvm_printer::m_push_element( const std::string& name,
+                                  const std::string& type_name,
+                                  const std::string& size,
+                                  const std::string& value,
+                                  uvm_printer_element::element_kind_e kind ) const
+{
+  uvm_printer_element* elem = new uvm_printer_element(name.empty() ? "uvm_printer_element" : name);
+  elem->set(name, type_name, size, value);
+  elem->set_element_kind(kind);
+
+  if (m_element_stack.empty())
+    m_top_elements.push_back(elem);
+  else
+    m_element_stack.back()->add_child(elem);
+
+  m_element_stack.push_back(elem);
+}
+
+void uvm_printer::push_element( const std::string& name,
+                                const std::string& type_name,
+                                const std::string& size,
+                                const std::string& value ) const
+{
+  m_push_element(name, type_name, size, value, uvm_printer_element::ELEMENT_FIELD);
+
+  uvm_printer_row_info row_info;
+  row_info.level = static_cast<int>(m_element_stack.size()) - 1;
+  row_info.name = name;
+  row_info.type_name = type_name;
+  row_info.size = size;
+  row_info.val = value;
+  m_rows.push_back(row_info);
+}
+
+void uvm_printer::pop_element() const
+{
+  if (!m_element_stack.empty())
+    m_element_stack.pop_back();
+}
+
+uvm_printer_element* uvm_printer::get_bottom_element() const
+{
+  return m_element_stack.empty() ? nullptr : m_element_stack.back();
+}
+
+uvm_printer_element* uvm_printer::get_top_element() const
+{
+  if (!m_element_stack.empty())
+    return m_element_stack.front();
+  return m_top_elements.empty() ? nullptr : m_top_elements.front();
+}
+
+const std::vector<uvm_printer_element*>& uvm_printer::get_top_elements() const
+{
+  return m_top_elements;
+}
+
+uvm_printer* uvm_printer::get_default()
+{
+  if (uvm_default_printer == nullptr)
+    uvm_default_printer = uvm_default_table_printer;
+  return uvm_default_printer;
+}
+
+void uvm_printer::set_default( uvm_printer* printer )
+{
+  uvm_default_printer = (printer != nullptr) ? printer : uvm_default_table_printer;
 }
 
 //----------------------------------------------------------------------

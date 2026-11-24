@@ -24,10 +24,18 @@
 #define UVM_PACKER_H_
 
 #include <systemc>
+#include <cstdint>
 #include <sstream>
+#include <string>
+#include <type_traits>
+#include <vector>
 
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/factory/uvm_factory.h"
+#include "uvmsc/factory/uvm_object_registry.h"
+#include "uvmsc/macros/uvm_object_defines.h"
 #include "uvmsc/misc/uvm_scope_stack.h"
+#include "uvmsc/policy/uvm_policy_base.h"
 
 #define UVM_PACKING_BLOCK_SIZE 4096
 
@@ -48,10 +56,25 @@ class uvm_object;
 //
 //-------------------------------------------------------------------------------
 
-class uvm_packer
+class uvm_packer : public uvm_policy
 {
  public:
   friend class uvm_object;
+
+  UVM_OBJECT_UTILS(uvm_packer);
+
+  explicit uvm_packer( const std::string& name = "uvm_packer" );
+  uvm_packer( const uvm_packer& rhs );
+  uvm_packer& operator=( const uvm_packer& rhs );
+  virtual ~uvm_packer();
+
+  virtual void flush();
+
+  virtual void set_recursion_policy( uvm_recursion_policy_enum p );
+  virtual uvm_recursion_policy_enum get_recursion_policy() const;
+
+  static uvm_packer* get_default();
+  static void set_default( uvm_packer* packer );
 
   //--------------------------------------------------------------------------
   // UVM Standard LRM API below
@@ -70,6 +93,9 @@ class uvm_packer
   virtual void pack_real( double value );
 
   virtual void pack_object( const uvm_object& value );
+  virtual void pack_object( const uvm_object* value );
+  virtual void pack_object_with_meta( const uvm_object* value );
+  void pack_object_with_meta( const uvm_object& value );
 
   // Group: Unpacking
 
@@ -86,8 +112,64 @@ class uvm_packer
   virtual double unpack_real();
 
   virtual void unpack_object( uvm_object& value );
+  virtual void unpack_object( uvm_object*& value );
+  virtual void unpack_object_with_meta( uvm_object*& value );
+  void unpack_object_with_meta( uvm_object& value );
+
+  template <typename T,
+            typename std::enable_if<
+              std::is_base_of<uvm_object, T>::value &&
+              !std::is_same<uvm_object, T>::value, int>::type = 0>
+  void unpack_object_with_meta( T*& value )
+  {
+    uvm_object* tmp = value;
+    bool allocated = false;
+    if (tmp == nullptr && get_remaining_unpacked_bits() >= 4 && !is_null())
+    {
+      const uvm_object_wrapper* wrapper = T::get_type();
+      if (wrapper != nullptr)
+      {
+        uvm_object_wrapper* resolved = const_cast<uvm_object_wrapper*>(wrapper);
+        uvm_factory* factory = uvm_factory::get();
+        if (factory != nullptr)
+        {
+          uvm_object_wrapper* ovr =
+            factory->find_override_by_type(resolved, "");
+          if (ovr != nullptr)
+            resolved = ovr;
+        }
+        tmp = resolved->create_object("");
+        allocated = (tmp != nullptr);
+      }
+    }
+    try
+    {
+      unpack_object_with_meta(tmp);
+    }
+    catch (...)
+    {
+      if (allocated)
+        delete tmp;
+      throw;
+    }
+    value = (tmp == nullptr) ? nullptr : dynamic_cast<T*>(tmp);
+    if (allocated && value == nullptr)
+      delete tmp;
+  }
 
   virtual unsigned int get_packed_size() const;
+
+  virtual void get_packed_bits( std::vector<bool>& stream ) const;
+  virtual void get_packed_bytes( std::vector<unsigned char>& stream ) const;
+  virtual void get_packed_ints( std::vector<unsigned int>& stream ) const;
+  virtual void get_packed_longints( std::vector<std::uint64_t>& stream ) const;
+
+  virtual void set_packed_bits( const std::vector<bool>& stream );
+  virtual void set_packed_bytes( const std::vector<unsigned char>& stream );
+  virtual void set_packed_ints( const std::vector<unsigned int>& stream );
+  virtual void set_packed_longints( const std::vector<std::uint64_t>& stream );
+
+  void reset();
 
   // Group: Variables
 
@@ -263,13 +345,8 @@ class uvm_packer
     return *this;
   }
 
-  virtual ~uvm_packer();
-
- private:
-  // Disabled
-  uvm_packer();
-
-  // variables and methods primarily for internal use
+ protected:
+  // variables and methods primarily for internal use & subclass extension
 
   //static std::vector<bool> bitstream;   // local bits for (un)pack_bytes
   //static std::vector<bool> fabitstream; // field automation bits for (un)pack_bytes
@@ -298,8 +375,6 @@ class uvm_packer
   virtual void put_bytes( const std::vector<unsigned char>& bytestream );
   virtual void put_ints( const std::vector<unsigned int>& intstream );
 
-  void reset();
-
   bool m_enough_bits( int needed, std::string id ) const;
 
   void m_set_size(int nbits);
@@ -311,6 +386,15 @@ class uvm_packer
   void m_check_size( int nbits );
 
   void inc_unpack_index( int n );
+
+  void set_packed_size();
+
+ private:
+  uvm_packer( const std::string& name, no_inst_count_t );
+  static uvm_packer& m_builtin_default();
+
+  void m_pack_object( const uvm_object* val, bool with_meta );
+  void m_unpack_object( uvm_object*& val, bool with_meta, bool allow_nullify );
 
   void pack_char( char a );
   void unpack_char( char& a );
@@ -338,8 +422,6 @@ class uvm_packer
 
   void pack_sc_unsigned( const sc_dt::sc_unsigned& a );
   void unpack_sc_unsigned( sc_dt::sc_unsigned& a );
-
-  void set_packed_size();
 };
 
 } // namespace uvm

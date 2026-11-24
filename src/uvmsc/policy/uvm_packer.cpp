@@ -27,6 +27,7 @@
 #include "uvmsc/base/uvm_object.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/policy/uvm_packer.h"
+#include "uvmsc/policy/uvm_field_op.h"
 #include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 
@@ -34,22 +35,191 @@
 
 namespace uvm {
 
-uvm_packer::uvm_packer()
+namespace {
+
+class active_object_guard
+{
+ public:
+  active_object_guard( uvm_policy* policy, uvm_object* obj )
+  : m_policy(policy)
+  {
+    if (m_policy != nullptr)
+      m_policy->push_active_object(obj);
+  }
+
+  ~active_object_guard()
+  {
+    if (m_policy != nullptr)
+      m_policy->pop_active_object();
+  }
+
+ private:
+  active_object_guard( const active_object_guard& );
+  active_object_guard& operator=( const active_object_guard& );
+
+  uvm_policy* m_policy;
+};
+
+class field_op_guard
+{
+ public:
+  explicit field_op_guard( uvm_field_op* op )
+  : m_op(op)
+  {}
+
+  ~field_op_guard()
+  {
+    if (m_op != nullptr)
+      m_op->m_recycle();
+  }
+
+ private:
+  field_op_guard( const field_op_guard& );
+  field_op_guard& operator=( const field_op_guard& );
+
+  uvm_field_op* m_op;
+};
+
+class cycle_check_guard
+{
+ public:
+  explicit cycle_check_guard( const uvm_object* val )
+  : m_val(val)
+  {
+    if (m_val != nullptr && uvm_object::__m_uvm_status_container != nullptr)
+      uvm_object::__m_uvm_status_container->cycle_check[m_val] = true;
+  }
+
+  ~cycle_check_guard()
+  {
+    if (m_val != nullptr && uvm_object::__m_uvm_status_container != nullptr)
+      uvm_object::__m_uvm_status_container->cycle_check.erase(m_val);
+  }
+
+ private:
+  cycle_check_guard( const cycle_check_guard& );
+  cycle_check_guard& operator=( const cycle_check_guard& );
+
+  const uvm_object* m_val;
+};
+
+class packer_scope_guard
+{
+ public:
+  packer_scope_guard( uvm_scope_stack* scope, const std::string& name )
+  : m_scope(scope)
+  {
+    if (m_scope != nullptr)
+      m_scope->down(name);
+  }
+
+  ~packer_scope_guard()
+  {
+    if (m_scope != nullptr)
+      m_scope->up();
+  }
+
+ private:
+  packer_scope_guard( const packer_scope_guard& );
+  packer_scope_guard& operator=( const packer_scope_guard& );
+
+  uvm_scope_stack* m_scope;
+};
+
+} // namespace
+
+uvm_packer::uvm_packer( const std::string& name )
+: uvm_policy(name),
+  pack_index(0),
+  unpack_index(0),
+  reverse_order(false),
+  byte_size(8),
+  word_size(16),
+  nopack(false),
+  policy(UVM_DEFAULT_POLICY),
+  m_bits(nullptr),
+  m_size(0),
+  m_max_size(0)
 {
   physical = true;
-  byte_size = 8;  //set up bytesize for endianess
-  word_size = 16; //set up worksize for endianess
-  big_endian = false;
-  use_metadata = false;
   abstract = false;
-  policy = UVM_DEFAULT_POLICY;
+  use_metadata = false;
+  big_endian = false;
+}
 
-  pack_index = 0;
-  unpack_index = 0;
+uvm_packer::uvm_packer( const std::string& name, no_inst_count_t )
+: uvm_policy(name, no_inst_count_t()),
+  pack_index(0),
+  unpack_index(0),
+  reverse_order(false),
+  byte_size(8),
+  word_size(16),
+  nopack(false),
+  policy(UVM_DEFAULT_POLICY),
+  m_bits(nullptr),
+  m_size(0),
+  m_max_size(0)
+{
+  physical = true;
+  abstract = false;
+  use_metadata = false;
+  big_endian = false;
+}
 
+uvm_packer::uvm_packer( const uvm_packer& rhs )
+: uvm_policy(rhs),
+  physical(rhs.physical),
+  abstract(rhs.abstract),
+  use_metadata(rhs.use_metadata),
+  big_endian(rhs.big_endian),
+  pack_index(rhs.pack_index),
+  unpack_index(rhs.unpack_index),
+  scope(rhs.scope),
+  reverse_order(rhs.reverse_order),
+  byte_size(rhs.byte_size),
+  word_size(rhs.word_size),
+  nopack(rhs.nopack),
+  policy(rhs.policy),
+  m_bits(nullptr),
+  m_size(rhs.m_size),
+  m_max_size(rhs.m_max_size)
+{
+  if (rhs.m_bits != nullptr && rhs.m_max_size > 0)
+  {
+    m_bits = new sc_dt::sc_bv_base(rhs.m_max_size);
+    *m_bits = *rhs.m_bits;
+  }
+}
+
+uvm_packer& uvm_packer::operator=( const uvm_packer& rhs )
+{
+  if (this == &rhs)
+    return *this;
+
+  uvm_policy::operator=(rhs);
+  physical = rhs.physical;
+  abstract = rhs.abstract;
+  use_metadata = rhs.use_metadata;
+  big_endian = rhs.big_endian;
+  pack_index = rhs.pack_index;
+  unpack_index = rhs.unpack_index;
+  scope = rhs.scope;
+  reverse_order = rhs.reverse_order;
+  byte_size = rhs.byte_size;
+  word_size = rhs.word_size;
+  nopack = rhs.nopack;
+  policy = rhs.policy;
+
+  delete m_bits;
   m_bits = nullptr;
-  m_size = 0;
-  m_max_size = 0;
+  m_size = rhs.m_size;
+  m_max_size = rhs.m_max_size;
+  if (rhs.m_bits != nullptr && rhs.m_max_size > 0)
+  {
+    m_bits = new sc_dt::sc_bv_base(rhs.m_max_size);
+    *m_bits = *rhs.m_bits;
+  }
+  return *this;
 }
 
 uvm_packer::~uvm_packer()
@@ -59,6 +229,42 @@ uvm_packer::~uvm_packer()
     delete m_bits;
     m_bits = nullptr;
   }
+}
+
+uvm_packer& uvm_packer::m_builtin_default()
+{
+  static uvm_packer builtin_default("uvm_default_packer", no_inst_count_t());
+  return builtin_default;
+}
+
+uvm_packer* uvm_packer::get_default()
+{
+  if (uvm_default_packer == nullptr)
+    uvm_default_packer = &m_builtin_default();
+  return uvm_default_packer;
+}
+
+void uvm_packer::set_default( uvm_packer* packer )
+{
+  uvm_default_packer = (packer != nullptr) ? packer : &m_builtin_default();
+}
+
+void uvm_packer::flush()
+{
+  reset();
+  scope.m_stack.clear();
+  scope.m_arg.clear();
+  uvm_policy::flush();
+}
+
+void uvm_packer::set_recursion_policy( uvm_recursion_policy_enum p )
+{
+  policy = p;
+}
+
+uvm_recursion_policy_enum uvm_packer::get_recursion_policy() const
+{
+  return policy;
 }
 
 //------------------------------------------------------------------------------
@@ -71,6 +277,9 @@ uvm_packer::~uvm_packer()
 
 void uvm_packer::pack_field( const uvm_bitstream_t& value, int size )
 {
+  if (size <= 0)
+    return;
+
   sc_dt::sc_bv<UVM_MAX_STREAMBITS> tmp = value;
   m_check_size(size);
 
@@ -99,6 +308,9 @@ void uvm_packer::pack_field( const uvm_bitstream_t& value, int size )
 
 void uvm_packer::pack_field_int( const uvm_integral_t& value, int size )
 {
+  if (size <= 0)
+    return;
+
   sc_dt::sc_bv<64> tmp = value;
   m_check_size(size);
 
@@ -192,12 +404,12 @@ void uvm_packer::pack_real( double value )
 //! outside of SystemVerilog UVM.
 //------------------------------------------------------------------------------
 
-void uvm_packer::pack_object( const uvm_object& value )
+void uvm_packer::m_pack_object( const uvm_object* val, bool with_meta )
 {
-  const uvm_object* val = &value;
-
-  if( val->__m_uvm_status_container->cycle_check.find(val)
-      != val->__m_uvm_status_container->cycle_check.end()) //exists
+  if (val != nullptr &&
+      (is_active_object(val) ||
+       val->__m_uvm_status_container->cycle_check.find(val) !=
+         val->__m_uvm_status_container->cycle_check.end()))
   {
     std::ostringstream str;
     str << "Cycle detected for object "
@@ -207,31 +419,54 @@ void uvm_packer::pack_object( const uvm_object& value )
     return;
   }
 
-  val->__m_uvm_status_container->cycle_check[val] = true;
-
-  if((policy != UVM_REFERENCE) && (val != nullptr) )
+  if (val == nullptr || policy == UVM_REFERENCE)
   {
-    if(use_metadata)
+    if (with_meta)
     {
       m_check_size(4);
-      m_bits->range(pack_index+3, pack_index) = 1;
-      pack_index += 4; // to better debug when display packed bits in hexidecimal
-    }
-    scope.down(val->get_name());
-    //value.__m_uvm_field_automation(null, UVM_PACK,""); // TODO do we need this?
-    val->do_pack(*this);
-    scope.up();
-  }
-  else
-  {
-    if(use_metadata)
-    {
-      m_check_size(4);
-      m_bits->range(pack_index+3, pack_index) = 0; // nullptr object gets metadata 0
+      m_bits->range(pack_index + 3, pack_index) = 0;
       pack_index += 4;
     }
+    return;
   }
-  val->__m_uvm_status_container->cycle_check.erase(val);
+
+  if (with_meta)
+  {
+    m_check_size(4);
+    m_bits->range(pack_index + 3, pack_index) = 1;
+    pack_index += 4;
+  }
+
+  cycle_check_guard cyc_guard(val);
+  active_object_guard act_guard(this, const_cast<uvm_object*>(val));
+  packer_scope_guard sc_guard(&scope, val->get_name());
+  uvm_field_op* op = uvm_field_op::m_get_available_op();
+  field_op_guard op_guard(op);
+
+  op->set(UVM_PACK, this, val);
+  const_cast<uvm_object*>(val)->do_execute_op(op);
+  if (op->user_hook_enabled())
+    val->do_pack(*this);
+}
+
+void uvm_packer::pack_object( const uvm_object& value )
+{
+  m_pack_object(&value, use_metadata);
+}
+
+void uvm_packer::pack_object( const uvm_object* value )
+{
+  m_pack_object(value, use_metadata);
+}
+
+void uvm_packer::pack_object_with_meta( const uvm_object* value )
+{
+  m_pack_object(value, true);
+}
+
+void uvm_packer::pack_object_with_meta( const uvm_object& value )
+{
+  m_pack_object(&value, true);
 }
 
 //------------------------------------------------------------------------------
@@ -249,7 +484,9 @@ void uvm_packer::pack_object( const uvm_object& value )
 
 bool uvm_packer::is_null()
 {
-  return (m_bits->range(unpack_index+3, unpack_index) == 0);
+  if (!m_enough_bits(4, "object metadata") || m_bits == nullptr)
+    return true;
+  return (m_bits->range(unpack_index + 3, unpack_index) == 0);
 }
 
 
@@ -265,6 +502,9 @@ bool uvm_packer::is_null()
 
 uvm_integral_t uvm_packer::unpack_field_int( int size )
 {
+  if (size <= 0)
+    return 0;
+
   sc_dt::sc_bv<64> a, tmp;
 
   if (m_enough_bits(size, "integral"))
@@ -303,6 +543,9 @@ uvm_integral_t uvm_packer::unpack_field_int( int size )
 
 uvm_bitstream_t uvm_packer::unpack_field( int size )
 {
+  if (size <= 0)
+    return 0;
+
   sc_dt::sc_bv<UVM_MAX_STREAMBITS> a, tmp;
 
   if (m_enough_bits(size,"integral"))
@@ -356,9 +599,11 @@ std::string uvm_packer::unpack_string( int num_chars )
   else
     is_null_term = false;
 
-  while( m_enough_bits(8, "string") &&
-        (( (*m_bits).range(unpack_index+7, unpack_index) != 0 ) || (is_null_term == false)) &&
-        ((i < num_chars) || (is_null_term == true)) )
+  bool enough = true;
+  while( (is_null_term || (i < num_chars)) &&
+         (enough = m_enough_bits(8, "string")) &&
+         m_bits != nullptr &&
+        (( (*m_bits).range(unpack_index+7, unpack_index) != 0 ) || (is_null_term == false)) )
   {
     s += " ";
     if(!big_endian)
@@ -380,7 +625,7 @@ std::string uvm_packer::unpack_string( int num_chars )
     ++i;
   }
 
-  if(use_metadata) // metadata adds null string at the end
+  if(use_metadata && enough) // metadata adds null string at the end
   {
     if(m_enough_bits(8, "string"))
       inc_unpack_index(8);
@@ -457,13 +702,12 @@ double uvm_packer::unpack_real()
 //! the pack array before calling this method.
 //------------------------------------------------------------------------------
 
-void uvm_packer::unpack_object( uvm_object& value )
+void uvm_packer::m_unpack_object( uvm_object*& val, bool with_meta, bool allow_nullify )
 {
-  int is_non_null = 1;
-  uvm_object* val = &value;
-
-  if( val->__m_uvm_status_container->cycle_check.find(val)
-      != val->__m_uvm_status_container->cycle_check.end()) //exists
+  if (val != nullptr &&
+      (is_active_object(val) ||
+       val->__m_uvm_status_container->cycle_check.find(val) !=
+         val->__m_uvm_status_container->cycle_check.end()))
   {
     std::ostringstream str;
     str << "Cycle detected for object "
@@ -472,38 +716,61 @@ void uvm_packer::unpack_object( uvm_object& value )
     UVM_WARNING("CYCFND", str.str());
     return;
   }
-  val->__m_uvm_status_container->cycle_check[val] = true;
 
-  if(use_metadata)
+  int is_non_null = 1;
+  if (with_meta)
   {
-    is_non_null = (*m_bits).range(unpack_index+3, unpack_index).to_int();
+    if (!m_enough_bits(4, "object metadata") || m_bits == nullptr)
+      return;
+    is_non_null = (*m_bits).range(unpack_index + 3, unpack_index).to_int();
     inc_unpack_index(4);
   }
 
-  // NOTE- policy is a ~pack~ policy, not unpack policy;
-  //       and you can't pack an object by REFERENCE
-
-  if (val != nullptr)
+  if (is_non_null == 0)
   {
-    if (is_non_null > 0)
-    {
-      scope.down(val->get_name());
-      //value.__m_uvm_field_automation(null, UVM_UNPACK,"");
-      val->do_unpack(*this);
-      scope.up();
-    }
-    else
-    {
-      // TODO: help do_unpack know whether unpacked result would be null
-      //       to avoid new'ing unnecessarily;
-      //       this does not nullify argument; need to pass obj by ref
-    }
+    if (allow_nullify)
+      val = nullptr;
+    return;
   }
-  else
-    if ((is_non_null != 0) && (val == nullptr))
-      UVM_ERROR("UNPCKERR","Can not unpack into nullptr object.");
 
-  val->__m_uvm_status_container->cycle_check.erase(val);
+  if (val == nullptr)
+  {
+    UVM_ERROR("UNPCKERR", "Can not unpack into nullptr object.");
+    return;
+  }
+
+  cycle_check_guard cyc_guard(val);
+  active_object_guard act_guard(this, val);
+  packer_scope_guard sc_guard(&scope, val->get_name());
+  uvm_field_op* op = uvm_field_op::m_get_available_op();
+  field_op_guard op_guard(op);
+
+  op->set(UVM_UNPACK, this, val);
+  val->do_execute_op(op);
+  if (op->user_hook_enabled())
+    val->do_unpack(*this);
+}
+
+void uvm_packer::unpack_object( uvm_object& value )
+{
+  uvm_object* val = &value;
+  m_unpack_object(val, use_metadata, false);
+}
+
+void uvm_packer::unpack_object( uvm_object*& value )
+{
+  m_unpack_object(value, use_metadata, true);
+}
+
+void uvm_packer::unpack_object_with_meta( uvm_object*& value )
+{
+  m_unpack_object(value, true, true);
+}
+
+void uvm_packer::unpack_object_with_meta( uvm_object& value )
+{
+  uvm_object* val = &value;
+  m_unpack_object(val, true, false);
 }
 
 
@@ -659,18 +926,188 @@ UVM_PACK_UNPACK_SC_OPERATORS( sc_dt::sc_unsigned, sc_unsigned )
 //! Implementation defined
 //------------------------------------------------------------------------------
 
+void uvm_packer::get_packed_bits( std::vector<bool>& stream ) const
+{
+  stream.clear();
+  if (pack_index == 0 || m_bits == nullptr)
+    return;
+  stream.reserve(pack_index);
+  for (unsigned int i = 0; i < pack_index; ++i)
+    stream.push_back((*m_bits)[i].to_bool());
+}
+
+void uvm_packer::get_packed_bytes( std::vector<unsigned char>& stream ) const
+{
+  stream.clear();
+  if (pack_index == 0 || m_bits == nullptr)
+    return;
+
+  const unsigned int nbytes = 1u + (pack_index - 1u) / 8u;
+  stream.reserve(nbytes);
+  for (unsigned int i = 0; i < nbytes; ++i)
+  {
+    sc_dt::sc_bv<8> bv(0);
+    const unsigned int base = 8u * i;
+    for (unsigned int j = 0; j < 8u && (base + j) < pack_index; ++j)
+      bv[j] = (*m_bits)[base + j].to_bool();
+
+    if (big_endian)
+    {
+      sc_dt::sc_bv<8> tmp = bv;
+      for (int j = 0; j < 8; ++j)
+        bv[j] = tmp[7 - j];
+    }
+    stream.push_back(static_cast<unsigned char>(bv.to_uint()));
+  }
+}
+
+void uvm_packer::get_packed_ints( std::vector<unsigned int>& stream ) const
+{
+  stream.clear();
+  if (pack_index == 0 || m_bits == nullptr)
+    return;
+
+  const unsigned int nints = 1u + (pack_index - 1u) / 32u;
+  stream.reserve(nints);
+  for (unsigned int i = 0; i < nints; ++i)
+  {
+    sc_dt::sc_bv<32> bv(0);
+    const unsigned int base = 32u * i;
+    for (unsigned int j = 0; j < 32u && (base + j) < pack_index; ++j)
+      bv[j] = (*m_bits)[base + j].to_bool();
+
+    if (big_endian)
+    {
+      sc_dt::sc_bv<32> tmp = bv;
+      for (int j = 0; j < 32; ++j)
+        bv[j] = tmp[31 - j];
+    }
+    stream.push_back(bv.to_uint());
+  }
+}
+
+void uvm_packer::get_packed_longints( std::vector<std::uint64_t>& stream ) const
+{
+  stream.clear();
+  if (pack_index == 0 || m_bits == nullptr)
+    return;
+
+  const unsigned int nlongints = 1u + (pack_index - 1u) / 64u;
+  stream.reserve(nlongints);
+  for (unsigned int i = 0; i < nlongints; ++i)
+  {
+    sc_dt::sc_bv<64> bv(0);
+    const unsigned int base = 64u * i;
+    for (unsigned int j = 0; j < 64u && (base + j) < pack_index; ++j)
+      bv[j] = (*m_bits)[base + j].to_bool();
+
+    if (big_endian)
+    {
+      sc_dt::sc_bv<64> tmp = bv;
+      for (int j = 0; j < 64; ++j)
+        bv[j] = tmp[63 - j];
+    }
+    stream.push_back(bv.to_uint64());
+  }
+}
+
+void uvm_packer::set_packed_bits( const std::vector<bool>& stream )
+{
+  flush();
+  const int bit_size = static_cast<int>(stream.size());
+  if (bit_size == 0)
+    return;
+
+  m_set_size(bit_size);
+  for (int i = 0; i < bit_size; ++i)
+    (*m_bits)[i] = stream[i];
+
+  pack_index = static_cast<unsigned int>(bit_size);
+}
+
+void uvm_packer::set_packed_bytes( const std::vector<unsigned char>& stream )
+{
+  flush();
+  const int byte_count = static_cast<int>(stream.size());
+  if (byte_count == 0)
+    return;
+
+  m_set_size(byte_count * 8);
+  for (int i = 0; i < byte_count; ++i)
+  {
+    sc_dt::sc_bv<8> b = stream[i];
+    if (big_endian)
+    {
+      sc_dt::sc_bv<8> tmp = b;
+      for (int j = 0; j < 8; ++j)
+        b[j] = tmp[7 - j];
+    }
+    (*m_bits).range(8 * i + 7, 8 * i) = b;
+  }
+  pack_index = static_cast<unsigned int>(byte_count * 8);
+}
+
+void uvm_packer::set_packed_ints( const std::vector<unsigned int>& stream )
+{
+  flush();
+  const int int_count = static_cast<int>(stream.size());
+  if (int_count == 0)
+    return;
+
+  m_set_size(int_count * 32);
+  for (int i = 0; i < int_count; ++i)
+  {
+    sc_dt::sc_bv<32> v = stream[i];
+    if (big_endian)
+    {
+      sc_dt::sc_bv<32> tmp = v;
+      for (int j = 0; j < 32; ++j)
+        v[j] = tmp[31 - j];
+    }
+    (*m_bits).range(32 * i + 31, 32 * i) = v;
+  }
+  pack_index = static_cast<unsigned int>(int_count * 32);
+}
+
+void uvm_packer::set_packed_longints( const std::vector<std::uint64_t>& stream )
+{
+  flush();
+  const int longint_count = static_cast<int>(stream.size());
+  if (longint_count == 0)
+    return;
+
+  m_set_size(longint_count * 64);
+  for (int i = 0; i < longint_count; ++i)
+  {
+    sc_dt::sc_bv<64> v = static_cast<sc_dt::uint64>(stream[i]);
+    if (big_endian)
+    {
+      sc_dt::sc_bv<64> tmp = v;
+      for (int j = 0; j < 64; ++j)
+        v[j] = tmp[63 - j];
+    }
+    (*m_bits).range(64 * i + 63, 64 * i) = v;
+  }
+  pack_index = static_cast<unsigned int>(longint_count * 64);
+}
+
+//------------------------------------------------------------------------------
+// member function: get_bits
+//
+//! Implementation defined
+//------------------------------------------------------------------------------
+
 void uvm_packer::get_bits( std::vector<bool>& bits ) const
 {
   unsigned int n = get_remaining_unpacked_bits();
+  if (n == 0 || m_bits == nullptr)
+    return;
   for (unsigned int i = 0; i < n; i++)
   {
     bool b = (*m_bits)[i].to_bool();
     bits.push_back(b);
   }
 }
-
-
-
 
 //------------------------------------------------------------------------------
 // member function: get_bytes
@@ -681,24 +1118,28 @@ void uvm_packer::get_bits( std::vector<bool>& bits ) const
 void uvm_packer::get_bytes( std::vector<unsigned char>& bytes ) const
 {
   unsigned int n = get_remaining_unpacked_bits();
-  unsigned int nbytes = 1 + (n-1)/8;
+  if (n == 0 || m_bits == nullptr)
+    return;
+  unsigned int nbytes = 1 + (n - 1) / 8;
 
   for (unsigned int i = 0; i < nbytes; i++)
   {
-    char b = (*m_bits).range(8*i+7,8*i).to_int();
+    sc_dt::sc_bv<8> tmp(0);
+    unsigned int base = 8 * i;
+    for (unsigned int j = 0; j < 8 && (base + j) < pack_index; ++j)
+      tmp[j] = (*m_bits)[base + j].to_bool();
 
-    if(big_endian)
+    if (big_endian)
     {
-      sc_dt::sc_bv<8> tmp, tmp2;
-      tmp = b;
-      for(int j = 0; j < 8; ++j) tmp2[j] = tmp[7-j];
-      b = tmp2.to_int();
+      sc_dt::sc_bv<8> tmp2;
+      for (int j = 0; j < 8; ++j)
+        tmp2[j] = tmp[7 - j];
+      tmp = tmp2;
     }
 
-    bytes.push_back(b);
+    bytes.push_back(static_cast<unsigned char>(tmp.to_uint()));
   }
 }
-
 
 //------------------------------------------------------------------------------
 // member function: get_ints
@@ -709,21 +1150,26 @@ void uvm_packer::get_bytes( std::vector<unsigned char>& bytes ) const
 void uvm_packer::get_ints( std::vector<unsigned int>& ints ) const
 {
   unsigned int n = get_remaining_unpacked_bits();
-  unsigned int nints = 1 + (n-1)/32;
+  if (n == 0 || m_bits == nullptr)
+    return;
+  unsigned int nints = 1 + (n - 1) / 32;
 
   for (unsigned int i = 0; i < nints; i++)
   {
-    int b = (*m_bits).range(32*i+31, 32*i).to_int();
+    sc_dt::sc_bv<32> tmp(0);
+    unsigned int base = 32 * i;
+    for (unsigned int j = 0; j < 32 && (base + j) < pack_index; ++j)
+      tmp[j] = (*m_bits)[base + j].to_bool();
 
-    if(big_endian)
+    if (big_endian)
     {
-      sc_dt::sc_bv<32> tmp, tmp2;
-      tmp = b;
-      for(int j = 0; j < 32; ++j) tmp2[j] = tmp[31-j];
-      b = tmp2.to_int();
+      sc_dt::sc_bv<32> tmp2;
+      for (int j = 0; j < 32; ++j)
+        tmp2[j] = tmp[31 - j];
+      tmp = tmp2;
     }
 
-    ints.push_back(b);
+    ints.push_back(tmp.to_uint());
   }
 }
 
@@ -737,22 +1183,17 @@ void uvm_packer::put_bits( const std::vector<bool>& bitstream )
 {
   reset();
   int bit_size = (int)bitstream.size();
+  if (bit_size == 0)
+    return;
   m_set_size(bit_size);
 
-  if(!big_endian)
-    for (int i = 0; i < bit_size; i++)
-    {
-      (*m_bits)[i] = bitstream[i];
-    }
-  else
-    for (int i = bit_size-1; i >= 0; i--)
-    {
-      (*m_bits)[i] = bitstream[i];
-    }
+  for (int i = 0; i < bit_size; i++)
+  {
+    (*m_bits)[i] = bitstream[i];
+  }
 
   pack_index = bit_size;
 }
-
 
 //------------------------------------------------------------------------------
 // member function: put_bytes
@@ -764,22 +1205,23 @@ void uvm_packer::put_bytes( const std::vector<unsigned char>& bytestream )
 {
   reset();
   int byte_size = (int)bytestream.size();
-  m_set_size(byte_size*8);
+  if (byte_size == 0)
+    return;
+  m_set_size(byte_size * 8);
 
   for (int i = 0; i < byte_size; i++)
   {
     sc_dt::sc_bv<8> b = bytestream[i];
-    if(big_endian)
+    if (big_endian)
     {
       sc_dt::sc_bv<8> tmp = b;
-      for(int j = 0; j < 8; ++j)
-        b[j] = tmp[7-j]; // swap char first
+      for (int j = 0; j < 8; ++j)
+        b[j] = tmp[7 - j]; // swap char first
     }
-    (*m_bits).range(8*i+7,8*i) = b;
+    (*m_bits).range(8 * i + 7, 8 * i) = b;
   }
-  pack_index = 8*byte_size;
+  pack_index = 8 * byte_size;
 }
-
 
 //------------------------------------------------------------------------------
 // member function: put_ints
@@ -791,21 +1233,23 @@ void uvm_packer::put_ints( const std::vector<unsigned int>& intstream )
 {
   reset();
   int int_size = (int)intstream.size();
-  m_set_size(int_size*32);
+  if (int_size == 0)
+    return;
+  m_set_size(int_size * 32);
 
   for (int i = 0; i < int_size; i++)
   {
     sc_dt::sc_bv<32> v = intstream[i];
-    if(big_endian)
+    if (big_endian)
     {
       sc_dt::sc_bv<32> tmp = v;
-      for(int j = 0; j < 32; ++j)
-        v[j] = tmp[31-j]; // swap int first
+      for (int j = 0; j < 32; ++j)
+        v[j] = tmp[31 - j]; // swap int first
     }
 
-    (*m_bits).range(32*i+31, 32*i) = v;
+    (*m_bits).range(32 * i + 31, 32 * i) = v;
   }
-  pack_index = 32*int_size;
+  pack_index = 32 * int_size;
 }
 
 
@@ -831,14 +1275,19 @@ void uvm_packer::reset()
 
 bool uvm_packer::m_enough_bits( int needed, std::string id ) const
 {
-  if ((int)(pack_index - unpack_index) < needed)
+  if (needed <= 0)
+    return true;
+  const unsigned int avail = (m_bits != nullptr && pack_index >= unpack_index)
+    ? (pack_index - unpack_index)
+    : 0u;
+  if (m_bits == nullptr || pack_index < unpack_index || avail < static_cast<unsigned int>(needed))
   {
    std::ostringstream str;
    str << needed
        << " bits needed to unpack "
        << id
        << ", yet only "
-       << pack_index - unpack_index //m_packed_size - count
+       << avail
        << " available.";
     UVM_ERROR("PCKSZERR", str.str());
     return false;
@@ -908,6 +1357,8 @@ void uvm_packer::m_allocate( int nbits, bool copy_ )
 
 unsigned int uvm_packer::get_remaining_unpacked_bits() const
 {
+  if (m_bits == nullptr || pack_index < unpack_index)
+    return 0u;
   return pack_index - unpack_index;
 }
 
@@ -992,6 +1443,11 @@ void uvm_packer::pack_char( char a )
 void uvm_packer::unpack_char( char& a )
 {
   unsigned nbits = 8;
+  if (!m_enough_bits(static_cast<int>(nbits), "char") || m_bits == nullptr)
+  {
+    a = 0;
+    return;
+  }
   sc_dt::sc_bv<8> b, c;
   b = (*m_bits)(unpack_index + nbits - 1, unpack_index);
 
@@ -1030,6 +1486,11 @@ void uvm_packer::pack_bool( bool a )
 
 void uvm_packer::unpack_bool( bool& a )
 {
+  if (!m_enough_bits(1, "bool") || m_bits == nullptr)
+  {
+    a = false;
+    return;
+  }
   a = (*m_bits)[unpack_index] == 1;
 
   inc_unpack_index(1);
@@ -1050,6 +1511,11 @@ void uvm_packer::pack_sc_logic( const sc_dt::sc_logic& a )
 
 void uvm_packer::unpack_sc_logic( sc_dt::sc_logic& a )
 {
+  if (!m_enough_bits(1, "sc_logic") || m_bits == nullptr)
+  {
+    a = sc_dt::SC_LOGIC_X;
+    return;
+  }
   sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index));
   a = val;
   inc_unpack_index(1);
@@ -1066,6 +1532,10 @@ void uvm_packer::pack_sc_bv_base( const sc_dt::sc_bv_base& a )
 void uvm_packer::unpack_sc_bv_base( sc_dt::sc_bv_base& a )
 {
   int nbits = a.length();
+  if (nbits <= 0)
+    return;
+  if (!m_enough_bits(nbits, "sc_bv") || m_bits == nullptr)
+    return;
   a = (*m_bits)(unpack_index + nbits - 1, unpack_index);
   inc_unpack_index(nbits);
 }
@@ -1085,12 +1555,16 @@ void uvm_packer::pack_sc_lv_base( const sc_dt::sc_lv_base& a )
 void uvm_packer::unpack_sc_lv_base( sc_dt::sc_lv_base& a )
 {
   int n = a.length();
+  if (n <= 0)
+    return;
+  if (!m_enough_bits(n, "sc_lv") || m_bits == nullptr)
+    return;
   for (int i = 0; i < n; i++)
   {
-    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index));
+    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index + i));
     a.set_bit(i, val);
-    unpack_index++;
   }
+  inc_unpack_index(n);
 }
 
 void uvm_packer::pack_sc_int_base( const sc_dt::sc_int_base& a )
@@ -1112,17 +1586,19 @@ void uvm_packer::pack_sc_int_base( const sc_dt::sc_int_base& a )
 void uvm_packer::unpack_sc_int_base( sc_dt::sc_int_base& a )
 {
   int n = a.length();
+  if (n <= 0)
+    return;
+  if (!m_enough_bits(n, "sc_int") || m_bits == nullptr)
+    return;
+  sc_dt::uint_type raw = 0;
   for (int i = 0; i < n; i++)
   {
-    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index));
+    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index + i));
     if (val == sc_dt::Log_1)
-    {
-      a.set(i, true);
-    } else {
-      a.set(i, false);
-    }
-    unpack_index++;
+      raw |= (sc_dt::UINT_ONE << i);
   }
+  a = static_cast<sc_dt::int_type>(raw);
+  inc_unpack_index(n);
 }
 
 void uvm_packer::pack_sc_uint_base( const sc_dt::sc_uint_base& a )
@@ -1145,17 +1621,16 @@ void uvm_packer::pack_sc_uint_base( const sc_dt::sc_uint_base& a )
 void uvm_packer::unpack_sc_uint_base( sc_dt::sc_uint_base& a )
 {
   int n = a.length();
+  if (n <= 0)
+    return;
+  if (!m_enough_bits(n, "sc_uint") || m_bits == nullptr)
+    return;
   for (int i = 0; i < n; i++)
   {
-    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index));
-    if (val == sc_dt::Log_1)
-    {
-      a.set(i, true);
-    } else {
-      a.set(i, false);
-    }
-    unpack_index++;
+    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index + i));
+    a.set(i, val == sc_dt::Log_1);
   }
+  inc_unpack_index(n);
 }
 
 void uvm_packer::pack_sc_signed( const sc_dt::sc_signed& a )
@@ -1176,17 +1651,16 @@ void uvm_packer::pack_sc_signed( const sc_dt::sc_signed& a )
 void uvm_packer::unpack_sc_signed( sc_dt::sc_signed& a )
 {
   int n = a.length();
+  if (n <= 0)
+    return;
+  if (!m_enough_bits(n, "sc_signed") || m_bits == nullptr)
+    return;
   for (int i = 0; i < n; i++)
   {
-    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index));
-    if (val == sc_dt::Log_1)
-    {
-      a.set(i, true);
-    } else {
-      a.set(i, false);
-    }
-    unpack_index++;
+    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index + i));
+    a.set(i, val == sc_dt::Log_1);
   }
+  inc_unpack_index(n);
 }
 
 void uvm_packer::pack_sc_unsigned( const sc_dt::sc_unsigned& a )
@@ -1209,17 +1683,16 @@ void uvm_packer::pack_sc_unsigned( const sc_dt::sc_unsigned& a )
 void uvm_packer::unpack_sc_unsigned( sc_dt::sc_unsigned& a )
 {
   int n = a.length();
+  if (n <= 0)
+    return;
+  if (!m_enough_bits(n, "sc_unsigned") || m_bits == nullptr)
+    return;
   for (int i = 0; i < n; i++)
   {
-    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index));
-    if (val == sc_dt::Log_1)
-    {
-      a.set(i, true);
-    } else {
-      a.set(i, false);
-    }
-    unpack_index++;
+    sc_dt::sc_logic_value_t val = sc_dt::sc_logic_value_t((*m_bits).get_bit(unpack_index + i));
+    a.set(i, val == sc_dt::Log_1);
   }
+  inc_unpack_index(n);
 }
 
 

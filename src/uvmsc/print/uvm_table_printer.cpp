@@ -40,12 +40,27 @@ namespace uvm {
 //! Creates a new instance of #uvm_table_printer
 //------------------------------------------------------------------------------
 
-uvm_table_printer::uvm_table_printer()
+uvm_table_printer::uvm_table_printer( const std::string& name )
+: uvm_printer(name)
 {
   m_max_name = 4;
   m_max_type = 4;
   m_max_size = 4;
   m_max_value = 5;
+}
+
+uvm_table_printer::uvm_table_printer( const std::string& name, no_inst_count_t )
+: uvm_printer(name, no_inst_count_t())
+{
+  m_max_name = 4;
+  m_max_type = 4;
+  m_max_size = 4;
+  m_max_value = 5;
+}
+
+uvm_table_printer* uvm_table_printer::m_create_default()
+{
+  return new uvm_table_printer("uvm_default_table_printer", no_inst_count_t());
 }
 
 //------------------------------------------------------------------------------
@@ -131,7 +146,7 @@ std::string uvm_table_printer::emit()
       s = s + user_format + linefeed;
   } // footer
   /* */
-  m_rows.clear(); // flush content
+  flush(); // flush content
   return s;
 }
 

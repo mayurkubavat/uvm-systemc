@@ -35,11 +35,139 @@
 #include "uvmsc/print/uvm_tree_printer.h"
 #include "uvmsc/print/uvm_printer_globals.h"
 #include "uvmsc/policy/uvm_packer.h"
+#include "uvmsc/policy/uvm_comparer.h"
 #include "uvmsc/policy/uvm_recorder.h"
+#include "uvmsc/policy/uvm_copier.h"
+#include "uvmsc/policy/uvm_field_op.h"
 #include "uvmsc/report/uvm_report_object.h"
 
 namespace uvm {
 
+namespace {
+
+class copier_flush_guard
+{
+ public:
+  copier_flush_guard( uvm_copier* copier, bool active )
+  : m_copier(copier), m_active(active)
+  {}
+
+  ~copier_flush_guard()
+  {
+    if (m_active && m_copier != nullptr)
+      m_copier->flush();
+  }
+
+ private:
+  copier_flush_guard( const copier_flush_guard& );
+  copier_flush_guard& operator=( const copier_flush_guard& );
+
+  uvm_copier* m_copier;
+  bool m_active;
+};
+
+class active_object_guard
+{
+ public:
+  active_object_guard( uvm_policy* policy, uvm_object* obj )
+  : m_policy(policy)
+  {
+    if (m_policy != nullptr)
+      m_policy->push_active_object(obj);
+  }
+
+  ~active_object_guard()
+  {
+    if (m_policy != nullptr)
+      m_policy->pop_active_object();
+  }
+
+ private:
+  active_object_guard( const active_object_guard& );
+  active_object_guard& operator=( const active_object_guard& );
+
+  uvm_policy* m_policy;
+};
+
+class field_op_guard
+{
+ public:
+  explicit field_op_guard( uvm_field_op* op )
+  : m_op(op)
+  {}
+
+  ~field_op_guard()
+  {
+    if (m_op != nullptr)
+      m_op->m_recycle();
+  }
+
+ private:
+  field_op_guard( const field_op_guard& );
+  field_op_guard& operator=( const field_op_guard& );
+
+  uvm_field_op* m_op;
+};
+
+class packer_scope_guard
+{
+ public:
+  packer_scope_guard( uvm_scope_stack* scope, const std::string& name )
+  : m_scope(scope)
+  {
+    if (m_scope != nullptr)
+      m_scope->down(name);
+  }
+
+  ~packer_scope_guard()
+  {
+    if (m_scope != nullptr)
+      m_scope->up();
+  }
+
+ private:
+  packer_scope_guard( const packer_scope_guard& );
+  packer_scope_guard& operator=( const packer_scope_guard& );
+
+  uvm_scope_stack* m_scope;
+};
+
+class compare_map_guard
+{
+ public:
+  compare_map_guard( std::set<std::pair<const uvm_object*, const uvm_object*> >& map,
+                     const std::pair<const uvm_object*, const uvm_object*>& key,
+                     bool clear_all_on_exit )
+  : m_map(map),
+    m_key(key),
+    m_clear_all_on_exit(clear_all_on_exit),
+    m_committed(false)
+  {}
+
+  void commit()
+  {
+    m_committed = true;
+  }
+
+  ~compare_map_guard()
+  {
+    if (m_clear_all_on_exit)
+      m_map.clear();
+    else if (!m_committed)
+      m_map.erase(m_key);
+  }
+
+ private:
+  compare_map_guard( const compare_map_guard& );
+  compare_map_guard& operator=( const compare_map_guard& );
+
+  std::set<std::pair<const uvm_object*, const uvm_object*> >& m_map;
+  std::pair<const uvm_object*, const uvm_object*> m_key;
+  bool m_clear_all_on_exit;
+  bool m_committed;
+};
+
+} // namespace
 
 // global for instance count
 int g_inst_count = 0;
@@ -88,6 +216,16 @@ uvm_object::uvm_object( uvm_object_name name)
     __m_uvm_status_container = new uvm_status_container();
 
   // register callbacks
+  m_register_cb();
+}
+
+uvm_object::uvm_object( uvm_object_name name, no_inst_count_t )
+: m_leaf_name(name),
+  m_inst_id(-1)
+{
+  if (uvm_object::__m_uvm_status_container == nullptr)
+    __m_uvm_status_container = new uvm_status_container();
+
   m_register_cb();
 }
 
@@ -324,12 +462,24 @@ std::string uvm_object::sprint( uvm_printer* printer ) const
   if(!printer->istop())
   {
     __m_uvm_status_container->printer = printer;
-    //__m_uvm_field_automation(null, UVM_PRINT, ""); // TODO do we need this?
-    do_print( *printer );
+    uvm_field_op* op = uvm_field_op::m_get_available_op();
+    field_op_guard op_guard(op);
+    op->set(UVM_PRINT, printer, nullptr);
+    const_cast<uvm_object*>(this)->do_execute_op(op);
+    if (op->user_hook_enabled())
+      do_print( *printer );
     return "";
   }
 
-  printer->print_object(get_name(), *this);
+  try
+  {
+    printer->print_object(get_name(), *this);
+  }
+  catch (...)
+  {
+    printer->flush();
+    throw;
+  }
   // backward compat with sprint knob: if used,
   //    print that, do not call emit()
   if (!printer->m_string.empty())
@@ -434,9 +584,18 @@ void uvm_object::do_record( const uvm_recorder& recorder )
 //! the #do_copy method.
 //----------------------------------------------------------------------------
 
-void uvm_object::copy( const uvm_object& rhs )
+void uvm_object::copy( const uvm_object& rhs, uvm_copier* copier )
 {
-  do_copy(rhs);
+  if (this == &rhs)
+    return;
+
+  const bool using_default = (copier == nullptr);
+  if (using_default)
+    copier = uvm_copier::get_default();
+
+  const bool top_level = (copier->get_active_object() == nullptr);
+  copier_flush_guard flush_guard(copier, using_default && top_level);
+  copier->copy_object(*this, rhs);
 }
 
 //----------------------------------------------------------------------------
@@ -450,6 +609,19 @@ void uvm_object::copy( const uvm_object& rhs )
 void uvm_object::do_copy( const uvm_object& rhs )
 {
   uvm_report_warning("DOCPY", "member function do_copy not implemented in " + get_type_name(), UVM_HIGH);
+}
+
+//----------------------------------------------------------------------------
+// member function: do_execute_op (virtual)
+//
+//! Executes a field operation described by ~op~ per IEEE 1800.2-2020
+//! section 5.3.13. Base implementation is a silent no-op so derived
+//! classes fall through to their do_* user hooks unless disabled.
+//----------------------------------------------------------------------------
+
+void uvm_object::do_execute_op( uvm_field_op* op )
+{
+  (void)op;
 }
 
 //----------------------------------------------------------------------------
@@ -470,7 +642,38 @@ void uvm_object::do_copy( const uvm_object& rhs )
 bool uvm_object::compare( const uvm_object& rhs,
                           const uvm_comparer* comparer ) const
 {
-  return do_compare(rhs, (comparer==nullptr)?::uvm::uvm_default_comparer:comparer);
+  const uvm_comparer* eff = (comparer == nullptr) ? uvm_comparer::get_default() : comparer;
+  uvm_comparer* mut = const_cast<uvm_comparer*>(eff);
+  __m_uvm_status_container->comparer = mut;
+
+  const bool top_level = (mut->get_active_object() == nullptr && mut->m_compare_depth == 0);
+  if (top_level)
+    mut->flush();
+
+  if (this == &rhs)
+    return true;
+
+  const std::pair<const uvm_object*, const uvm_object*> key(this, &rhs);
+  if (mut->m_compare_map.find(key) != mut->m_compare_map.end())
+    return true;
+  mut->m_compare_map.insert(key);
+  compare_map_guard map_guard(mut->m_compare_map, key, top_level);
+
+  const unsigned int result_before = mut->get_result();
+
+  active_object_guard act_guard(mut, const_cast<uvm_object*>(this));
+  uvm_field_op* op = uvm_field_op::m_get_available_op();
+  field_op_guard op_guard(op);
+
+  op->set(UVM_COMPARE, mut, &rhs);
+  const_cast<uvm_object*>(this)->do_execute_op(op);
+
+  bool ok = true;
+  if (op->user_hook_enabled())
+    ok = do_compare(rhs, eff);
+
+  map_guard.commit();
+  return ok && (mut->get_result() == result_before);
 }
 
 
@@ -502,22 +705,21 @@ bool uvm_object::do_compare( const uvm_object& rhs,
 
 void uvm_object::m_pack( uvm_packer*& packer )
 {
-  if( packer != nullptr)
-    __m_uvm_status_container->packer = packer;
-  else
-    __m_uvm_status_container->packer = uvm_default_packer;
+  packer = (packer != nullptr) ? packer : uvm_packer::get_default();
+  __m_uvm_status_container->packer = packer;
 
-  packer = __m_uvm_status_container->packer;
+  packer->flush();
 
-  packer->reset();
-  packer->scope.down(get_name());
+  active_object_guard act_guard(packer, this);
+  packer_scope_guard sc_guard(&packer->scope, get_name());
+  uvm_field_op* op = uvm_field_op::m_get_available_op();
+  field_op_guard op_guard(op);
 
-  //   __m_uvm_field_automation(null, UVM_PACK, ""); // TODO do we need this?
-  do_pack(*packer);
+  op->set(UVM_PACK, packer, this);
+  do_execute_op(op);
+  if (op->user_hook_enabled())
+    do_pack(*packer);
   packer->set_packed_size();
-
-  packer->scope.up();
-
 }
 
 //----------------------------------------------------------------------------
@@ -588,14 +790,10 @@ void uvm_object::do_pack( uvm_packer& packer ) const
 
 void uvm_object::m_unpack_pre( uvm_packer*& packer )
 {
-  if( packer != nullptr)
-    __m_uvm_status_container->packer = packer;
-  else
-    __m_uvm_status_container->packer = uvm_default_packer;
+  packer = (packer != nullptr) ? packer : uvm_packer::get_default();
+  __m_uvm_status_container->packer = packer;
 
-  packer = __m_uvm_status_container->packer;
-
-  packer->reset();
+  packer->flush();
 }
 
 
@@ -612,16 +810,17 @@ void uvm_object::m_unpack_post( uvm_packer*& packer )
 
   provided_size = packer->get_packed_size();
 
-  //Put this object into the hierarchy
-  packer->scope.down(get_name());
+  {
+    active_object_guard act_guard(packer, this);
+    packer_scope_guard sc_guard(&packer->scope, get_name());
+    uvm_field_op* op = uvm_field_op::m_get_available_op();
+    field_op_guard op_guard(op);
 
-  // TODO do we need field automation??
-  //__m_uvm_field_automation(null, UVM_UNPACK, "");
-
-  do_unpack(*packer);
-
-  //Scope back up before leaving
-  packer->scope.up();
+    op->set(UVM_UNPACK, packer, this);
+    do_execute_op(op);
+    if (op->user_hook_enabled())
+      do_unpack(*packer);
+  }
 
   if(packer->get_packed_size() != provided_size)
   {
@@ -818,8 +1017,7 @@ bool uvm_object::m_register_cb()
 
 uvm_packer* uvm_object::get_uvm_packer()
 {
-  static uvm_packer* p = new uvm_packer;
-  return p;
+  return uvm_packer::get_default();
 }
 
 

@@ -5,6 +5,7 @@ target_sources (uvm-systemc PRIVATE
   uvm_objection.cpp
   uvm_phase.cpp
   uvm_phase_cb.cpp
+  uvm_process.cpp
   uvm_process_phase.cpp
   uvm_runtime_phases.cpp
   uvm_topdown_phase.cpp

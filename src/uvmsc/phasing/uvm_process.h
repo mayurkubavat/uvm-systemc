@@ -1,5 +1,6 @@
 //----------------------------------------------------------------------
 //   Copyright 2012-2014 NXP B.V.
+//   Copyright 2026 Mayur Kubavat
 //   All Rights Reserved Worldwide
 //
 //   Licensed under the Apache License, Version 2.0 (the
@@ -20,32 +21,52 @@
 #ifndef UVM_PROCESS_H_
 #define UVM_PROCESS_H_
 
+#include <random>
+#include <string>
 
-//////////////
+#include <systemc>
 
 namespace uvm {
 
-// TODO finish process class
+//----------------------------------------------------------------------
+// CLASS: uvm_process
+//
+//! IEEE 1800.2-2020 process wrapper backed by sc_core::sc_process_handle.
+//----------------------------------------------------------------------
+
 class uvm_process
 {
  public:
   enum state { FINISHED, RUNNING, WAITING, SUSPENDED, KILLED };
 
   static uvm_process* self();
+  static uvm_process* from_handle( const sc_core::sc_process_handle& handle );
 
-  state status()
-  {
-    return m_status;
-  }
+  state status() const;
 
   void kill();
   void await();
   void suspend();
   void resume();
 
-  state m_status;
-};
+  void srandom( unsigned int seed );
+  std::string get_randstate() const;
+  void set_randstate( const std::string& state_str );
 
+  sc_core::sc_process_handle get_process_handle() const;
+  std::mt19937& get_rng();
+
+  ~uvm_process() = default;
+
+ private:
+  explicit uvm_process( const sc_core::sc_process_handle& handle );
+  uvm_process( const uvm_process& ) = delete;
+  uvm_process& operator=( const uvm_process& ) = delete;
+
+  sc_core::sc_process_handle m_handle;
+  bool m_killed;
+  std::mt19937 m_rng;
+};
 
 } // namespace uvm
 

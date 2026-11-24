@@ -24,10 +24,16 @@
 #define UVM_PRINTER_H_
 
 #include <list>
+#include <string>
+#include <vector>
 
 #include <systemc>
 
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/factory/uvm_abstract_object_registry.h"
+#include "uvmsc/macros/uvm_object_defines.h"
+#include "uvmsc/policy/uvm_policy_base.h"
+#include "uvmsc/print/uvm_printer_element.h"
 #include "uvmsc/print/uvm_printer_knobs.h"
 #include "uvmsc/misc/uvm_scope_stack.h"
 
@@ -55,10 +61,30 @@ typedef struct {
 //! different print formats or policies.
 //------------------------------------------------------------------------------
 
-class uvm_printer
+class uvm_printer : public uvm_policy
 {
  public:
   friend class uvm_object;
+
+  UVM_OBJECT_ABSTRACT_UTILS(uvm_printer);
+
+  uvm_printer( const uvm_printer& rhs );
+  uvm_printer& operator=( const uvm_printer& rhs );
+  virtual ~uvm_printer();
+
+  virtual void flush();
+
+  virtual void push_element( const std::string& name,
+                             const std::string& type_name,
+                             const std::string& size,
+                             const std::string& value = "" ) const;
+  virtual void pop_element() const;
+  virtual uvm_printer_element* get_bottom_element() const;
+  virtual uvm_printer_element* get_top_element() const;
+  const std::vector<uvm_printer_element*>& get_top_elements() const;
+
+  static uvm_printer* get_default();
+  static void set_default( uvm_printer* printer );
 
   //--------------------------------------------------------------------------
   // UVM Standard LRM API below
@@ -143,17 +169,17 @@ class uvm_printer
 
   uvm_printer_knobs knobs;
 
-  /////////////////////////////////////////////////////
-  // Implementation-defined member functions below,
-  // not part of UVM Class reference / LRM
-  /////////////////////////////////////////////////////
-
-  // destructor
-  virtual ~uvm_printer();
-
  private:
 
   bool istop() const;
+
+  void m_push_element( const std::string& name,
+                       const std::string& type_name,
+                       const std::string& size,
+                       const std::string& value,
+                       uvm_printer_element::element_kind_e kind ) const;
+  void m_cleanup_elements() const;
+  void m_copy_elements( const uvm_printer& rhs );
 
   // member variables below
 
@@ -161,15 +187,19 @@ class uvm_printer
 
   std::string m_string;
 
+  mutable std::vector<uvm_printer_element*> m_top_elements;
+  mutable std::vector<uvm_printer_element*> m_element_stack;
+
  protected:
-  // constructor disabled for application
-  uvm_printer();
+  // constructor for derived printers
+  explicit uvm_printer( const std::string& name = "uvm_printer" );
+  uvm_printer( const std::string& name, no_inst_count_t );
 
   typedef std::vector<uvm_printer_row_info> m_row_vecT;
   typedef m_row_vecT::iterator m_row_vecItT;
   mutable m_row_vecT m_rows;
 
-  std::list<bool> m_array_stack;
+  mutable std::list<bool> m_array_stack;
 
 }; // class uvm_printer
 

@@ -1,0 +1,17 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test report_db_test...
+report_db_checks_ok=1
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :  11
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[DIRECT_REC]            1
+[RNTST]                 1
+[TEST_ALL]              1
+[TEST_REC]              8
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

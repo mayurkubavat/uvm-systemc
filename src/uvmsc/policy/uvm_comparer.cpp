@@ -47,17 +47,59 @@ namespace uvm {
 // Class: uvm_comparer implementation
 //----------------------------------------------------------------------------
 
-uvm_comparer::uvm_comparer()
+uvm_comparer::uvm_comparer( const std::string& name )
+: uvm_policy(name),
+  policy(UVM_DEFAULT_POLICY),
+  show_max(1),
+  verbosity(UVM_LOW),
+  sev(UVM_INFO),
+  miscompares(""),
+  physical(true),
+  abstract(false),
+  check_type(true),
+  result(0),
+  m_compare_depth(0)
+{}
+
+uvm_comparer::uvm_comparer( const std::string& name, no_inst_count_t )
+: uvm_policy(name, no_inst_count_t()),
+  policy(UVM_DEFAULT_POLICY),
+  show_max(1),
+  verbosity(UVM_LOW),
+  sev(UVM_INFO),
+  miscompares(""),
+  physical(true),
+  abstract(false),
+  check_type(true),
+  result(0),
+  m_compare_depth(0)
+{}
+
+uvm_comparer& uvm_comparer::m_builtin_default()
 {
-  //uvm_recursion_policy_enum policy = UVM_DEFAULT_POLICY;
-  show_max = true;
-  verbosity = UVM_LOW;
-  sev = UVM_INFO;
-  miscompares = "";
-  physical = true;
-  abstract = false;
-  check_type = true;
+  static uvm_comparer builtin_default("uvm_default_comparer", no_inst_count_t());
+  return builtin_default;
+}
+
+uvm_comparer* uvm_comparer::get_default()
+{
+  if (uvm_default_comparer == nullptr)
+    uvm_default_comparer = &m_builtin_default();
+  return uvm_default_comparer;
+}
+
+void uvm_comparer::set_default( uvm_comparer* comparer )
+{
+  uvm_default_comparer = (comparer != nullptr) ? comparer : &m_builtin_default();
+}
+
+void uvm_comparer::flush()
+{
   result = 0;
+  miscompares.clear();
+  m_compare_map.clear();
+  m_compare_depth = 0;
+  uvm_policy::flush();
 }
 
 //----------------------------------------------------------------------------
@@ -68,10 +110,7 @@ uvm_comparer::uvm_comparer()
 
 uvm_comparer* uvm_comparer::init()
 {
-  if( uvm_default_comparer == nullptr )
-    uvm_default_comparer = new uvm_comparer();
-
-  return uvm_default_comparer;
+  return get_default();
 }
 
 
@@ -258,25 +297,88 @@ bool uvm_comparer::compare_field_real( const std::string& name,
 
 bool uvm_comparer::compare_object( const std::string& name,
                                    const uvm_object& lhs,
-                                   const uvm_object& rhs) const
+                                   const uvm_object& rhs ) const
 {
-  bool result;
+  return compare_object(name, &lhs, &rhs);
+}
 
-  if (lhs.compare(rhs))
+bool uvm_comparer::compare_object( const std::string& name,
+                                   const uvm_object* lhs,
+                                   const uvm_object* rhs ) const
+{
+  if (lhs == rhs)
     return true;
 
-  if (policy == UVM_REFERENCE && !(lhs.compare(rhs)))
+  if (lhs == nullptr || rhs == nullptr)
   {
     uvm_object::__m_uvm_status_container->scope->set_arg(name);
-    print_msg_object(lhs, rhs);
+    std::ostringstream msg;
+    msg << "lhs = ";
+    if (lhs == nullptr)
+      msg << "<null>";
+    else
+      msg << "@" << lhs->get_inst_id();
+    msg << " : rhs = ";
+    if (rhs == nullptr)
+      msg << "<null>";
+    else
+      msg << "@" << rhs->get_inst_id();
+    print_msg(msg.str());
     return false;
   }
 
-  uvm_object::__m_uvm_status_container->scope->down(name);
-  result = lhs.compare(rhs, this);
-  uvm_object::__m_uvm_status_container->scope->up();
+  if (policy == UVM_REFERENCE)
+  {
+    uvm_object::__m_uvm_status_container->scope->set_arg(name);
+    print_msg_object(*lhs, *rhs);
+    return false;
+  }
 
-  return result;
+  if (check_type && lhs->get_type_name() != rhs->get_type_name())
+  {
+    uvm_object::__m_uvm_status_container->scope->set_arg(name);
+    std::ostringstream msg;
+    msg << "lhs type = \"" << lhs->get_type_name()
+        << "\" : rhs type = \"" << rhs->get_type_name() << "\"";
+    print_msg(msg.str());
+    return false;
+  }
+
+  const std::pair<const uvm_object*, const uvm_object*> key(lhs, rhs);
+  if (m_compare_map.find(key) != m_compare_map.end())
+    return true;
+
+  const bool top_compare_object = (get_active_object() == nullptr && m_compare_depth == 0);
+  struct compare_object_guard
+  {
+    const uvm_comparer* cmp;
+    bool clear_map_on_exit;
+    compare_object_guard( const uvm_comparer* c, bool clear_map )
+    : cmp(c), clear_map_on_exit(clear_map)
+    {
+      ++cmp->m_compare_depth;
+    }
+    ~compare_object_guard()
+    {
+      --cmp->m_compare_depth;
+      if (clear_map_on_exit)
+        cmp->m_compare_map.clear();
+    }
+  } cmp_guard(this, top_compare_object);
+
+  struct scope_guard
+  {
+    explicit scope_guard( const std::string& n )
+    {
+      uvm_object::__m_uvm_status_container->scope->down(n);
+    }
+    ~scope_guard()
+    {
+      uvm_object::__m_uvm_status_container->scope->up();
+    }
+  } guard(name);
+
+  return lhs->compare(*rhs, this);
 }
 
 
@@ -355,8 +457,10 @@ void uvm_comparer::print_msg( const std::string& msg ) const
 //! or UVM_SHALLOW. The default policy shall be set to UVM_DEFAULT_POLICY.
 //----------------------------------------------------------------------------
 
-void uvm_comparer::set_policy( uvm_recursion_policy_enum policy )
-{}
+void uvm_comparer::set_policy( uvm_recursion_policy_enum _policy )
+{
+  policy = _policy;
+}
 
 //----------------------------------------------------------------------------
 // member function: get_policy
