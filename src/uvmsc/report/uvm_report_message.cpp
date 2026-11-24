@@ -357,6 +357,28 @@ uvm_report_message_element_container::uvm_report_message_element_container(const
 : uvm::uvm_object(name)
 {}
 
+uvm_report_message_element_container::uvm_report_message_element_container(
+  const uvm_report_message_element_container& rhs )
+: uvm::uvm_object(rhs.get_name())
+{
+  for (unsigned int i = 0; i < rhs.m_elements.size(); i++)
+    m_elements.push_back(rhs.m_elements[i]->clone());
+}
+
+uvm_report_message_element_container&
+uvm_report_message_element_container::operator=(
+  const uvm_report_message_element_container& rhs )
+{
+  if (this != &rhs)
+    do_copy(rhs);
+  return *this;
+}
+
+uvm_report_message_element_container::~uvm_report_message_element_container()
+{
+  delete_elements();
+}
+
 //----------------------------------------------------------------------
 // Member function: size (virtual)
 //
@@ -376,6 +398,9 @@ unsigned int uvm_report_message_element_container::size() const
 
 void uvm_report_message_element_container::do_delete(int index)
 {
+  if (index < 0 || static_cast<size_t>(index) >= m_elements.size())
+    return;
+  delete m_elements[index];
   m_elements.erase(m_elements.begin()+index);
 }
 
@@ -387,6 +412,8 @@ void uvm_report_message_element_container::do_delete(int index)
 
 void uvm_report_message_element_container::delete_elements()
 {
+  for (unsigned int i = 0; i < m_elements.size(); i++)
+    delete m_elements[i];
   m_elements.clear();
 }
 
@@ -511,11 +538,10 @@ void uvm_report_message_element_container::add_object(
 
 void uvm_report_message_element_container::do_print( const uvm_printer& printer ) const
 {
-  uvm_printer lprinter = printer;
-
-  uvm_object::do_print(lprinter);
+  uvm_object::do_print(printer);
+  uvm_printer* l_printer = const_cast<uvm_printer*>(&printer);
   for(unsigned int i = 0; i < m_elements.size(); i++)
-    m_elements[i]->print(&lprinter);
+    m_elements[i]->print(l_printer);
 }
 
 //----------------------------------------------------------------------
@@ -545,7 +571,7 @@ void uvm_report_message_element_container::do_copy( const uvm_object& rhs )
 
   urme_container = dynamic_cast<const uvm_report_message_element_container*>(&rhs);
 
-  if( urme_container==nullptr )
+  if( urme_container==nullptr || urme_container==this )
     return;
 
   delete_elements();
@@ -575,6 +601,33 @@ uvm_report_message::uvm_report_message( const std::string& name )
   m_file(nullptr)
 {
   m_report_message_element_container = new uvm_report_message_element_container();
+}
+
+uvm_report_message::uvm_report_message( const uvm_report_message& rhs )
+: uvm_object(rhs.get_name()),
+  m_report_object(nullptr),
+  m_report_handler(nullptr),
+  m_report_server(nullptr),
+  m_severity(UVM_INFO),
+  m_verbosity(UVM_MEDIUM),
+  m_line(0),
+  m_action(UVM_NO_ACTION),
+  m_file(nullptr)
+{
+  m_report_message_element_container = new uvm_report_message_element_container();
+  do_copy(rhs);
+}
+
+uvm_report_message& uvm_report_message::operator=( const uvm_report_message& rhs )
+{
+  if (this != &rhs)
+    do_copy(rhs);
+  return *this;
+}
+
+uvm_report_message::~uvm_report_message()
+{
+  delete m_report_message_element_container;
 }
 
 //------------------------------------------------------------------------------
