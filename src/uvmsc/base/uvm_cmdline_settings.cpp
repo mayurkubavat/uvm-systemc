@@ -219,9 +219,10 @@ bool string_to_time( const std::string& str, sc_core::sc_time& t )
   if (pos == 0)
     return false;
 
+  std::string num = str.substr(0, pos);
   char* end = nullptr;
   errno = 0;
-  double v = std::strtod(str.substr(0, pos).c_str(), &end);
+  double v = std::strtod(num.c_str(), &end);
 
   if (*end != '\0' || errno != 0)
     return false;
