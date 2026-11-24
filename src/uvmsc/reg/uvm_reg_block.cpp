@@ -62,6 +62,7 @@ uvm_reg_block::uvm_reg_block( const std::string& name,
                               int has_coverage) : uvm_object(name)
 {
   m_parent = nullptr;
+  default_map = nullptr;
 
   m_blks.clear();
   m_regs.clear();
