@@ -1,0 +1,21 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x10:0x1f]...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x200:0x2ff]...
+Allocated memory regions:
+   ['h0000000000000010:'h000000000000001f]
+   ['h0000000000000200:'h00000000000002ff]
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Attempting to reserve [0x18:0x1b]...
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Cannot reserve [0x18:0x1b] because it overlaps with ['h0000000000000010:'h000000000000001f].
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   4
+UVM_WARNING   :   0
+UVM_ERROR     :   1
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[RegModel]              4
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

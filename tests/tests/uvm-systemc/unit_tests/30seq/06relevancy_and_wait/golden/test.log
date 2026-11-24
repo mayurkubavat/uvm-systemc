@@ -1,0 +1,40 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+20 ns: s1 active_watchers=1
+30 ns: driver got item 10
+30 ns: A done wait_calls=1 active=0
+40 ns: driver got item 15
+45 ns: B waiting s2_active=1 s3_active=1
+55 ns: driver got item 20
+60 ns: B after s2 s3_active=1 s3_wait_calls=2
+70 ns: driver got item 30
+70 ns: B after s3 s3_active=0
+80 ns: driver got item 35
+80 ns: B2 done wait_calls=1
+90 ns: driver got item 38
+100 ns: driver got item 40
+100 ns: C s_rel done, s_irrel wait_calls=1
+105 ns: C s_irrel killed active=0
+110 ns: D1 after seq->kill active=0
+UVM_ERROR <removed by verify-uvm.pl> @ 115 ns: test.sqr [SEQREQZMB] The task responsible for requesting a wait_for_grant on sequencer 'test.sqr' for sequence 'test.sqr.s_kill2' has been killed, to avoid a deadlock the sequence will be removed from the arbitration queues.
+120 ns: D2 after proc.kill active=0
+130 ns: driver got item 70
+130 ns: E1 self-kill term=1 state=128 active=0
+130 ns: E2 self-kill-wait term=1 state=128 active=0
+140 ns: driver got item 85
+140 ns: F stop_sequences term=1,1 states=128,128 active=0,0
+150 ns: driver got item 88
+150 ns: F2 stop_sequences term=1,1 states=128,128 active=0,0
+160 ns: driver got item 90
+sequencer is free
+UVM_INFO <removed by verify-uvm.pl> @ 160 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   1
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[SEQREQZMB]             1
+UVM_INFO @ 160 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

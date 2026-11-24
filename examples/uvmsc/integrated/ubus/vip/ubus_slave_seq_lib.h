@@ -49,6 +49,7 @@ class simple_response_seq : public uvm::uvm_sequence<ubus_transfer>
   simple_response_seq( const std::string& name = "simple_response_seq")
   : uvm::uvm_sequence<ubus_transfer>(name)
   {
+      set_response_queue_error_report_disabled(true);
       req = ubus_transfer::type_id::create();
   }
   
@@ -107,8 +108,9 @@ class slave_memory_seq : public uvm::uvm_sequence<ubus_transfer>
  public:
 
   slave_memory_seq( const std::string& name = "slave_memory_seq" )
-  : uvm::uvm_sequence<ubus_transfer>(name), rng(SEED), dist(0, 255)
+  : uvm::uvm_sequence<ubus_transfer>(name), rng(SEED)
   {
+    set_response_queue_error_report_disabled(true);
   }
 
   UVM_OBJECT_UTILS(slave_memory_seq);
@@ -137,7 +139,7 @@ class slave_memory_seq : public uvm::uvm_sequence<ubus_transfer>
       if( req->read_write == READ )
       {
         if (m_mem.find(util_transfer.addr + i) == m_mem.end()) // not exists
-          m_mem[util_transfer.addr + i] = dist(rng);
+          m_mem[util_transfer.addr + i] = random_byte();
 
         req->data[i] = m_mem[util_transfer.addr + i];
       }
@@ -194,8 +196,15 @@ class slave_memory_seq : public uvm::uvm_sequence<ubus_transfer>
   ubus_transfer* req{nullptr};
   ubus_transfer util_transfer;
 
+  // The sequence produced by std::mt19937 is defined by the C++ standard,
+  // the mapping done by std::uniform_int_distribution is not. Take the upper
+  // byte of the generator output to get the same data on every platform.
+  unsigned int random_byte()
+  {
+    return static_cast<unsigned int>( rng() >> 24 );
+  }
+
   std::mt19937 rng;
-  std::uniform_int_distribution<int> dist;
 
 }; // class slave_memory_seq
 

@@ -27,6 +27,7 @@
 #include <string>
 
 #include "uvmsc/reg/uvm_reg.h"
+#include "uvmsc/reg/uvm_reg_indirect_data.h"
 #include "uvmsc/reg/uvm_reg_block.h"
 #include "uvmsc/reg/uvm_hdl_path_concat.h"
 #include "uvmsc/reg/uvm_reg_model.h"
@@ -39,6 +40,7 @@
 #include "uvmsc/reg/uvm_reg_cbs.h"
 #include "uvmsc/conf/uvm_object_string_pool.h"
 #include "uvmsc/macros/uvm_message_defines.h"
+#include "uvmsc/dpi/uvm_hdl.h"
 
 namespace uvm {
 
@@ -135,7 +137,8 @@ void uvm_reg::configure( uvm_reg_block* blk_parent,
                          const std::string& hdl_path )
 {
   m_parent = blk_parent;
-  m_parent->add_reg(this);
+  if (m_parent != nullptr)
+    m_parent->add_reg(this);
   m_regfile_parent = regfile_parent;
 
   if (!hdl_path.empty())
@@ -315,6 +318,9 @@ std::string uvm_reg::get_rights( uvm_reg_map* map ) const
     return "RW";
 
   info = map->get_reg_map_info(this);
+  if (info == nullptr)
+    return "RW";
+
   return info->rights;
 }
 
@@ -420,6 +426,8 @@ uvm_reg_addr_t uvm_reg::get_offset( uvm_reg_map* map ) const
     return -1;
 
   map_info = map->get_reg_map_info(this);
+  if (map_info == nullptr)
+    return -1;
 
   if (map_info->unmapped)
   {
@@ -497,6 +505,8 @@ int uvm_reg::get_addresses( std::vector<uvm_reg_addr_t>& addr, const uvm_reg_map
     return -1;
 
   map_info = lmap->get_reg_map_info(this);
+  if (map_info == nullptr)
+    return -1;
 
   if (map_info->unmapped)
   {
@@ -775,7 +785,7 @@ void uvm_reg::write( uvm_status_e& status,
 
    m_atomic_check_lock(true);
 
-   set(value);
+   uvm_reg::set(value);
 
    rw = uvm_reg_item::type_id::create("write_item", nullptr, get_full_name());
 
@@ -1077,7 +1087,17 @@ void uvm_reg::mirror( uvm_status_e& status,
    m_lineno = lineno;
 
    if (path == UVM_DEFAULT_PATH)
+   {
+     if (m_parent == nullptr)
+     {
+       UVM_ERROR(get_type_name(),
+           "Register '" + get_full_name() + "' has no parent block (called from mirror())");
+       status = UVM_NOT_OK;
+       m_atomic_check_lock(false);
+       return;
+     }
      path = m_parent->get_default_path();
+   }
 
    if (path == UVM_BACKDOOR && (bkdr != nullptr || has_hdl_path()))
      map = uvm_reg_map::backdoor();
@@ -1085,7 +1105,11 @@ void uvm_reg::mirror( uvm_status_e& status,
      map = get_local_map(map, "read()");
 
    if (map == nullptr)
+   {
+     status = UVM_NOT_OK;
+     m_atomic_check_lock(false);
      return;
+   }
 
    // Remember what we think the value is before it gets updated
    if (check == UVM_CHECK)
@@ -1127,21 +1151,21 @@ bool uvm_reg::predict( uvm_reg_data_t value,
                        const std::string&  fname,
                        int lineno )
 {
-  uvm_reg_item* rw = new uvm_reg_item();
+  uvm_reg_item rw;
 
   // make sure we have reserved space to store an initial value
-  if (rw->value.size() == 0)
-    rw->value.resize(1);
+  if (rw.value.size() == 0)
+    rw.value.resize(1);
 
-  rw->value[0] = value;
-  rw->path = path;
-  rw->map = map;
-  rw->fname = fname;
-  rw->lineno = lineno;
+  rw.value[0] = value;
+  rw.path = path;
+  rw.map = map;
+  rw.fname = fname;
+  rw.lineno = lineno;
 
-  do_predict(rw, kind, be);
+  do_predict(&rw, kind, be);
 
-  return (rw->status == UVM_NOT_OK) ? false : true;
+  return (rw.status == UVM_NOT_OK) ? false : true;
 }
 
 //----------------------------------------------------------------------
@@ -1221,6 +1245,8 @@ uvm_reg_frontdoor* uvm_reg::get_frontdoor( uvm_reg_map* map ) const
     return nullptr;
 
   map_info = map->get_reg_map_info(this);
+  if (map_info == nullptr)
+    return nullptr;
 
   return map_info->frontdoor;
 }
@@ -1319,8 +1345,14 @@ void uvm_reg::clear_hdl_path( const std::string& kind )
   if (lkind.empty()) {
     if (m_regfile_parent != nullptr)
       lkind = m_regfile_parent->get_default_hdl_path();
-    else
+    else if (m_parent != nullptr)
       lkind = m_parent->get_default_hdl_path();
+    else
+    {
+      UVM_WARNING("RegModel",
+          "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+      return;
+    }
   }
 
   if (m_hdl_paths_pool.find(lkind) == m_hdl_paths_pool.end())
@@ -1430,8 +1462,14 @@ bool uvm_reg::has_hdl_path( const std::string& kind ) const
   {
     if (m_regfile_parent != nullptr)
       kindl = m_regfile_parent->get_default_hdl_path();
-    else
+    else if (m_parent != nullptr)
       kindl = m_parent->get_default_hdl_path();
+    else
+    {
+      UVM_WARNING("RegModel",
+          "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+      return false;
+    }
   }
 
   return (m_hdl_paths_pool.find(kindl) != m_hdl_paths_pool.end() ); // exists
@@ -1462,8 +1500,14 @@ void uvm_reg::get_hdl_path( std::vector<uvm_hdl_path_concat>& paths,
   {
      if (m_regfile_parent != nullptr)
         lkind = m_regfile_parent->get_default_hdl_path();
-     else
+     else if (m_parent != nullptr)
         lkind = m_parent->get_default_hdl_path();
+     else
+     {
+        UVM_WARNING("RegModel",
+            "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+        return;
+     }
   }
 
   if (!has_hdl_path(lkind))
@@ -1524,8 +1568,14 @@ void uvm_reg::get_full_hdl_path( std::vector<uvm_hdl_path_concat>& paths,
   {
     if (m_regfile_parent != nullptr)
       lkind = m_regfile_parent->get_default_hdl_path();
-    else
+    else if (m_parent != nullptr)
       lkind = m_parent->get_default_hdl_path();
+    else
+    {
+      UVM_WARNING("RegModel",
+          "Register '" + get_full_name() + "' has no parent block or regfile for default HDL path");
+      return;
+    }
   }
 
   if (!has_hdl_path(lkind))
@@ -1545,8 +1595,14 @@ void uvm_reg::get_full_hdl_path( std::vector<uvm_hdl_path_concat>& paths,
 
   if (m_regfile_parent != nullptr)
     m_regfile_parent->get_full_hdl_path(parent_paths, lkind, separator);
-  else
+  else if (m_parent != nullptr)
     m_parent->get_full_hdl_path(parent_paths, lkind, separator);
+  else
+  {
+    for (unsigned int i = 0; i < hdl_paths.size(); i++)
+      paths.push_back(hdl_paths[i]);
+    return;
+  }
 
   for(unsigned int i = 0; i < hdl_paths.size(); i++)
   {
@@ -1596,38 +1652,44 @@ void uvm_reg::backdoor_read( uvm_reg_item* rw )
 
 void uvm_reg::backdoor_write( uvm_reg_item* rw )
 {
-  /* TODO backdoor write
   std::vector<uvm_hdl_path_concat> paths;
-  std::vector<uvm_hdl_path_concat>::iterator paths_itT;
-
   bool ok = true;
 
   get_full_hdl_path(paths, rw->bd_kind);
 
-  for( paths_itT it = paths.begin(); it != paths.end(); it++ )
-  {
-    uvm_hdl_path_concat hdl_concat = (*it);
+  // no HDL path was found for this kind, there is nothing to write to
+  if (paths.empty())
+    ok = false;
 
-    for( int j = 0; j < hdl_concat.slices.size(); j++)
+  for( unsigned int i = 0; i < paths.size(); i++ )
+  {
+    uvm_hdl_path_concat hdl_concat = paths[i];
+
+    for( unsigned int j = 0; j < hdl_concat.slices.size(); j++ )
     {
       UVM_INFO("RegMem", "backdoor_write to " +
-          hdl_concat.slices[j].path ,UVM_DEBUG)
+        hdl_concat.slices[j].path, UVM_DEBUG);
 
-          if (hdl_concat.slices[j].offset < 0)
-          {
-            ok &= uvm_hdl_deposit(hdl_concat.slices[j].path,rw.value[0]);
-            continue;
-          }
+      if (hdl_concat.slices[j].offset < 0)
+      {
+        ok &= uvm_hdl_deposit(hdl_concat.slices[j].path, rw->value[0]);
+        continue;
+      }
+
+      if (!m_check_hdl_slice(hdl_concat.slices[j]))
+      {
+        ok = false;
+        continue;
+      }
 
       uvm_reg_data_t slice;
-      slice = rw.value[0] >> hdl_concat.slices[j].offset;
+      slice = rw->value[0] >> hdl_concat.slices[j].offset;
       slice &= uvm_mask_size(hdl_concat.slices[j].size);
       ok &= uvm_hdl_deposit(hdl_concat.slices[j].path, slice);
-
     }
   }
+
   rw->status = (ok ? UVM_IS_OK : UVM_NOT_OK);
-  */
 }
 
 //----------------------------------------------------------------------
@@ -1641,40 +1703,45 @@ void uvm_reg::backdoor_write( uvm_reg_item* rw )
 
 uvm_status_e uvm_reg::backdoor_read_func( uvm_reg_item* rw )
 {
-  /* TODO backdoor read func
-
   std::vector<uvm_hdl_path_concat> paths;
   uvm_reg_data_t val;
-
   bool ok = true;
 
   get_full_hdl_path(paths, rw->bd_kind);
 
-  for( int i = 0; i < paths.size(); i++ )
+  // no HDL path was found for this kind, there is nothing to read from
+  if (paths.empty())
+    ok = false;
+
+  for( unsigned int i = 0; i < paths.size(); i++ )
   {
     uvm_hdl_path_concat hdl_concat = paths[i];
 
     val = 0;
 
-    foreach (hdl_concat.slices[j])
+    for( unsigned int j = 0; j < hdl_concat.slices.size(); j++ )
     {
-      std::ostringstream str;
-      str << "backdoor_read from "
-          << hdl_concat.slices[j].path;
-      UVM_INFO("RegMem", str.str(), UVM_DEBUG);
+      UVM_INFO("RegMem", "backdoor_read from " +
+        hdl_concat.slices[j].path, UVM_DEBUG);
 
       if (hdl_concat.slices[j].offset < 0)
       {
-        ok &= uvm_hdl_read(hdl_concat.slices[j].path,val);
+        ok &= uvm_hdl_read(hdl_concat.slices[j].path, val);
         continue;
       }
 
-      uvm_reg_data_t slice;
+      if (!m_check_hdl_slice(hdl_concat.slices[j]))
+      {
+        ok = false;
+        continue;
+      }
+
+      uvm_reg_data_t slice = 0;
       int k = hdl_concat.slices[j].offset;
 
       ok &= uvm_hdl_read(hdl_concat.slices[j].path, slice);
 
-      for (int s = 0; s < hdl_concat.slices[j].size; s++)
+      for( int s = 0; s < hdl_concat.slices[j].size; s++ )
       {
         val[k++] = slice[0];
         slice >>= 1;
@@ -1691,29 +1758,49 @@ uvm_status_e uvm_reg::backdoor_read_func( uvm_reg_item* rw )
       std::ostringstream str;
       str << "Backdoor read of register "
           << get_full_name()
-          << " with multiple HDL copies: values are not the same: "
-          << rw->value[0]
-                       << " at path '"
-                       << uvm_hdl_concat2string(paths[0])
-                       << "', and "
-                       << val
-                       << " at path '"
-                       << uvm_hdl_concat2string(paths[i])
-                       << "'. Returning first value.";
+          << " with multiple HDL copies: values are not the same: 0x"
+          << std::hex << rw->value[0].to_uint64()
+          << " at path '"
+          << uvm_hdl_concat2string(paths[0])
+          << "', and 0x"
+          << val.to_uint64()
+          << " at path '"
+          << uvm_hdl_concat2string(paths[i])
+          << "'. Returning first value.";
       UVM_ERROR("RegModel", str.str());
       return UVM_NOT_OK;
     }
+
     std::ostringstream str;
     str << "returned backdoor value 0x"
         << std::hex << rw->value[0].to_uint64();
     UVM_INFO("RegMem", str.str(), UVM_DEBUG);
   }
 
-  rw->status = (ok) ? UVM_IS_OK : UVM_NOT_OK;
+  rw->status = (ok ? UVM_IS_OK : UVM_NOT_OK);
   return rw->status;
-  */
+}
 
-  return UVM_NOT_OK; // dummy only
+//----------------------------------------------------------------------
+// member function: m_check_hdl_slice
+//
+// Implementation defined
+// Check that a slice of a HDL path lies within the register
+//----------------------------------------------------------------------
+
+bool uvm_reg::m_check_hdl_slice( const uvm_hdl_path_slice& slice ) const
+{
+  if (slice.size > 0 && (slice.offset + slice.size) <= (int)m_n_bits)
+    return true;
+
+  std::ostringstream str;
+  str << "HDL path slice '" << slice.path
+      << "' (offset " << slice.offset << ", size " << slice.size
+      << ") is not within the " << m_n_bits << " bits of register '"
+      << get_full_name() << "'";
+  UVM_ERROR("RegModel", str.str());
+
+  return false;
 }
 
 //----------------------------------------------------------------------
@@ -1769,11 +1856,9 @@ void uvm_reg::include_coverage( const std::string& scope,
                                 uvm_reg_cvr_t models,
                                 uvm_object* accessor )
 {
-  /* TODO support of regular data in resource database
   uvm_reg_cvr_rsrc_db::set( "uvm_reg::"+ scope,
                             "include_coverage",
                             models, accessor);
-                            */
 }
 
 //----------------------------------------------------------------------
@@ -2040,11 +2125,63 @@ void uvm_reg::set_parent( uvm_reg_block* blk_parent,
                           uvm_reg_file* regfile_parent )
 {
   if (m_parent != nullptr)
+  {
     // UVM-SV TODO: remove register from previous parent
+  }
 
   m_parent = blk_parent;
   m_regfile_parent = regfile_parent;
 }
+
+//----------------------------------------------------------------------
+// member function: randomize
+//
+//! Randomizes the fields of the register, see uvm_reg_field::randomize.
+//! Calls pre_randomize before and post_randomize after the fields have
+//! been randomized. Returns false if a field could not be randomized.
+//!
+//! The new values are the desired values of the fields. They are
+//! written to the DUT by the member function update.
+//!
+//! In UVM-SystemVerilog the register is randomized with the built-in
+//! method randomize of the language.
+//----------------------------------------------------------------------
+
+bool uvm_reg::randomize()
+{
+  bool ok = true;
+
+  pre_randomize();
+
+  for (unsigned int i = 0; i < m_fields.size(); i++)
+    if (!m_fields[i]->randomize())
+      ok = false;
+
+  post_randomize();
+
+  return ok;
+}
+
+//----------------------------------------------------------------------
+// member function: pre_randomize
+//
+//! Called by randomize before the fields are randomized. Does nothing;
+//! may be extended by the abstraction class generator or by the user.
+//----------------------------------------------------------------------
+
+void uvm_reg::pre_randomize()
+{}
+
+//----------------------------------------------------------------------
+// member function: post_randomize
+//
+//! Called by randomize after the fields have been randomized. Does
+//! nothing; may be extended, for example to make the values of the
+//! fields meet a constraint by calling uvm_reg_field::set.
+//----------------------------------------------------------------------
+
+void uvm_reg::post_randomize()
+{}
 
 //----------------------------------------------------------------------
 // member function: get_block
@@ -2259,12 +2396,15 @@ uvm_reg_map* uvm_reg::get_default_map( const std::string& caller ) const
   {
     uvm_reg_map* map = (*it).first;
     uvm_reg_block* blk = map->get_parent();
-    uvm_reg_map* default_map = blk->get_default_map();
-    if (default_map != nullptr)
+    if (blk != nullptr)
     {
-      uvm_reg_map* local_map = get_local_map(default_map, "get_default_map()");
-      if (local_map != nullptr)
-        return local_map;
+      uvm_reg_map* default_map = blk->get_default_map();
+      if (default_map != nullptr)
+      {
+        uvm_reg_map* local_map = get_local_map(default_map, "get_default_map()");
+        if (local_map != nullptr)
+          return local_map;
+      }
     }
   }
 
@@ -2417,7 +2557,16 @@ bool uvm_reg::m_check_access( uvm_reg_item* rw,
                               const std::string& caller )
 {
   if (rw->path == UVM_DEFAULT_PATH)
+  {
+    if (m_parent == nullptr)
+    {
+      UVM_ERROR(get_type_name(),
+          "Register '" + get_full_name() + "' has no parent block (called from " + caller + ")");
+      rw->status = UVM_NOT_OK;
+      return false;
+    }
     rw->path = m_parent->get_default_path();
+  }
 
   if (rw->path == UVM_BACKDOOR)
   {
@@ -2440,12 +2589,17 @@ bool uvm_reg::m_check_access( uvm_reg_item* rw,
     {
       UVM_ERROR(get_type_name(),
           "No transactor available to physically access register on map '" +
-          rw->map->get_full_name() + "'");
-          rw->status = UVM_NOT_OK;
+          ((rw->map == nullptr) ? (rw->local_map ? rw->local_map->get_full_name() : "<null>") : rw->map->get_full_name()) + "'");
+      rw->status = UVM_NOT_OK;
       return false;
     }
 
     map_info = rw->local_map->get_reg_map_info(this);
+    if (map_info == nullptr)
+    {
+      rw->status = UVM_NOT_OK;
+      return false;
+    }
 
     if (map_info->frontdoor == nullptr && map_info->unmapped)
     {
@@ -2492,7 +2646,7 @@ bool uvm_reg::do_check( uvm_reg_data_t expected,
   for( unsigned int i = 0; i < m_fields.size(); i++ )
   {
     std::string acc = m_fields[i]->get_access(map);
-    acc = acc.substr(0, 1);
+    acc = acc.substr(0, 2);
     if (m_fields[i]->get_compare() == UVM_NO_CHECK ||
         acc == "WO")
     {
@@ -2517,7 +2671,7 @@ bool uvm_reg::do_check( uvm_reg_data_t expected,
   for( unsigned int i = 0; i < m_fields.size(); i++ )
   {
     std::string acc = m_fields[i]->get_access(map);
-    acc = acc.substr(0, 1);
+    acc = acc.substr(0, 2);
     if (!(m_fields[i]->get_compare() == UVM_NO_CHECK || acc == "WO"))
     {
       uvm_reg_data_t mask = uvm_mask_size(m_fields[i]->get_n_bits());
@@ -2569,7 +2723,10 @@ void uvm_reg::do_write( uvm_reg_item* rw )
   m_lineno = rw->lineno;
 
   if (!m_check_access(rw, map_info, "write()") )
+  {
+    delete cbs;
     return;
+  }
 
   m_atomic_check_lock(true);
 
@@ -2623,6 +2780,7 @@ void uvm_reg::do_write( uvm_reg_item* rw )
   {
     m_write_in_progress = false;
     m_atomic_check_lock(false);
+    delete cbs;
     return;
   }
 
@@ -2646,6 +2804,8 @@ void uvm_reg::do_write( uvm_reg_item* rw )
       if (rw->status == UVM_NOT_OK)
       {
         m_write_in_progress = false;
+        m_atomic_check_lock(false);
+        delete cbs;
         return;
       }
 
@@ -2699,7 +2859,8 @@ void uvm_reg::do_write( uvm_reg_item* rw )
         if (rw->status != UVM_NOT_OK)
         {
           sample(value, -1, 0, rw->map);
-          m_parent->m_sample(map_info->offset, 0, rw->map);
+          if (m_parent != nullptr)
+            m_parent->m_sample(map_info->offset, 0, rw->map);
         }
 
         status = rw->status; // do_predict will override rw.status, so we save it here
@@ -2790,7 +2951,10 @@ void uvm_reg::do_read( uvm_reg_item* rw )
   m_lineno  = rw->lineno;
 
   if (!m_check_access(rw, map_info, "read()"))
+  {
+    delete cbs;
     return;
+  }
 
   m_read_in_progress = true;
 
@@ -2823,6 +2987,7 @@ void uvm_reg::do_read( uvm_reg_item* rw )
   if (rw->status != UVM_IS_OK)
   {
     m_read_in_progress = false;
+    delete cbs;
     return;
   }
 
@@ -2834,8 +2999,26 @@ void uvm_reg::do_read( uvm_reg_item* rw )
       uvm_reg_backdoor* bkdr = get_backdoor();
 
       uvm_reg_map* map = uvm_reg_map::backdoor();
+      uvm_reg_indirect_data* ireg = dynamic_cast<uvm_reg_indirect_data*>(this);
+      uvm_reg* check_reg = this;
+      bool has_exp = false;
       if (map->get_check_on_read())
-        exp = get();
+      {
+        if (ireg != nullptr)
+        {
+          check_reg = ireg->get_indirect_reg();
+          if (check_reg != nullptr)
+          {
+            exp = check_reg->get();
+            has_exp = true;
+          }
+        }
+        else
+        {
+          exp = get();
+          has_exp = true;
+        }
+      }
 
       if (bkdr != nullptr)
         bkdr->read(rw);
@@ -2896,10 +3079,11 @@ void uvm_reg::do_read( uvm_reg_item* rw )
 
         rw->value[0] &= ~wo_mask;
 
-        if (map->get_check_on_read() &&
-            rw->status != UVM_NOT_OK)
+        if (has_exp &&
+            rw->status != UVM_NOT_OK &&
+            check_reg != nullptr)
         {
-          do_check(exp, rw->value[0], map);
+          check_reg->do_check(exp, rw->value[0], map);
         }
 
         do_predict(rw, UVM_PREDICT_READ);
@@ -2910,11 +3094,29 @@ void uvm_reg::do_read( uvm_reg_item* rw )
     case UVM_FRONTDOOR:
     {
       uvm_reg_map* system_map = rw->local_map->get_root_map();
+      uvm_reg_indirect_data* ireg = dynamic_cast<uvm_reg_indirect_data*>(this);
+      uvm_reg* check_reg = this;
+      bool has_exp = false;
 
       m_is_busy = true;
 
       if (rw->local_map->get_check_on_read())
-        exp = get();
+      {
+        if (ireg != nullptr)
+        {
+          check_reg = ireg->get_indirect_reg();
+          if (check_reg != nullptr)
+          {
+            exp = check_reg->get();
+            has_exp = true;
+          }
+        }
+        else
+        {
+          exp = get();
+          has_exp = true;
+        }
+      }
 
       // ...VIA USER FRONTDOOR
       if (map_info->frontdoor != nullptr)
@@ -2935,16 +3137,18 @@ void uvm_reg::do_read( uvm_reg_item* rw )
       if (system_map->get_auto_predict())
       {
         uvm_status_e status;
-        if (rw->local_map->get_check_on_read() &&
-            rw->status != UVM_NOT_OK)
+        if (has_exp &&
+            rw->status != UVM_NOT_OK &&
+            check_reg != nullptr)
         {
-          do_check(exp, rw->value[0], system_map);
+          check_reg->do_check(exp, rw->value[0], system_map);
         }
 
         if (rw->status != UVM_NOT_OK)
         {
           sample(rw->value[0], -1, 1, rw->map);
-          m_parent->m_sample(map_info->offset, 1, rw->map);
+          if (m_parent != nullptr)
+            m_parent->m_sample(map_info->offset, 1, rw->map);
         }
 
         status = rw->status; // do_predict will override rw.status, so we save it here

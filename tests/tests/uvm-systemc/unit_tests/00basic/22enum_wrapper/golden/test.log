@@ -1,0 +1,30 @@
+SystemC Simulation
+mode_e "MODE_IDLE": found 0
+mode_e "MODE_RUN": found 5
+mode_e "MODE_STOP": found 10
+mode_e "my_pkg::MODE_RUN": not found, unchanged 0
+mode_e "mode_run": not found, unchanged 0
+color_e "RED": found 0
+color_e "GREEN": found 1
+color_e "BLUE": found 2
+color_e "": not found, unchanged 1
+first_e "FIRST": found 0
+second_e "SECOND": found 0
+unknown_e "ONE": not found, unchanged 1
+unknown_e "ONE": found 0
+add green: 1
+add GREEN again: 1
+add GREEN as BLUE: 0
+color_e "green": found 1
+color_e "GREEN": found 1
+uvm_active_passive_enum "UVM_PASSIVE": found 0
+uvm_active_passive_enum "UVM_ACTIVE": found 1
+uvm_verbosity "UVM_HIGH": found 300
+uvm_verbosity "UVM_DEBUG": found 500
+uvm_severity "UVM_ERROR": found 2
+uvm_sequencer_arb_mode "UVM_SEQ_ARB_RANDOM": found 2
+uvm_sequencer_arb_mode "SEQ_ARB_USER": found 5
+uvm_phase_state "UVM_PHASE_JUMPING": found 9
+uvm_radix_enum "UVM_HEX": found 6
+uvm_radix_enum "UVM_FOO": not found, unchanged 0
+default type: 1 0

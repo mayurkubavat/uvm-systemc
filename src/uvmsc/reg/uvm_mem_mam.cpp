@@ -22,8 +22,13 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
+#include <limits>
+#include <random>
+
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
+#include "uvmsc/misc/uvm_misc.h"
 #include "uvmsc/reg/uvm_mem.h"
 #include "uvmsc/reg/uvm_mem_mam.h"
 #include "uvmsc/reg/uvm_mem_region.h"
@@ -58,6 +63,9 @@ uvm_mem_mam::uvm_mem_mam( const std::string& name,
 
   default_alloc = new uvm_mem_mam_policy();
   m_for_each_idx = -1;
+  m_name = name;
+  m_rng_seeded = false;
+  m_rng_global_seed = 0;
   m_lineno = 0;
   m_fname = "";
 }
@@ -162,6 +170,12 @@ uvm_mem_region* uvm_mem_mam::reserve_region( unsigned long start_offset,
   m_fname = fname;
   m_lineno = lineno;
 
+  if (m_cfg == nullptr || m_cfg->n_bytes == 0)
+  {
+    UVM_ERROR("RegModel", "Memory Allocation Manager has invalid configuration");
+    return nullptr;
+  }
+
   if (n_bytes == 0)
   {
     UVM_ERROR("RegModel", "Cannot reserve 0 bytes");
@@ -179,20 +193,30 @@ uvm_mem_region* uvm_mem_mam::reserve_region( unsigned long start_offset,
     return nullptr;
   }
 
-  _end_offset = start_offset + ((n_bytes-1) / m_cfg->n_bytes);
-  n_bytes = (_end_offset - start_offset + 1) * m_cfg->n_bytes;
-
-  if (_end_offset > m_cfg->end_offset)
+  unsigned long loc_span = (n_bytes - 1) / m_cfg->n_bytes;
+  if (start_offset > m_cfg->end_offset || loc_span > (m_cfg->end_offset - start_offset))
   {
     std::ostringstream str;
     str << "Cannot reserve past end of memory space: 0x"
-        << std::hex << _end_offset
+        << std::hex << start_offset
+        << " + 0x" << loc_span
         << " > 0x"
         << std::hex << m_cfg->end_offset
         << ".";
     UVM_ERROR("RegModel", str.str());
     return nullptr;
   }
+
+  unsigned int max_uint = std::numeric_limits<unsigned int>::max();
+  if (loc_span >= max_uint ||
+      (loc_span + 1) > (static_cast<unsigned long>(max_uint) / m_cfg->n_bytes))
+  {
+    UVM_ERROR("RegModel", "Reserved region size exceeds maximum representable byte/location count");
+    return nullptr;
+  }
+
+  _end_offset = start_offset + loc_span;
+  n_bytes = static_cast<unsigned int>((loc_span + 1) * m_cfg->n_bytes);
 
   std::ostringstream inf;
   inf << "Attempting to reserve [0x"
@@ -223,7 +247,7 @@ uvm_mem_region* uvm_mem_mam::reserve_region( unsigned long start_offset,
     }
 
     // Regions are stored in increasing start offset
-    if (start_offset > (*it)->get_start_offset())
+    if (start_offset < (*it)->get_start_offset())
     {
       _region = new uvm_mem_region(start_offset, _end_offset,
         _end_offset - start_offset + 1, n_bytes, this);
@@ -271,26 +295,224 @@ uvm_mem_region* uvm_mem_mam::request_region( unsigned int n_bytes,
                                              const std::string& fname,
                                              int lineno )
 {
-
   m_fname = fname;
   m_lineno = lineno;
+
+  if (m_cfg == nullptr || m_cfg->n_bytes == 0)
+  {
+    UVM_ERROR("RegModel", "Memory Allocation Manager has invalid configuration");
+    return nullptr;
+  }
+
+  if (n_bytes == 0)
+  {
+    UVM_ERROR("RegModel", "Cannot request 0 bytes");
+    return nullptr;
+  }
 
   if (alloc == nullptr)
     alloc = default_alloc;
 
-  alloc->len        = (n_bytes-1) / m_cfg->n_bytes + 1;
+  unsigned long loc_span = (n_bytes - 1) / m_cfg->n_bytes;
+  unsigned int max_uint = std::numeric_limits<unsigned int>::max();
+  if (loc_span >= max_uint ||
+      (loc_span + 1) > (static_cast<unsigned long>(max_uint) / m_cfg->n_bytes))
+  {
+    UVM_ERROR("RegModel", "Requested region size exceeds maximum addressable locations");
+    return nullptr;
+  }
+
+  alloc->len        = static_cast<unsigned int>(loc_span + 1);
   alloc->min_offset = m_cfg->start_offset;
   alloc->max_offset = m_cfg->end_offset;
   alloc->in_use     = m_in_use;
 
-  /* TODO error for randomize
+  alloc->pre_randomize();
+
+  if (alloc->len == 0 || alloc->max_offset < alloc->min_offset ||
+      (alloc->len - 1) > (alloc->max_offset - alloc->min_offset))
+  {
+    UVM_ERROR("RegModel", "Unable to randomize policy: requested size exceeds available range");
+    return nullptr;
+  }
+
+  struct mam_gap_t
+  {
+    unsigned long start;
+    unsigned long end;
+    unsigned long span; // inclusive span: end - start (location count = span + 1)
+    bool adj_left;
+    bool adj_right;
+  };
+
+  std::vector<mam_gap_t> gaps;
+  unsigned long cursor = alloc->min_offset;
+  bool left_is_region = false;
+  bool exhausted_space = false;
+
+  for (unsigned int i = 0; i < m_in_use.size(); ++i)
+  {
+    unsigned long r_start = m_in_use[i]->get_start_offset();
+    unsigned long r_end   = m_in_use[i]->get_end_offset();
+
+    if (r_end < alloc->min_offset)
+      continue;
+
+    if (r_start > alloc->max_offset)
+      break;
+
+    if (r_start > cursor)
+    {
+      unsigned long g_end = r_start - 1;
+      bool has_right_adj = true;
+      if (g_end > alloc->max_offset)
+      {
+        g_end = alloc->max_offset;
+        has_right_adj = false;
+      }
+      unsigned long g_span = g_end - cursor;
+      if (g_span >= (alloc->len - 1))
+        gaps.push_back({cursor, g_end, g_span, left_is_region, has_right_adj});
+    }
+
+    if (r_end >= cursor)
+    {
+      if (r_end >= alloc->max_offset || r_end == std::numeric_limits<unsigned long>::max())
+      {
+        exhausted_space = true;
+        break;
+      }
+      cursor = r_end + 1;
+      left_is_region = true;
+    }
+  }
+
+  if (!exhausted_space && cursor <= alloc->max_offset)
+  {
+    unsigned long g_span = alloc->max_offset - cursor;
+    if (g_span >= (alloc->len - 1))
+      gaps.push_back({cursor, alloc->max_offset, g_span, left_is_region, false});
+  }
+
+  if (gaps.empty())
+  {
+    UVM_ERROR("RegModel", "Unable to randomize policy: no contiguous space available");
+    return nullptr;
+  }
+
+  if (!m_rng_seeded || m_rng_global_seed != uvm_get_random_seed())
+  {
+    m_rng_global_seed = uvm_get_random_seed();
+    unsigned long long seed_val = 0xcbf29ce484222325ULL ^ m_rng_global_seed;
+    seed_val *= 0x100000001b3ULL;
+    for (std::string::size_type i = 0; i < m_name.size(); ++i)
+    {
+      seed_val ^= static_cast<unsigned char>(m_name[i]);
+      seed_val *= 0x100000001b3ULL;
+    }
+    m_rng.seed(seed_val);
+    m_rng_seeded = true;
+  }
+
+  bool picked = false;
+  unsigned long chosen_start = alloc->min_offset;
+
+  if (m_cfg->locality == NEARBY && !m_in_use.empty())
+  {
+    std::vector<std::pair<unsigned long, unsigned long> > adj_candidates; // (gap_span, offset)
+    unsigned long min_adj_span = std::numeric_limits<unsigned long>::max();
+    for (unsigned int i = 0; i < gaps.size(); ++i)
+    {
+      if (gaps[i].adj_left)
+      {
+        adj_candidates.push_back(std::make_pair(gaps[i].span, gaps[i].start));
+        min_adj_span = std::min(min_adj_span, gaps[i].span);
+      }
+      if (gaps[i].adj_right)
+      {
+        unsigned long off = gaps[i].end - (alloc->len - 1);
+        if (!gaps[i].adj_left || off != gaps[i].start)
+        {
+          adj_candidates.push_back(std::make_pair(gaps[i].span, off));
+          min_adj_span = std::min(min_adj_span, gaps[i].span);
+        }
+      }
+    }
+
+    if (!adj_candidates.empty())
+    {
+      std::vector<unsigned long> filtered;
+      for (unsigned int i = 0; i < adj_candidates.size(); ++i)
+      {
+        if (m_cfg->mode != THRIFTY || adj_candidates[i].first == min_adj_span)
+          filtered.push_back(adj_candidates[i].second);
+      }
+      std::uniform_int_distribution<std::size_t> dist(0, filtered.size() - 1);
+      chosen_start = filtered[dist(m_rng)];
+      picked = true;
+    }
+  }
+
+  if (!picked)
+  {
+    unsigned long min_span = std::numeric_limits<unsigned long>::max();
+    if (m_cfg->mode == THRIFTY)
+    {
+      for (unsigned int i = 0; i < gaps.size(); ++i)
+        min_span = std::min(min_span, gaps[i].span);
+    }
+
+    std::vector<const mam_gap_t*> chosen_gaps;
+    for (unsigned int i = 0; i < gaps.size(); ++i)
+    {
+      if (m_cfg->mode == THRIFTY && gaps[i].span != min_span)
+        continue;
+      chosen_gaps.push_back(&gaps[i]);
+    }
+
+    if (chosen_gaps.size() == 1)
+    {
+      unsigned long max_delta = chosen_gaps[0]->span - (alloc->len - 1);
+      std::uniform_int_distribution<unsigned long> dist(0, max_delta);
+      chosen_start = chosen_gaps[0]->start + dist(m_rng);
+    }
+    else
+    {
+      unsigned long long total_choices = 0;
+      for (unsigned int i = 0; i < chosen_gaps.size(); ++i)
+      {
+        unsigned long long gap_choices =
+            static_cast<unsigned long long>(chosen_gaps[i]->span - (alloc->len - 1)) + 1ULL;
+        total_choices += gap_choices;
+      }
+
+      std::uniform_int_distribution<unsigned long long> dist(0, total_choices - 1);
+      unsigned long long pick = dist(m_rng);
+      for (unsigned int i = 0; i < chosen_gaps.size(); ++i)
+      {
+        unsigned long long gap_choices =
+            static_cast<unsigned long long>(chosen_gaps[i]->span - (alloc->len - 1)) + 1ULL;
+        if (pick < gap_choices)
+        {
+          chosen_start = chosen_gaps[i]->start + static_cast<unsigned long>(pick);
+          break;
+        }
+        pick -= gap_choices;
+      }
+    }
+  }
+
+  alloc->start_offset = chosen_start;
+
   if (!alloc->randomize())
   {
     UVM_ERROR("RegModel", "Unable to randomize policy");
     return nullptr;
   }
-  */
-  return reserve_region(alloc->start_offset, n_bytes);
+
+  alloc->post_randomize();
+
+  return reserve_region(alloc->start_offset, n_bytes, fname, lineno);
 }
 
 

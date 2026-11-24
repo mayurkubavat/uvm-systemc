@@ -34,6 +34,7 @@
 #include "uvmsc/reg/uvm_reg_indirect_ftdr_seq.h"
 #include "uvmsc/reg/uvm_reg_item.h"
 #include "uvmsc/reg/uvm_reg_map.h"
+#include "uvmsc/reg/uvm_reg_transaction_order_policy.h"
 #include "uvmsc/reg/uvm_reg_model.h"
 #include "uvmsc/reg/uvm_reg_predictor.h"
 #include "uvmsc/reg/uvm_reg_read_only_cbs.h"
@@ -54,8 +55,15 @@
 
 #include "uvmsc/reg/sequences/uvm_reg_bit_bash_seq.h"
 #include "uvmsc/reg/sequences/uvm_reg_mem_hdl_paths_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_hw_reset_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_access_seq.h"
+#include "uvmsc/reg/sequences/uvm_mem_walk_seq.h"
+#include "uvmsc/reg/sequences/uvm_mem_access_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_mem_shared_access_seq.h"
+#include "uvmsc/reg/sequences/uvm_reg_mem_built_in_seq.h"
 
 // SystemC inspection interface
 #include "uvmsc/reg/uvm_sc_if.h"
+#include "uvmsc/reg/uvm_verilator_reg_backdoor.h"
 
 #endif /* UVM_REG_LAYER_H_ */

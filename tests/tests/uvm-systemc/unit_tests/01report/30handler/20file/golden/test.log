@@ -1,0 +1,76 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+---- default file ----
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test [OTHER] info to the default file
+---- end of default file ----
+---- warning file ----
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test [OTHER] warning to the severity file
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test [DEMOTE] demoted to info, still to the severity file
+---- end of warning file ----
+---- id file ----
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: test [ID] info to the id file
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: test [ID] warning to the id file
+---- end of id file ----
+---- error,id file ----
+UVM_ERROR <removed by verify-uvm.pl> @ 0 s: test [ID] error to the (severity,id) file
+---- end of error,id file ----
+summarize_report_catcher to a file
+---- catcher file ----
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    1
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    0
+Number of caught UVM_WARNING reports :    0
+---- end of catcher file ----
+report_summarize to a file
+---- summary file ----
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    1
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    0
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   6
+UVM_WARNING   :   2
+UVM_ERROR     :   1
+UVM_FATAL     :   0
+** Report counts by id
+[DEMOTE]                1
+[ID]                    3
+[OTHER]                 2
+[RNTST]                 1
+[UVM/REPORT/CATCHER]    2
+---- end of summary file ----
+UVM/REPORT/SERVER action is UVM_DISPLAY: 1, file is the default: 1
+UVM/REPORT/CATCHER action is UVM_DISPLAY: 1, file is the default: 1
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    1
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    0
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   8
+UVM_WARNING   :   2
+UVM_ERROR     :   1
+UVM_FATAL     :   0
+** Report counts by id
+[DEMOTE]                1
+[ID]                    3
+[OTHER]                 2
+[RNTST]                 1
+[UVM/REPORT/CATCHER]    3
+[UVM/REPORT/SERVER]     1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

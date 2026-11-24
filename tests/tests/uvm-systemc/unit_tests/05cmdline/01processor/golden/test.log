@@ -1,0 +1,28 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test ...
+args (11): [test] [+foo=1,yes,on] [-uvmbar] [plain] [+UVM_SOMETHING] [+foobar] [-foo] [+barfoo] [+foo=5,no,off] [+uVm_mixed=1] [-uv]
+plusargs (6): [+foo=1,yes,on] [+UVM_SOMETHING] [+foobar] [+barfoo] [+foo=5,no,off] [+uVm_mixed=1]
+uvm_args (3): [-uvmbar] [+UVM_SOMETHING] [+uVm_mixed=1]
+get_arg_matches +foo returns 3
+matches +foo (3): [+foo=1,yes,on] [+foobar] [+foo=5,no,off]
+matches /.*foo.*/ (5): [+foo=1,yes,on] [+foobar] [-foo] [+barfoo] [+foo=5,no,off]
+matches /^-.*o$/ (1): [-foo]
+get_arg_matches +none returns 0
+matches +none (0):
+get_arg_value +foo= returns 2, value [1,yes,on]
+get_arg_value +none= returns 0, value [unchanged]
+get_arg_values +foo= returns 2
+values +foo= (2): [1,yes,on] [5,no,off]
+values +none= (0):
+tool name [SystemC]
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

@@ -1,11 +1,15 @@
 H_FILES += \
 	base/uvm_base.h \
+	base/uvm_cmdline_processor.h \
 	base/uvm_component.h \
 	base/uvm_component_name.h \
 	base/uvm_coreservice_t.h \
 	base/uvm_default_coreservice_t.h \
+	base/uvm_enum_wrapper.h \
 	base/uvm_event_callback.h \
+	base/uvm_barrier.h \
 	base/uvm_event.h \
+	base/uvm_heartbeat.h \
 	base/uvm_export_base.h \
 	base/uvm_globals.h \
 	base/uvm_mutex.h \
@@ -13,23 +17,35 @@ H_FILES += \
 	base/uvm_object_globals.h \
 	base/uvm_port_base.h \
 	base/uvm_root.h \
+	base/uvm_run_test_callback.h \
 	base/uvm_transaction.h \
+	base/uvm_traversal.h \
 	base/uvm_void.h \
 	base/uvm_version.h
 
+NO_H_FILES += \
+	base/uvm_cmdline_settings.h
+
 CXX_FILES += \
+	base/uvm_cmdline_processor.cpp \
+	base/uvm_cmdline_settings.cpp \
 	base/uvm_component.cpp \
 	base/uvm_component_name.cpp \
 	base/uvm_coreservice_t.cpp \
 	base/uvm_default_coreservice_t.cpp \
+	base/uvm_enum_wrapper.cpp \
 	base/uvm_event_callback.cpp \
+	base/uvm_barrier.cpp \
 	base/uvm_event.cpp \
+	base/uvm_heartbeat.cpp \
 	base/uvm_globals.cpp \
 	base/uvm_mutex.cpp \
 	base/uvm_object.cpp \
 	base/uvm_object_globals.cpp \
 	base/uvm_root.cpp \
+	base/uvm_run_test_callback.cpp \
 	base/uvm_transaction.cpp \
+	base/uvm_traversal.cpp \
 	base/uvm_version.cpp
 
 INCDIRS += base

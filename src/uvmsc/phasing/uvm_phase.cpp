@@ -24,6 +24,7 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
 #include <cstdlib>
 
 #include <systemc>
@@ -31,9 +32,12 @@
 
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/phasing/uvm_objection.h"
 #include "uvmsc/phasing/uvm_process_phase.h"
 #include "uvmsc/phasing/uvm_phase.h"
+#include "uvmsc/phasing/uvm_phase_cb.h"
+#include "uvmsc/cb/uvm_callback_iter.h"
 #include "uvmsc/phasing/uvm_domain.h"
 #include "uvmsc/phasing/uvm_common_phases.h"
 #include "uvmsc/macros/uvm_message_defines.h"
@@ -74,14 +78,15 @@ uvm_phase::uvm_phase( const std::string& name,
                       uvm_phase* parent) : uvm_object( name )
 {
   m_phase_type = phase_type;
-  m_phase_hopper = new uvm_phase_queue<uvm_phase*>();
+  if (m_phase_hopper == nullptr)
+    m_phase_hopper = new uvm_phase_queue<uvm_phase*>();
 
   /* TODO uvm_test_done_objection is deprecated???
   if (name == "run")
     phase_done = uvm_test_done_objection::get();
   else
   */
-    phase_done = new uvm_objection(name+"_objection");
+  phase_done = new uvm_objection(name+"_objection");
 
   m_parent = parent;
   m_imp = nullptr;
@@ -129,6 +134,76 @@ uvm_phase::uvm_phase( const std::string& name,
 }
 
 //----------------------------------------------------------------------
+// Destructor
+//----------------------------------------------------------------------
+
+uvm_phase::~uvm_phase()
+{
+  std::vector<uvm_phase*> owned_nodes;
+  owned_nodes.reserve(m_nodes.size());
+  for (m_nodesmapItT it = m_nodes.begin(); it != m_nodes.end(); ++it)
+    owned_nodes.push_back(it->first);
+  m_nodes.clear();
+
+  for (std::size_t i = 0; i < owned_nodes.size(); ++i)
+  {
+    owned_nodes[i]->m_parent = nullptr;
+    delete owned_nodes[i];
+  }
+
+  uvm_phase* end = (m_end_node != nullptr) ? m_end_node : this;
+  std::vector<uvm_phase*> ext_preds;
+  for (m_schedulemapItT it = m_predecessors.begin(); it != m_predecessors.end(); ++it)
+    if (it->first != this && it->first != m_end_node)
+      ext_preds.push_back(it->first);
+
+  std::vector<uvm_phase*> ext_succs;
+  for (m_schedulemapItT it = end->m_successors.begin(); it != end->m_successors.end(); ++it)
+    if (it->first != this && it->first != m_end_node)
+      ext_succs.push_back(it->first);
+
+  if (m_end_node != nullptr)
+  {
+    uvm_phase* term = m_end_node;
+    m_end_node = nullptr;
+    m_unlink_phase_node(term);
+    term->m_parent = nullptr;
+    delete term;
+  }
+
+  m_unlink_phase_node(this);
+
+  if (m_parent != nullptr)
+  {
+    m_parent->m_nodes.erase(this);
+    m_parent = nullptr;
+  }
+
+  std::vector<bool> pred_empty(ext_preds.size(), false);
+  for (std::size_t i = 0; i < ext_preds.size(); ++i)
+    pred_empty[i] = ext_preds[i]->m_successors.empty();
+
+  std::vector<bool> succ_empty(ext_succs.size(), false);
+  for (std::size_t j = 0; j < ext_succs.size(); ++j)
+    succ_empty[j] = ext_succs[j]->m_predecessors.empty();
+
+  for (std::size_t i = 0; i < ext_preds.size(); ++i)
+  {
+    for (std::size_t j = 0; j < ext_succs.size(); ++j)
+    {
+      if (ext_preds[i] != ext_succs[j] && (pred_empty[i] || succ_empty[j]))
+      {
+        ext_preds[i]->m_successors[ext_succs[j]] = true;
+        ext_succs[j]->m_predecessors[ext_preds[i]] = true;
+      }
+    }
+  }
+
+  delete phase_done;
+  phase_done = nullptr;
+}
+
+//----------------------------------------------------------------------
 // member function: get_phase_type
 //
 //! Returns the phase type as defined by #uvm_phase_type
@@ -152,6 +227,58 @@ uvm_phase_type uvm_phase::get_phase_type() const
 uvm_phase_state uvm_phase::get_state() const
 {
   return m_state;
+}
+
+//----------------------------------------------------------------------
+// member function: m_set_state
+//
+//! Implementation defined
+//! Sets the state of this phase and calls the member function
+//! phase_state_change of all uvm_phase_cb callbacks registered for this
+//! phase, if the state changes.
+//----------------------------------------------------------------------
+
+void uvm_phase::m_set_state( uvm_phase_state state )
+{
+  if (m_state == state)
+    return;
+
+  uvm_phase_state prev_state = m_state;
+  m_state = state;
+
+  if (!uvm_phase_cb::m_exists())
+    return;
+
+  uvm_callback_iter<uvm_phase, uvm_phase_cb> iter(this);
+  uvm_phase_cb* cb = iter.first();
+
+  if (cb == nullptr)
+    return;
+
+  uvm_phase_state_change state_chg(get_name());
+  state_chg.m_phase = this;
+  state_chg.m_prev_state = prev_state;
+  // the jump target is only reported for the states caused by the jump
+  if (state == UVM_PHASE_ENDED || state == UVM_PHASE_JUMPING)
+    state_chg.m_jump_to = m_jump_phase;
+
+  while (cb != nullptr)
+  {
+    cb->phase_state_change(this, &state_chg);
+    cb = iter.next();
+  }
+}
+
+//----------------------------------------------------------------------
+// member function: m_register_cb (virtual)
+//
+//! Implementation defined
+//! Registers the callback type uvm_phase_cb with uvm_phase
+//----------------------------------------------------------------------
+
+bool uvm_phase::m_register_cb()
+{
+  return uvm_callbacks<uvm_phase, uvm_phase_cb>::m_register_pair("uvm_phase", "uvm_phase_cb");
 }
 
 //----------------------------------------------------------------------
@@ -1071,7 +1198,7 @@ void uvm_phase::execute_phase( bool proc )
   // NOTE: this only works in a process thread
   if (m_sync.size() && proc)
   {
-    m_state = UVM_PHASE_SYNCING;
+    m_set_state(UVM_PHASE_SYNCING);
     m_state_ev.notify();
 
     for( phase_listItT it = m_sync.begin();
@@ -1094,7 +1221,7 @@ void uvm_phase::execute_phase( bool proc )
   // If we're a schedule or domain, then "fake" execution
   if (m_phase_type != UVM_PHASE_NODE)
   {
-    m_state = UVM_PHASE_STARTED;
+    m_set_state(UVM_PHASE_STARTED);
 
     if (proc)
     {
@@ -1104,7 +1231,7 @@ void uvm_phase::execute_phase( bool proc )
     else
       m_state_ev.notify(SC_ZERO_TIME);
 
-    m_state = UVM_PHASE_EXECUTING;
+    m_set_state(UVM_PHASE_EXECUTING);
     if (proc)
     {
       m_state_ev.notify();
@@ -1119,7 +1246,7 @@ void uvm_phase::execute_phase( bool proc )
     //---------
     // STARTED:
     //---------
-    m_state = UVM_PHASE_STARTED;
+    m_set_state(UVM_PHASE_STARTED);
 
     if (proc)
       m_state_ev.notify();
@@ -1137,7 +1264,7 @@ void uvm_phase::execute_phase( bool proc )
       //-----------
       // EXECUTING: (function phases)
       //-----------
-      m_state = UVM_PHASE_EXECUTING;
+      m_set_state(UVM_PHASE_EXECUTING);
       m_state_ev.notify(SC_ZERO_TIME);
       // cannot add wait to untimed phase
       // sc_core::wait(SC_ZERO_TIME); // LET ANY WAITERS WAKE UP
@@ -1233,7 +1360,7 @@ void uvm_phase::execute_phase( bool proc )
       if (m_phase_trace)
         UVM_PH_TRACE("PH_END","Jumping out of phase", this, UVM_HIGH);
 
-      m_state = UVM_PHASE_ENDED;
+      m_set_state(UVM_PHASE_ENDED);
       if (proc)
         m_state_ev.notify();
       else
@@ -1245,7 +1372,7 @@ void uvm_phase::execute_phase( bool proc )
       if (proc)
         sc_core::wait(SC_ZERO_TIME); // LET ANY WAITERS WAKE UP
 
-      m_state = UVM_PHASE_JUMPING;
+      m_set_state(UVM_PHASE_JUMPING);
       if (proc)
         m_state_ev.notify();
       else
@@ -1289,7 +1416,7 @@ void uvm_phase::execute_phase( bool proc )
     if (m_phase_trace)
       UVM_PH_TRACE("PH_END","ENDING PHASE", this, UVM_HIGH);
 
-    m_state = UVM_PHASE_ENDED;
+    m_set_state(UVM_PHASE_ENDED);
 
     if(proc)
       m_state_ev.notify();
@@ -1306,7 +1433,7 @@ void uvm_phase::execute_phase( bool proc )
     // CLEANUP:
     //---------
     // kill this phase's threads
-    m_state = UVM_PHASE_CLEANUP;
+    m_set_state(UVM_PHASE_CLEANUP);
 
     if (proc)
       m_state_ev.notify();
@@ -1334,7 +1461,7 @@ void uvm_phase::execute_phase( bool proc )
   //------
   if (m_phase_trace)
     UVM_PH_TRACE("PH/TRC/DONE","Completed phase", this, UVM_LOW);
-  m_state = UVM_PHASE_DONE;
+  m_set_state(UVM_PHASE_DONE);
 
 
   if (proc)
@@ -1363,7 +1490,7 @@ void uvm_phase::execute_phase( bool proc )
     {
       if( it->first->m_state < UVM_PHASE_SCHEDULED)
       {
-        it->first->m_state = UVM_PHASE_SCHEDULED;
+        it->first->m_set_state(UVM_PHASE_SCHEDULED);
 
         if (proc)
         {
@@ -1398,7 +1525,7 @@ void uvm_phase::m_master_phase_process( uvm_phase* process_phase )
   //-----------
   // EXECUTING: (process phases)
   //-----------
-  m_state = UVM_PHASE_EXECUTING;
+  m_set_state(UVM_PHASE_EXECUTING);
   m_state_ev.notify();
   process_phase->traverse(top, this, UVM_PHASE_EXECUTING);
 
@@ -1466,7 +1593,7 @@ void uvm_phase::m_wait_for_all_dropped()
     if (m_phase_trace)
       UVM_PH_TRACE("PH_READY_TO_END_CB","Calling callback ready_to_end", this, UVM_HIGH);
 
-    m_state = UVM_PHASE_READY_TO_END;
+    m_set_state(UVM_PHASE_READY_TO_END);
     m_state_ev.notify();
 
     if (m_imp != nullptr)
@@ -1904,6 +2031,8 @@ void uvm_phase::m_run_phases()
   //TODO clean up after ourselves
   //phase_runner_proc.kill();
 
+  uvm_run_test_callback::m_do_post_run_test();
+
   uvm_report_server* rs = uvm_report_server::get_server();
   rs->report_summarize();
 
@@ -1923,7 +2052,7 @@ void uvm_phase::m_run_phases()
 void uvm_phase::wait_for_self_and_siblings_to_drop()
 {
   bool need_to_check_all = true;
-  std::map<uvm_phase*, bool> siblings;
+  m_schedulemapT siblings;
 
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
   uvm_root* top = cs->get_root();
@@ -1943,7 +2072,7 @@ void uvm_phase::wait_for_self_and_siblings_to_drop()
     // wait for own objections to drop
     if (phase_done->get_objection_total(top) != 0)
     {
-      m_state = UVM_PHASE_EXECUTING ;
+      m_set_state(UVM_PHASE_EXECUTING);
       m_state_ev.notify();
       phase_done->wait_for(UVM_ALL_DROPPED, top);
       need_to_check_all = true;
@@ -1957,7 +2086,7 @@ void uvm_phase::wait_for_self_and_siblings_to_drop()
       it->first->wait_for_state(UVM_PHASE_EXECUTING, UVM_GTE); // sibling must be at least executing
       if (it->first->phase_done->get_objection_total(top) != 0)
       {
-        m_state = UVM_PHASE_EXECUTING ;
+        m_set_state(UVM_PHASE_EXECUTING);
         m_state_ev.notify();
         it->first->phase_done->wait_for(UVM_ALL_DROPPED, top); // sibling must drop any objection
         need_to_check_all = true;
@@ -1975,7 +2104,7 @@ void uvm_phase::wait_for_self_and_siblings_to_drop()
 
 void uvm_phase::clear_phase( uvm_phase_state state )
 {
-  m_state = state;
+  m_set_state(state);
   m_state_ev.notify();
   //m_phase_proc = nullptr;
   phase_done->clear(this);
@@ -2011,11 +2140,11 @@ void uvm_phase::clear_successors( uvm_phase_state state,
 //----------------------------------------------------------------------
 
 void uvm_phase::get_predecessors_for_successors(
-  std::map<uvm_phase*, bool>& pred_of_succ )
+  m_schedulemapT& pred_of_succ )
 {
   bool done = false;
 
-  std::map<uvm_phase*, bool> successors;
+  m_schedulemapT successors;
 
   // get all successors
   for( m_schedulemapItT it = m_successors.begin();
@@ -2105,7 +2234,7 @@ void uvm_phase::m_wait_for_pred()
 {
   if(!(m_jump_fwd || m_jump_bkwd))
   {
-    std::map<uvm_phase*, bool> pred_of_succ;
+    m_schedulemapT pred_of_succ;
 
     get_predecessors_for_successors(pred_of_succ);
 
@@ -2197,10 +2326,34 @@ bool uvm_phase::m_is_domain()
 //! Implementation defined
 //----------------------------------------------------------------------
 
-std::map<uvm_phase*, bool>& uvm_phase::m_executing_phases()
+uvm_phase::m_schedulemapT& uvm_phase::m_executing_phases()
 {
-  static std::map<uvm_phase*, bool> executing_phases;
-  return executing_phases;
+  static m_schedulemapT* executing_phases = new m_schedulemapT();
+  return *executing_phases;
+}
+
+void uvm_phase::m_unlink_phase_node( uvm_phase* node )
+{
+  for (m_schedulemapItT it = node->m_predecessors.begin();
+       it != node->m_predecessors.end(); ++it)
+    it->first->m_successors.erase(node);
+  node->m_predecessors.clear();
+
+  for (m_schedulemapItT it = node->m_successors.begin();
+       it != node->m_successors.end(); ++it)
+    it->first->m_predecessors.erase(node);
+  node->m_successors.clear();
+
+  for (phase_listItT it = node->m_sync.begin();
+       it != node->m_sync.end(); ++it)
+  {
+    phase_listT& peer_sync = (*it)->m_sync;
+    peer_sync.erase(std::remove(peer_sync.begin(), peer_sync.end(), node),
+                    peer_sync.end());
+  }
+  node->m_sync.clear();
+
+  m_executing_phases().erase(node);
 }
 
 //----------------------------------------------------------------------

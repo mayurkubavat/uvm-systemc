@@ -100,6 +100,8 @@ class uvm_reg_predictor : public uvm_component,
 
   explicit uvm_reg_predictor( uvm_component_name name );
 
+  virtual ~uvm_reg_predictor();
+
   // Methods
 
   virtual void pre_predict( uvm_reg_item* rw );
@@ -116,7 +118,7 @@ class uvm_reg_predictor : public uvm_component,
   uvm_reg_adapter* adapter;
 
  private:
-  typedef std::map<uvm_reg*, uvm_predict_s*> m_pending_t;
+  typedef std::map<uvm_reg_inst_key<uvm_reg>, uvm_predict_s*> m_pending_t;
   typedef m_pending_t::iterator m_pending_itt;
   m_pending_t m_pending;
 
@@ -154,6 +156,20 @@ uvm_reg_predictor<BUSTYPE>::uvm_reg_predictor( uvm_component_name name )
   m_pending.clear();
 }
 
+template <typename BUSTYPE>
+uvm_reg_predictor<BUSTYPE>::~uvm_reg_predictor()
+{
+  for (m_pending_itt it = m_pending.begin(); it != m_pending.end(); ++it)
+  {
+    if (it->second != nullptr)
+    {
+      delete it->second->reg_item;
+      delete it->second;
+    }
+  }
+  m_pending.clear();
+}
+
 //------------------------------------------------------------------------------
 // member function: pre_predict
 //
@@ -180,6 +196,8 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
 
   if (adapter == nullptr)
     UVM_FATAL("REG/WRITE/NULL", "write: adapter handle is nullptr");
+  if (map == nullptr)
+    UVM_FATAL("REG/WRITE/NULL", "write: map handle is nullptr");
 
   // In case they forget to set byte_en
   rw.byte_en = -1;
@@ -187,7 +205,24 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
 
   rg = map->get_reg_by_offset(rw.addr, (rw.kind == UVM_READ));
 
-  // UVM_SV TODO: Add memory look-up and call uvm_mem::m_sample()
+  if (rg == nullptr)
+  {
+    uvm_mem* mem = map->get_mem_by_offset(rw.addr);
+    if (mem != nullptr)
+    {
+      uvm_reg_map* local_map = mem->get_local_map(map, "predictor::write()");
+      if (local_map != nullptr && rw.status != UVM_NOT_OK)
+      {
+        uvm_reg_map_info* map_info = local_map->get_mem_map_info(mem);
+        uvm_reg_addr_t mem_offset = rw.addr - map_info->mem_range.min;
+        mem->m_sample(mem_offset, rw.kind == UVM_READ, local_map);
+        uvm_reg_block* blk = mem->get_parent();
+        if (blk != nullptr)
+          blk->m_sample(map_info->offset + mem_offset, rw.kind == UVM_READ, local_map);
+      }
+      return;
+    }
+  }
 
   if (rg != nullptr)
   {
@@ -208,6 +243,7 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
       item->path         = UVM_PREDICT;
       item->map          = map;
       item->access_kind  = rw.kind;
+      item->value[0]     = 0;
       predict_info->reg_item = item;
       m_pending[rg] = predict_info;
     }
@@ -224,14 +260,45 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
       UVM_ERROR("REG_PREDICT_COLLISION",
         "Collision detected for register '" +
           rg->get_full_name() + "'");
-      // TODO: what to do with subsequent collisions?
-      m_pending.erase(rg); // TODO delete rg from map, but also delete the object
+      delete predict_info->reg_item;
+      delete predict_info;
+      m_pending.erase(rg);
+      return;
     }
 
     local_map = rg->get_local_map(map, "predictor::write()" );
+    if (local_map == nullptr)
+    {
+      UVM_ERROR("REG_PREDICT_INTERNAL",
+          "Cannot get local map for register '" +
+          rg->get_full_name() + "'");
+      delete predict_info->reg_item;
+      delete predict_info;
+      m_pending.erase(rg);
+      return;
+    }
+
     map_info = local_map->get_reg_map_info(rg);
+    if (map_info == nullptr)
+    {
+      UVM_ERROR("REG_PREDICT_INTERNAL",
+          "Cannot get map info for register '" +
+          rg->get_full_name() + "'");
+      delete predict_info->reg_item;
+      delete predict_info;
+      m_pending.erase(rg);
+      return;
+    }
+
     ireg = dynamic_cast<uvm_reg_indirect_data*>(rg);
     ir = (ireg != nullptr) ? ireg->get_indirect_reg() : rg;
+    if (ir == nullptr)
+    {
+      delete predict_info->reg_item;
+      delete predict_info;
+      m_pending.erase(rg);
+      return;
+    }
 
     for( unsigned int i = 0; i < map_info->addr.size(); i++ )
     {
@@ -251,7 +318,7 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
               local_map->get_check_on_read() &&
               reg_item->status != UVM_NOT_OK)
           {
-            rg->do_check(ir->get_mirrored_value(), reg_item->value[0], local_map);
+            ir->do_check(ir->get_mirrored_value(), reg_item->value[0], local_map);
           }
 
           pre_predict(reg_item);
@@ -260,9 +327,10 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
               reg_item->access_kind == UVM_READ, local_map);
 
           uvm_reg_block* blk = rg->get_parent();
-          blk->m_sample(map_info->offset,
-              reg_item->access_kind == UVM_READ,
-              local_map);
+          if (blk != nullptr)
+            blk->m_sample(map_info->offset,
+                reg_item->access_kind == UVM_READ,
+                local_map);
 
           rg->do_predict(reg_item, predict_kind, rw.byte_en);
 
@@ -288,16 +356,26 @@ void uvm_reg_predictor<BUSTYPE>::write( const BUSTYPE& tr )
 
             reg_ap.write(*reg_item); // TODO check dereferencing
           }
-          m_pending.erase(rg); // TODO deleted rg from map, but also delete object?
+          delete predict_info->reg_item;
+          delete predict_info;
+          m_pending.erase(rg);
         }
         break;
       }
     }
 
     if (!found)
+    {
       UVM_ERROR("REG_PREDICT_INTERNAL",
           "Unexpected failed address lookup for register '" +
           rg->get_full_name() + "'");
+      if (predict_info->addr.empty())
+      {
+        delete predict_info->reg_item;
+        delete predict_info;
+        m_pending.erase(rg);
+      }
+    }
   }
   else
   {

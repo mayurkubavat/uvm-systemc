@@ -1,0 +1,21 @@
+SystemC Simulation
+0 s: cb1 pre_run_test
+0 s: cb2 pre_run_test
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_FATAL <removed by verify-uvm.pl> @ 10 ns: test [TEST] fatal error terminates the test
+10 ns: test pre_abort
+10 ns: cb1 pre_abort
+10 ns: cb2 pre_abort
+UVM_INFO <removed by verify-uvm.pl> @ 10 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   1
+** Report counts by id
+[RNTST]                 1
+[TEST]                  1
+Error: (E549) uncaught exception: Simulation terminated by uvm_root::die()
+In file: <removed by verify-uvm.pl>
+In process: test.exec_proc_run_test_0 @ 10 ns

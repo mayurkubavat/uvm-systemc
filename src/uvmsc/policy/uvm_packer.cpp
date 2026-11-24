@@ -67,14 +67,11 @@ uvm_packer::~uvm_packer()
 //! Packs an integral value (less than or equal to 4096 bits) into the
 //! packed array. Argument \p size is the number of bits of argument \p value
 //! to pack.
-//!
-//! NOTE- max size limited to BITSTREAM bits parameter (default: 64)
 //------------------------------------------------------------------------------
 
 void uvm_packer::pack_field( const uvm_bitstream_t& value, int size )
 {
-  // TODO should be changed to 4096 size
-  sc_dt::sc_bv<64> tmp = value;
+  sc_dt::sc_bv<UVM_MAX_STREAMBITS> tmp = value;
   m_check_size(size);
 
   if(big_endian)
@@ -85,7 +82,8 @@ void uvm_packer::pack_field( const uvm_bitstream_t& value, int size )
   pack_index += size;
 
   std::ostringstream str;
-  str << "uvm_packer::pack_field_int 0x" << std::hex << tmp.to_uint64() << ", length = " << size << std::endl;
+  str << "uvm_packer::pack_field 0x" << tmp.range(size-1, 0).to_string(sc_dt::SC_HEX_US, false)
+      << ", length = " << size << std::endl;
   str << "pack_index = " << pack_index << std::endl;
   UVM_INFO("PCKFLD", str.str(), uvm::UVM_DEBUG);
 }
@@ -305,11 +303,11 @@ uvm_integral_t uvm_packer::unpack_field_int( int size )
 
 uvm_bitstream_t uvm_packer::unpack_field( int size )
 {
-  sc_dt::sc_bv<64> a, tmp; // TODO maximum to unpack is 4096
+  sc_dt::sc_bv<UVM_MAX_STREAMBITS> a, tmp;
 
   if (m_enough_bits(size,"integral"))
   {
-    a = (*m_bits)(unpack_index + size - 1, unpack_index);
+    a.range(size-1, 0) = (*m_bits)(unpack_index + size - 1, unpack_index);
     inc_unpack_index(size);
     if(big_endian)
     {
@@ -319,7 +317,8 @@ uvm_bitstream_t uvm_packer::unpack_field( int size )
     }
 
     std::ostringstream str;
-    str << "uvm_packer::unpack_field 0x" << std::hex << a.to_uint64() << ", length = " << size << std::endl;
+    str << "uvm_packer::unpack_field 0x" << a.range(size-1, 0).to_string(sc_dt::SC_HEX_US, false)
+        << ", length = " << size << std::endl;
     str << "unpack_index = " << unpack_index << std::endl;
     UVM_INFO("UNPCKFLD", str.str(), uvm::UVM_DEBUG);
 

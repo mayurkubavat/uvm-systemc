@@ -34,6 +34,11 @@
 
 namespace uvm {
 
+class uvm_recorder;
+class uvm_tr_database;
+class uvm_tr_stream;
+
+
 // forward declaration of necessary classes.
 class uvm_object;
 class uvm_phase;
@@ -81,6 +86,8 @@ class uvm_component : public sc_core::sc_module,
   friend class uvm_post_shutdown_phase;
   friend class uvm_process_phase;
   friend class uvm_sequencer_base;
+  friend class uvm_sequence_base;
+  friend class uvm_sequence_item;
   friend class uvm_report_object;
 
   typedef uvm_component this_type;
@@ -333,6 +340,18 @@ class uvm_component : public sc_core::sc_module,
                        const sc_core::sc_time& event_time = sc_core::SC_ZERO_TIME,
                        bool keep_active = false );
 
+  virtual uvm_tr_stream* get_tr_stream( const std::string& name,
+                                        const std::string& stream_type_name = "" );
+
+  virtual void free_tr_stream( uvm_tr_stream* stream );
+
+  virtual uvm_tr_database* get_tr_database();
+  virtual void set_tr_database( uvm_tr_database* db );
+
+  virtual bool get_recording_enabled() const;
+  virtual void set_recording_enabled( bool enabled );
+  virtual void set_recording_enabled_hier( bool enabled );
+
   /////////////////////////////////////////////////////
   /////////////////////////////////////////////////////
   // Implementation-defined member functions below,
@@ -398,6 +417,32 @@ class uvm_component : public sc_core::sc_module,
   bool m_add_child(uvm_component* child, const std::string& name = "");
 
   unsigned int recording_detail;
+
+  int m_begin_tr( const uvm_transaction& tr,
+                  int parent_handle,
+                  const std::string& stream_name,
+                  const std::string& label,
+                  const std::string& desc,
+                  const sc_core::sc_time& begin_time );
+
+  int m_record_tr( const std::string& stream_name,
+                   uvm_object* info,
+                   const std::string& label,
+                   const std::string& desc,
+                   const sc_core::sc_time& tr_time,
+                   bool keep_active,
+                   const std::string& kind );
+
+  void m_erase_tr_handle( const uvm_transaction* tr, int inst_id );
+
+  uvm_tr_database* m_tr_database;
+  std::map<std::string, std::map<std::string, uvm_tr_stream*> > m_streams;
+  // the recorders of the transactions which this component began, by the
+  // address of the transaction: the instance id of the transaction and the
+  // handle of the recorder. The id tells a transaction from another one
+  // created later at the same address; a handle no longer finds a
+  // recorder which was freed.
+  std::map<const uvm_transaction*, std::pair<int, int> > m_tr_h;
   //-------------
   // data members
   //-------------
@@ -467,7 +512,6 @@ class uvm_component : public sc_core::sc_module,
   uvm_domain* m_common; //common domain
 
   // keep track of dynamically added elements
-  std::list<uvm_phase*> m_schedule_list;
   std::list<uvm_config_object_wrapper*> m_config_object_wrapper_list;
 };
 

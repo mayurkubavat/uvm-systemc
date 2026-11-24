@@ -152,8 +152,8 @@ class uvm_reg_mem_hdl_paths_seq
       for ( unsigned int j = 0; j < path.slices.size(); j++)
       {
         std::string p_ = path.slices[j].path;
-        // uvm_reg_data_t d; // TODO type mismatch?
-        uvm_hdl_data_t d;
+        // the type which the backdoor of the register reads
+        uvm_reg_data_t d;
 
         if (!uvm_hdl_read(p_, d))
         {

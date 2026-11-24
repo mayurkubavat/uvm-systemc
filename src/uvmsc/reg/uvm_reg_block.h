@@ -60,6 +60,7 @@ class uvm_reg_block : public uvm_object
 {
  public:
   friend class uvm_reg;
+  friend class uvm_reg_field;
   friend class uvm_vreg;
   friend class uvm_mem;
   template <typename BUSTYPE> friend class uvm_reg_predictor;
@@ -173,6 +174,15 @@ class uvm_reg_block : public uvm_object
                        uvm_reg_map* map );
  public:
   void sample_values();
+
+  //--------------------------------------------------------------------------
+  // Group: Randomization
+  //--------------------------------------------------------------------------
+
+  virtual bool randomize();
+
+  virtual void pre_randomize();
+  virtual void post_randomize();
 
   //--------------------------------------------------------------------------
   // Group: Access
@@ -293,6 +303,8 @@ class uvm_reg_block : public uvm_object
 
   ~uvm_reg_block(); // destructor
 
+  virtual std::string convert2string() const;
+
  private:
 
   void m_sample( uvm_reg_addr_t addr,
@@ -330,40 +342,38 @@ class uvm_reg_block : public uvm_object
 
   void do_unpack( uvm_packer& packer );
 
-  std::string convert2string() const;
-
   void m_init_address_maps();
 
   // local data members
 
   uvm_reg_block* m_parent;
 
-  typedef std::map<uvm_reg_block*, bool> m_rootsT;
+  typedef std::map<uvm_reg_inst_key<uvm_reg_block>, bool> m_rootsT;
   typedef m_rootsT::iterator m_roots_itt;
   typedef m_rootsT::const_iterator m_roots_citt;
   static m_rootsT m_roots;
 
-  typedef std::map<uvm_reg_block*, unsigned int> m_blksT;
+  typedef std::map<uvm_reg_inst_key<uvm_reg_block>, unsigned int> m_blksT;
   typedef m_blksT::iterator m_blks_itt;
   typedef m_blksT::const_iterator m_blks_citt;
   m_blksT m_blks;
 
-  typedef std::map<uvm_reg*, unsigned int> m_regsT;
+  typedef std::map<uvm_reg_inst_key<uvm_reg>, unsigned int> m_regsT;
   typedef m_regsT::iterator m_regs_itt;
   typedef m_regsT::const_iterator m_regs_citt;
   m_regsT m_regs;
 
-  typedef std::map<uvm_vreg*, unsigned int> m_vregsT;
+  typedef std::map<uvm_reg_inst_key<uvm_vreg>, unsigned int> m_vregsT;
   typedef m_vregsT::iterator m_vregs_itt;
   typedef m_vregsT::const_iterator m_vregs_citt;
   m_vregsT m_vregs;
 
-  typedef std::map<uvm_mem*, unsigned int> m_memsT;
+  typedef std::map<uvm_reg_inst_key<uvm_mem>, unsigned int> m_memsT;
   typedef m_memsT::iterator m_mems_itt;
   typedef m_memsT::const_iterator m_mems_citt;
   m_memsT m_mems;
 
-  typedef std::map<uvm_reg_map*, bool> m_mapsT;
+  typedef std::map<uvm_reg_inst_key<uvm_reg_map>, bool> m_mapsT;
   typedef m_mapsT::iterator m_maps_itt;
   typedef m_mapsT::const_iterator m_maps_citt;
   m_mapsT m_maps;

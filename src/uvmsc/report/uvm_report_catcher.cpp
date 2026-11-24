@@ -253,6 +253,7 @@ void uvm_report_catcher::set_message( const std::string& message )
 void uvm_report_catcher::set_action( uvm_action action )
 {
   uvm_report_catcher_data::get().m_modified_report_message->set_action(action);
+  uvm_report_catcher_data::get().m_set_action_called = true;
 }
 
 //------------------------------------------------------------------------------
@@ -584,6 +585,7 @@ bool uvm_report_catcher::process_all_report_catchers( uvm_report_message* rm )
     return true;
 
   in_catcher = true;
+  bool prev_tracing = uvm_callbacks_base::m_tracing;
   uvm_callbacks_base::m_tracing = false;  //turn off cb tracing so catcher stuff doesn't print
 
   orig_severity = rm->get_severity();
@@ -656,7 +658,7 @@ bool uvm_report_catcher::process_all_report_catchers( uvm_report_message* rm )
   }
 
   in_catcher = false;
-  uvm_callbacks_base::m_tracing = true;  // turn tracing stuff back on
+  uvm_callbacks_base::m_tracing = prev_tracing;  // restore callback tracing state
 
   return thrown;
 }
@@ -698,10 +700,11 @@ int uvm_report_catcher::process_report_catcher()
 // member function: summarize (static)
 //
 //! This function is called automatically by uvm_report_server::summarize().
-//! It prints the statistics for the active catchers.
+//! It prints the statistics for the active catchers, to the standard output
+//! if \p file is 0, otherwise to \p file.
 //------------------------------------------------------------------------------
 
-void uvm_report_catcher::summarize()
+void uvm_report_catcher::summarize( UVM_FILE file )
 {
   std::ostringstream s;
   std::vector<std::string> q;
@@ -756,8 +759,32 @@ void uvm_report_catcher::summarize()
     uvm_coreservice_t* cs = uvm_coreservice_t::get();
     uvm_root* top = cs->get_root();
 
-    UVM_INFO_CONTEXT("UVM/REPORT/CATCHER", UVM_STRING_QUEUE_STREAMING_PACK(q), UVM_LOW, top );
+    if (file == 0)
+    {
+      UVM_INFO_CONTEXT("UVM/REPORT/CATCHER", UVM_STRING_QUEUE_STREAMING_PACK(q), UVM_LOW, top );
+    }
+    else
+    {
+      // Re-route the message to the file by changing the action, and
+      // restore the original settings after the message is reported
+      uvm_report_handler* rh = top->get_report_handler();
+      uvm_report_handler::m_id_route_t saved = rh->m_route_id_to_file("UVM/REPORT/CATCHER", file);
+      UVM_INFO_CONTEXT("UVM/REPORT/CATCHER", UVM_STRING_QUEUE_STREAMING_PACK(q), UVM_LOW, top );
+      rh->m_restore_id_route("UVM/REPORT/CATCHER", saved);
+    }
   }
+}
+
+//------------------------------------------------------------------------------
+// member function: summarize_report_catcher (static)
+//
+//! Prints the statistics for the active catchers, to the standard output
+//! if \p file is 0, otherwise to \p file.
+//------------------------------------------------------------------------------
+
+void uvm_report_catcher::summarize_report_catcher( UVM_FILE file )
+{
+  summarize(file);
 }
 
 void uvm_report_catcher::uvm_process_report_message(uvm_report_message* msg)

@@ -67,6 +67,7 @@ class uvm_mem : public uvm_object
   friend class uvm_reg_block;
   friend class uvm_reg_map;
   friend class uvm_vreg;
+  template <typename BUSTYPE> friend class uvm_reg_predictor;
 
   typedef enum {UNKNOWNS, ZEROES, ONES, ADDRESS, VALUE, INCR, DECR} init_e;
 
@@ -371,7 +372,7 @@ class uvm_mem : public uvm_object
   std::string m_access;
   unsigned long m_size;
 
-  typedef std::map<uvm_reg_map*, bool> m_maps_t;
+  typedef std::map<uvm_reg_inst_key<uvm_reg_map>, bool> m_maps_t;
   typedef m_maps_t::iterator m_maps_itt;
   mutable m_maps_t m_maps;
 
@@ -386,7 +387,7 @@ class uvm_mem : public uvm_object
   std::string m_fname;
   int m_lineno;
 
-  typedef std::map<uvm_vreg*, bool> m_vregs_t;
+  typedef std::map<uvm_reg_inst_key<uvm_vreg>, bool> m_vregs_t;
   typedef m_vregs_t::iterator m_vregs_itt;
   mutable m_vregs_t m_vregs;
 

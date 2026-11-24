@@ -1,0 +1,18 @@
+SystemC Simulation
+UVM_WARNING @ 0 s: reporter [INVTST] +UVM_TESTNAME provided on the command line without a test name, it will be ignored.
+UVM_WARNING @ 0 s: reporter [MULTTST] Multiple (2) +UVM_TESTNAME arguments provided on the command line.  'test_b' will be used.  Provided list: test_b, test_a.
+UVM_INFO @ 0 s: reporter [RNTST] Running test test_b...
+test_b run as test_b
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   2
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[INVTST]                1
+[MULTTST]               1
+[RNTST]                 1
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

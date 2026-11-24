@@ -33,6 +33,25 @@ include $(srcdir)/simple/tlm1/producer_consumer/test.am
 include $(srcdir)/simple/trivial/test.am
 include $(srcdir)/integrated/ubus/test.am
 
+# The CRAVE examples need an installation of CRAVE and are only built with
+# CMake (UVM_SYSTEMC_ENABLE_CRAVE), so they are distributed without a test.
+examples_DIRS += \
+				 simple/crave/constrained_random \
+				 simple/crave/constrained_registers \
+				 simple/crave/sequence_randomization \
+				 simple/crave
+
+examples_FILES += \
+	simple/crave/constrained_random/packet.h \
+	simple/crave/constrained_random/packet_driver.h \
+	simple/crave/constrained_random/packet_sequence.h \
+	simple/crave/constrained_random/packet_sequencer.h \
+	simple/crave/constrained_random/sc_main.cpp \
+	simple/crave/constrained_random/testbench.h \
+	simple/crave/constrained_registers/sc_main.cpp \
+	simple/crave/constrained_registers/timer_reg_model.h \
+	simple/crave/sequence_randomization/sc_main.cpp
+
 examples_DIRS += \
 				 simple/callbacks \
 				 simple/configuration \
@@ -68,6 +87,15 @@ endif # SEPARATE_INSTALL_TREE
 
 EXTRA_DIST += \
 	$(examples_FILES)
+
+# The FC4SC coverage example requires the optional FC4SC library. It is
+# only built and run by the CMake regression flow, and distributed here.
+EXTRA_DIST += \
+	simple/coverage/fc4sc/README.md \
+	simple/coverage/fc4sc/coverage_subscriber.h \
+	simple/coverage/fc4sc/monitor.h \
+	simple/coverage/fc4sc/packet.h \
+	simple/coverage/fc4sc/sc_main.cpp
 
 CLEANFILES += \
 	$(examples_CLEAN) \

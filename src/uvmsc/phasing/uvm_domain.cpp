@@ -46,7 +46,7 @@ namespace uvm {
 // Constructor: uvm_domain
 //------------------------------------------------------------------------------
 uvm_domain::uvm_domain( const std::string& name )
-  : uvm_phase(name, UVM_PHASE_DOMAIN)
+  : uvm_phase(name, UVM_PHASE_DOMAIN), m_schedule(nullptr)
 {
   if (m_domains().find(name) != m_domains().end())
   {
@@ -60,6 +60,19 @@ uvm_domain::uvm_domain( const std::string& name )
     str << "Create domain with name '" << name << "'...";
     uvm_report_info("NEWDOMAIN", str.str(), UVM_DEBUG);
     m_domains()[name] = this;
+  }
+}
+
+uvm_domain::~uvm_domain()
+{
+  domains_mapItT it = m_domains().find(get_name());
+  if (it != m_domains().end() && it->second == this)
+    m_domains().erase(it);
+
+  if (m_schedule != nullptr)
+  {
+    delete m_schedule;
+    m_schedule = nullptr;
   }
 }
 
@@ -222,8 +235,8 @@ void uvm_domain::jump( const uvm_phase* phase )
 
 uvm_domain::domains_mapT& uvm_domain::m_domains()
 {
-  static domains_mapT map;
-  return map;
+  static domains_mapT* map = new domains_mapT();
+  return *map;
 }
 
 

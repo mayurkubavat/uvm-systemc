@@ -26,9 +26,14 @@
 #include "uvmsc/comps/uvm_env.h"
 #include "uvmsc/comps/uvm_agent.h"
 #include "uvmsc/comps/uvm_driver.h"
+#include "uvmsc/comps/uvm_push_driver.h"
 #include "uvmsc/comps/uvm_monitor.h"
 #include "uvmsc/comps/uvm_test.h"
 #include "uvmsc/comps/uvm_scoreboard.h"
 #include "uvmsc/comps/uvm_subscriber.h"
+#include "uvmsc/comps/uvm_policies.h"
+#include "uvmsc/comps/uvm_pair.h"
+#include "uvmsc/comps/uvm_in_order_comparator.h"
+#include "uvmsc/comps/uvm_algorithmic_comparator.h"
 
 #endif /* UVM_COMPS_H_ */

@@ -27,11 +27,14 @@
 #include <stdexcept>
 
 #include "uvmsc/base/uvm_root.h"
+#include "uvmsc/base/uvm_cmdline_settings.h"
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_component_name.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
+#include "uvmsc/base/uvm_traversal.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 #include "uvmsc/phasing/uvm_phase.h"
 #include "uvmsc/phasing/uvm_common_phases.h"
@@ -97,6 +100,9 @@ uvm_root::uvm_root( uvm_component_name nm )
 
   // print header
   m_uvm_header();
+
+  // command line arguments which take effect before components exist
+  uvm_cmdline_settings::init(this);
 }
 
 //----------------------------------------------------------------------
@@ -121,12 +127,20 @@ uvm_root::~uvm_root()
 
 void uvm_root::run_test( const std::string& test_name )
 {
+  uvm_run_test_callback::m_do_pre_run_test();
+
   // disable SystemC messages
   // TODO make switch available to enable SystemC messages
   sc_core::sc_report_handler::set_actions("/OSCI/SystemC", sc_core::SC_DO_NOTHING);
 
+  // apply the command line arguments; +UVM_TESTNAME overrules test_name
+  uvm_cmdline_settings::apply(this);
+  if (uvm_cmdline_settings::has_arg("+UVM_PHASE_TRACE"))
+    uvm_phase::m_phase_trace = true;
+  const std::string name = uvm_cmdline_settings::get_test_name(this, test_name);
+
   // check and register test object
-  m_register_test(test_name);
+  m_register_test(name);
 
   // start objection mechanism fired as spawned process
   sc_process_handle m_init_objections_proc =
@@ -157,7 +171,7 @@ void uvm_root::run_test( const std::string& test_name )
     sc_core::sc_stop();
 
   // Clean-up 
-  m_unregister_test(test_name);
+  m_unregister_test(name);
 }
 
 //----------------------------------------------------------------------
@@ -175,9 +189,27 @@ void uvm_root::run_test( const std::string& test_name )
 
 void uvm_root::die()
 {
+  // only die once, as for the UVM-SV core states UVM_CORE_PRE_ABORT and
+  // UVM_CORE_ABORTED: a fatal error reported by a pre_abort callback
+  // returns here instead of aborting again. The guard is cleared when
+  // die() is left by its exception, which the caller may catch, so that
+  // a later fatal error terminates again.
+  static bool m_dying = false;
+  if (m_dying)
+    return;
+
+  struct dying_guard
+  {
+    explicit dying_guard( bool& flag ) : m_flag(flag) { m_flag = true; }
+    ~dying_guard() { m_flag = false; }
+    bool& m_flag;
+  } guard(m_dying);
+
   uvm_report_server* l_rs = uvm_report_server::get_server();
   // do the pre_abort callbacks
   m_do_pre_abort();
+
+  uvm_run_test_callback::m_do_pre_abort();
 
   l_rs->report_summarize();
   throw std::runtime_error("Simulation terminated by uvm_root::die()");
@@ -357,6 +389,24 @@ void uvm_root::enable_print_topology( bool enable )
   m_enable_print_topology = enable;
 }
 
+//----------------------------------------------------------------------
+// member function: end_of_elaboration_phase (virtual)
+//
+//! Implementation defined
+//! Traverses the entire component hierarchy top-down with the component
+//! visitor of the core service. By default, this is the visitor
+//! uvm_component_name_check_visitor, which checks the component names.
+//----------------------------------------------------------------------
+
+void uvm_root::end_of_elaboration_phase( uvm_phase& phase )
+{
+  uvm_component_proxy p("proxy");
+  uvm_top_down_visitor_adapter<uvm_component> adapter("adapter");
+  uvm_coreservice_t* cs = uvm_coreservice_t::get();
+  uvm_visitor<uvm_component>* v = cs->get_component_visitor();
+  adapter.accept(this, v, &p);
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -517,7 +567,7 @@ void uvm_root::m_register_test( const std::string& test_name )
   if(test_name=="")
     uvm_report_info("RNTST", "Running test ...", UVM_LOW);
   else
-    if (test_name == uvm_test_top->get_type_name())
+    if (uvm_test_top == nullptr || test_name == uvm_test_top->get_type_name())
       uvm_report_info("RNTST", "Running test " + test_name + "...", UVM_LOW);
     else
       uvm_report_info("RNTST", "Running test " + uvm_test_top->get_type_name() +
@@ -608,5 +658,20 @@ void uvm_root::m_unregister_test( const std::string& test_name )
   }
 }
 
-} // namespace uvm
+//----------------------------------------------------------------------------
+// member function: m_spawn
+//
+// Implementation defined
+//----------------------------------------------------------------------------
 
+sc_core::sc_process_handle uvm_root::m_spawn( std::function<void()> func, const char* name )
+{
+#if defined(IEEE_1666_SYSTEMC) && IEEE_1666_SYSTEMC >= 202301L
+  auto scope = sc_core::sc_module::get_hierarchy_scope();
+  return sc_core::sc_spawn(func, sc_core::sc_gen_unique_name(name));
+#else
+  return sc_core::sc_spawn(func, sc_core::sc_gen_unique_name(name));
+#endif
+}
+
+} // namespace uvm

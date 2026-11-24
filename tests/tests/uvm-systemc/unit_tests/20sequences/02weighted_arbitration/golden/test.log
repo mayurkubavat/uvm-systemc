@@ -1,0 +1,17 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+sequence 0: 15 of the first 100 grants
+sequence 1: 17 of the first 100 grants
+sequence 2: 11 of the first 100 grants
+sequence 3: 57 of the first 100 grants
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 4 us: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 4 us: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

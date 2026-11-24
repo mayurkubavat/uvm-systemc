@@ -65,6 +65,7 @@ class uvm_reg : public uvm_object
  public:
   friend class uvm_reg_block;
   friend class uvm_reg_field;
+  friend class uvm_reg_fifo;
   friend class uvm_reg_map;
   friend class uvm_reg_indirect_data; // TODO change access policy instead?
   friend class uvm_reg_indirect_ftdr_seq;
@@ -304,6 +305,14 @@ class uvm_reg : public uvm_object
  public:
   virtual void sample_values();
 
+  //--------------------------------------------------------------------------
+  // Group: Randomization
+  //--------------------------------------------------------------------------
+
+  virtual bool randomize();
+
+  virtual void pre_randomize();
+  virtual void post_randomize();
 
   //--------------------------------------------------------------------------
   // Group: Callbacks
@@ -369,6 +378,8 @@ class uvm_reg : public uvm_object
 
   void m_atomic_check_lock( bool on );
 
+  bool m_check_hdl_slice( const uvm_hdl_path_slice& slice ) const;
+
   virtual bool m_check_access( uvm_reg_item* rw,
                                uvm_reg_map_info*& map_info,
                                const std::string& caller );
@@ -424,7 +435,7 @@ class uvm_reg : public uvm_object
   unsigned int m_n_bits;
   unsigned int m_n_used_bits;
 
-  typedef std::map<uvm_reg_map*, bool> m_maps_t;
+  typedef std::map<uvm_reg_inst_key<uvm_reg_map>, bool> m_maps_t;
   typedef m_maps_t::const_iterator m_maps_citt;
   m_maps_t m_maps;
 

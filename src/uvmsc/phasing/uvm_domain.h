@@ -89,6 +89,8 @@ class uvm_domain : public uvm_phase
 
   uvm_domain( const std::string& name );
 
+  virtual ~uvm_domain();
+
   void jump( const uvm_phase* phase );
 
   /////////////////////////////////////////////////////

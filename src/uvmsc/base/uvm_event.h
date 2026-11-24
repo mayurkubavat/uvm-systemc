@@ -29,12 +29,12 @@
 
 #include "uvmsc/base/uvm_object.h"
 
-// forward declaration of uvm_packer used in uvm_object
+namespace uvm {
+
+// forward declarations
 class uvm_object;
 class uvm_event_callback;
 class uvm_printer;
-
-namespace uvm {
 
 //----------------------------------------------------------------------
 // CLASS: uvm_event

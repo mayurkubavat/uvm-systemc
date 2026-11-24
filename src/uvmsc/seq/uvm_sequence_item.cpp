@@ -20,11 +20,15 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <set>
+#include <typeindex>
+
 #include <systemc>
 
 #include "uvmsc/seq/uvm_sequence_item.h"
 #include "uvmsc/seq/uvm_sequence_base.h"
 #include "uvmsc/seq/uvm_sequencer_base.h"
+#include "uvmsc/policy/uvm_recorder.h"
 #include "uvmsc/report/uvm_report_object.h"
 #include "uvmsc/report/uvm_report_handler.h"
 #include "uvmsc/report/uvm_report_message.h"
@@ -49,6 +53,9 @@ uvm_sequence_item::uvm_sequence_item()
   m_use_sequence_info = true;
   m_sequence_id = -1;
   m_depth = -1;
+  m_tr_seq = nullptr;
+  m_tr_sqr = nullptr;
+  m_tr_sqr_handle = 0;
 }
 
 uvm_sequence_item::uvm_sequence_item( uvm_object_name name_ )
@@ -60,6 +67,40 @@ uvm_sequence_item::uvm_sequence_item( uvm_object_name name_ )
   m_use_sequence_info = true;
   m_sequence_id = -1;
   m_depth = -1;
+  m_tr_seq = nullptr;
+  m_tr_sqr = nullptr;
+  m_tr_sqr_handle = 0;
+}
+
+uvm_sequence_item::uvm_sequence_item( const uvm_sequence_item& rhs )
+  : uvm_transaction( rhs ),
+    print_sequence_info( rhs.print_sequence_info ),
+    m_parent_sequence( rhs.m_parent_sequence ),
+    m_sequencer( rhs.m_sequencer ),
+    m_use_sequence_info( rhs.m_use_sequence_info ),
+    m_sequence_id( rhs.m_sequence_id ),
+    m_depth( rhs.m_depth ),
+    m_tr_seq( nullptr ),
+    m_tr_sqr( nullptr ),
+    m_tr_sqr_handle( 0 )
+{}
+
+uvm_sequence_item& uvm_sequence_item::operator=( const uvm_sequence_item& rhs )
+{
+  if (this != &rhs)
+  {
+    uvm_transaction::operator=( rhs );
+    print_sequence_info = rhs.print_sequence_info;
+    m_use_sequence_info = rhs.m_use_sequence_info;
+    if (m_tr_seq == nullptr && m_tr_sqr == nullptr && m_tr_sqr_handle == 0 && !is_active())
+    {
+      m_parent_sequence = rhs.m_parent_sequence;
+      m_sequencer = rhs.m_sequencer;
+      m_sequence_id = rhs.m_sequence_id;
+      m_depth = rhs.m_depth;
+    }
+  }
+  return *this;
 }
 
 //----------------------------------------------------------------------
@@ -68,7 +109,49 @@ uvm_sequence_item::uvm_sequence_item( uvm_object_name name_ )
 
 uvm_sequence_item::~uvm_sequence_item()
 {
-  // TODO - cleanup
+  m_cleanup_tr_tracking();
+}
+
+void uvm_sequence_item::m_cleanup_tr_tracking()
+{
+  uvm_sequencer_base* sqr = m_tr_sqr;
+  const int sqr_h = m_tr_sqr_handle;
+
+  if (m_tr_seq != nullptr)
+  {
+    m_tr_seq->m_detach_tr_item(this);
+    m_tr_seq = nullptr;
+  }
+
+  if (sqr != nullptr)
+  {
+    sqr->m_detach_active_tr_item(this);
+    sqr->m_erase_tr_handle(this, get_inst_id());
+  }
+  m_tr_sqr = nullptr;
+
+  if (sqr_h != 0)
+  {
+    uvm_recorder* sqr_rec = uvm_recorder::get_recorder_from_handle(sqr_h);
+    if (sqr_rec != nullptr)
+    {
+      sqr_rec->close();
+      sqr_rec->free();
+    }
+  }
+  m_tr_sqr_handle = 0;
+
+  const int own_handle = get_tr_handle();
+  if (own_handle != 0)
+  {
+    uvm_recorder* own_rec = uvm_recorder::get_recorder_from_handle(own_handle);
+    if (own_rec != nullptr)
+    {
+      own_rec->close();
+      own_rec->free();
+    }
+  }
+  m_reset_tr_state();
 }
 
 //----------------------------------------------------------------------
@@ -245,6 +328,62 @@ int uvm_sequence_item::get_depth() const
 bool uvm_sequence_item::is_item() const
 {
   return true;
+}
+
+//----------------------------------------------------------------------
+// member function: m_uvm_randomize (virtual)
+//
+// Implementation defined
+//
+// Randomizes the item or sequence where UVM in SystemVerilog calls
+// randomize(): in uvm_sequencer_param_base::send_request if the argument
+// rerandomize is set, in the macros UVM_DO and its variants, and on the
+// default sequence of a phase before the sequencer starts it.
+//
+// The macros UVM_OBJECT_UTILS and UVM_OBJECT_PARAM_UTILS override it to
+// call the public member function randomize() of the class, if it has
+// one which returns a value convertible to bool, for example one which
+// calls a constraint solver such as CRAVE. Otherwise, and in classes
+// without these macros, it does nothing and returns true.
+//----------------------------------------------------------------------
+
+bool uvm_sequence_item::m_uvm_randomize()
+{
+  return true;
+}
+
+//----------------------------------------------------------------------
+// function: m_uvm_randomize_warning
+//
+// Implementation defined
+//
+// Warns once for each type that a randomize() of the class is not
+// called, see m_uvm_randomize_object in uvm_object_defines.h.
+//----------------------------------------------------------------------
+
+void m_uvm_randomize_warning( const uvm_object* obj,
+                              const std::type_info& type,
+                              m_uvm_randomize_issue issue )
+{
+  static std::set<std::pair<std::type_index, int> > warned;
+
+  if (!warned.insert(std::make_pair(std::type_index(type), (int)issue)).second)
+    return;
+
+  std::ostringstream msg;
+  if (issue == M_UVM_RANDOMIZE_NOT_USABLE)
+    msg << "The member randomize of class " << obj->get_type_name()
+        << " is not called to randomize its objects. Declare it as a public"
+        << " member function without arguments, which returns bool or an"
+        << " integral type, and which is not ambiguous.";
+  else
+    msg << "The class of object " << obj->get_name() << " is derived from " << obj->get_type_name()
+        << " without UVM_OBJECT_UTILS or UVM_OBJECT_PARAM_UTILS, so it is"
+        << " randomized with the randomize() of " << obj->get_type_name()
+        << ". A randomize() which it declares is only called if it overrides"
+        << " a virtual one.";
+
+  uvm_report_warning("RNDNOTCALLED", msg.str(), UVM_NONE);
 }
 
 //----------------------------------------------------------------------

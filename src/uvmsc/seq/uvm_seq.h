@@ -24,9 +24,11 @@
 #include "uvmsc/seq/uvm_sequence_base.h"
 #include "uvmsc/seq/uvm_sequence_item.h"
 #include "uvmsc/seq/uvm_sequence.h"
+#include "uvmsc/seq/uvm_sequence_library.h"
 
 #include "uvmsc/seq/uvm_sequencer_base.h"
 #include "uvmsc/seq/uvm_sequencer.h"
+#include "uvmsc/seq/uvm_push_sequencer.h"
 #include "uvmsc/seq/uvm_sequencer_param_base.h"
 #include "uvmsc/seq/uvm_sequencer_ifs.h"
 

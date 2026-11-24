@@ -25,8 +25,11 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
 #include <iomanip>
+#include <map>
 
+#include "uvmsc/policy/uvm_comparer.h"
 #include "uvmsc/reg/uvm_reg_field.h"
 #include "uvmsc/reg/uvm_reg_model.h"
 #include "uvmsc/reg/uvm_reg_item.h"
@@ -34,6 +37,8 @@
 #include "uvmsc/reg/uvm_reg_adapter.h"
 #include "uvmsc/reg/uvm_reg_block.h"
 #include "uvmsc/reg/uvm_reg_cbs.h"
+#include "uvmsc/reg/uvm_reg_frontdoor.h"
+#include "uvmsc/misc/uvm_misc.h"
 
 //////////////
 
@@ -75,6 +80,11 @@ uvm_reg_field::uvm_reg_field( const std::string& name ) : uvm_object(name)
   m_cover_on = 0;
   m_individually_accessible = false;
   m_check = UVM_NO_CHECK;
+  m_rand_mode = false;
+  m_rng_state = 0;
+  m_rng_seeded = false;
+  m_rng_global_seed = 0;
+  m_rng_instance = 0;
 }
 
 //----------------------------------------------------------------------
@@ -136,7 +146,8 @@ void uvm_reg_field::configure( uvm_reg* parent,
       "NO_REG_HW_RESET_TEST", true);
   */
 
-  m_parent->add_field(this);
+  if (m_parent != nullptr)
+    m_parent->add_field(this);
 
   if(m_policy_names().find(m_access) == m_policy_names().end()) // not exists
   {
@@ -150,19 +161,16 @@ void uvm_reg_field::configure( uvm_reg* parent,
 
   // Ignore is_rand if the field is known not to be writeable
   // i.e. not "RW", "WRC", "WRS", "WO", "W1", "WO1"
-  if( (access == "RO") || (access == "RC") || (access == "RS") ||
-      (access == "WC") || (access == "WS") || (access == "W1C") ||
-      (access == "W1S") || (access == "W1T") || (access == "W0C") ||
-      (access == "W0S") || (access == "W0T") || (access == "W1SRC") ||
-      (access == "W1CRS") || (access == "W0SRC") || (access == "W0CRS") ||
-      (access == "WSRC") || (access == "WCRS") || (access == "WOC") ||
-      (access == "WOS") )
+  if( (m_access == "RO") || (m_access == "RC") || (m_access == "RS") ||
+      (m_access == "WC") || (m_access == "WS") || (m_access == "W1C") ||
+      (m_access == "W1S") || (m_access == "W1T") || (m_access == "W0C") ||
+      (m_access == "W0S") || (m_access == "W0T") || (m_access == "W1SRC") ||
+      (m_access == "W1CRS") || (m_access == "W0SRC") || (m_access == "W0CRS") ||
+      (m_access == "WSRC") || (m_access == "WCRS") || (m_access == "WOC") ||
+      (m_access == "WOS") )
     is_rand = false;
 
-   /* TODO randomization
-   if (!is_rand)
-     m_value.rand_mode(0);
-   */
+  m_rand_mode = is_rand;
 }
 
 //----------------------------------------------------------------------
@@ -190,6 +198,9 @@ void uvm_reg_field::configure( uvm_reg* parent,
 
 const std::string uvm_reg_field::get_full_name() const
 {
+  if (m_parent == nullptr)
+    return get_name();
+
   return m_parent->get_full_name() + "." + get_name();
 }
 
@@ -356,14 +367,17 @@ bool uvm_reg_field::define_access( std::string name )
 std::string uvm_reg_field::get_access( uvm_reg_map* map ) const
 {
   std::string _access = m_access;
-  std::string _rights = m_parent->get_rights(map);
 
-  if( map == uvm_reg_map::backdoor() )
+  if( map == uvm_reg_map::backdoor() || m_parent == nullptr )
     return _access;
+
+  std::string _rights = m_parent->get_rights(map);
 
   // Is the register restricted in this map?
   if (_rights == "RW")   // No restrictions
     return _access;
+
+  std::string map_name = (map != nullptr) ? map->get_full_name() : "<null>";
 
   if (_rights == "RO")
   {
@@ -390,7 +404,7 @@ std::string uvm_reg_field::get_access( uvm_reg_map* map ) const
     {
       UVM_ERROR("RegModel",
         _access + " field '" + get_name() + "' restricted to RO in map '"
-        + map->get_full_name() + "'");
+        + map_name + "'");
     }
   } // if "RO"
   else
@@ -402,15 +416,15 @@ std::string uvm_reg_field::get_access( uvm_reg_map* map ) const
     {
       UVM_ERROR("RegModel",
         _access + " field '" + get_full_name() + "' restricted to WO in map '"
-        + map->get_full_name() + "'");
+        + map_name + "'");
     }
   } // if "WO"
   else // default to error
     UVM_ERROR("RegModel",
       "Register '" + m_parent->get_full_name() +
       "' containing field '" + get_name() + "' is mapped in map '" +
-      map->get_full_name() + "' with unknown access right '" +
-      m_parent->get_rights(map) + "'");
+      map_name + "' with unknown access right '" +
+      _rights + "'");
 
   return _access;
 }
@@ -520,11 +534,15 @@ void uvm_reg_field::set( uvm_reg_data_t value,
   m_fname = fname;
   m_lineno = lineno;
 
-  if (value >> m_size)
+  if ((value & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
+    // the value in hexadecimal, without leading zeros
+    std::string hex = value.to_string(sc_dt::SC_HEX_US, false);
+    hex.erase(0, std::min(hex.find_first_not_of('0'), hex.size() - 1));
+
     std::ostringstream str;
     str << "Specified value (0x"
-        << value
+        << hex
         << ") greater than field '"
         << get_name()
         << "' size ("
@@ -534,7 +552,7 @@ void uvm_reg_field::set( uvm_reg_data_t value,
     value &= mask;
   }
 
-  if (m_parent->is_busy())
+  if (m_parent != nullptr && m_parent->is_busy())
   {
     UVM_WARNING("UVM/FLD/SET/BSY",
         "Setting the value of field '" + get_name() +
@@ -542,34 +560,33 @@ void uvm_reg_field::set( uvm_reg_data_t value,
         "' is being accessed may result in loss of desired field value. A race condition between threads concurrently accessing the register model is the likely cause of the problem.");
   }
 
-  //if( m_access == "RO" )    m_desired = m_desired; // TODO original UVM-SV code! remove?
-  if( m_access == "RW" )    m_desired = value;
-  //if( m_access == "RC" )    m_desired = m_desired; // TODO original UVM-SV code! remove?
-  //if( m_access == "RS" )    m_desired = m_desired; // TODO original UVM-SV code! remove?
-  if( m_access == "WC" )    m_desired = 0;
-  if( m_access == "WS" )    m_desired = mask;
-  if( m_access == "WRC" )   m_desired = value;
-  if( m_access == "WRS" )   m_desired = value;
-  if( m_access == "WSRC" )  m_desired = mask;
-  if( m_access == "WCRS" )  m_desired = 0;
-  if( m_access == "W1C" )   m_desired = m_desired & (~value);
-  if( m_access == "W1S" )   m_desired = m_desired | value;
-  if( m_access == "W1T" )   m_desired = m_desired ^ value;
-  if( m_access == "W0C" )   m_desired = m_desired & value;
-  if( m_access == "W0S" )   m_desired = m_desired | (~value & mask);
-  if( m_access == "W0T" )   m_desired = m_desired ^ (~value & mask);
-  if( m_access == "W1SRC" ) m_desired = m_desired | value;
-  if( m_access == "W1CRS" ) m_desired = m_desired & (~value);
-  if( m_access == "W0SRC" ) m_desired = m_desired | (~value & mask);
-  if( m_access == "W0CRS" ) m_desired = m_desired & value;
-  if( m_access == "WO" )    m_desired = value;
-  if( m_access == "WOC" )   m_desired = 0;
-  if( m_access == "WOS" )   m_desired = mask;
-  if( m_access == "W1" )    m_desired = (m_written) ? m_desired : value;
-  if( m_access == "WO1" )   m_desired = (m_written) ? m_desired : value;
-
-  // default:
-  m_desired = value;
+  if( m_access == "RO" || m_access == "RC" || m_access == "RS" )
+  {
+    // Read-only / read-side-effect fields ignore set()
+  }
+  else if( m_access == "RW" )    m_desired = value;
+  else if( m_access == "WC" )    m_desired = 0;
+  else if( m_access == "WS" )    m_desired = mask;
+  else if( m_access == "WRC" )   m_desired = value;
+  else if( m_access == "WRS" )   m_desired = value;
+  else if( m_access == "WSRC" )  m_desired = mask;
+  else if( m_access == "WCRS" )  m_desired = 0;
+  else if( m_access == "W1C" )   m_desired = m_desired & (~value);
+  else if( m_access == "W1S" )   m_desired = m_desired | value;
+  else if( m_access == "W1T" )   m_desired = m_desired ^ value;
+  else if( m_access == "W0C" )   m_desired = m_desired & value;
+  else if( m_access == "W0S" )   m_desired = m_desired | (~value & mask);
+  else if( m_access == "W0T" )   m_desired = m_desired ^ (~value & mask);
+  else if( m_access == "W1SRC" ) m_desired = m_desired | value;
+  else if( m_access == "W1CRS" ) m_desired = m_desired & (~value);
+  else if( m_access == "W0SRC" ) m_desired = m_desired | (~value & mask);
+  else if( m_access == "W0CRS" ) m_desired = m_desired & value;
+  else if( m_access == "WO" )    m_desired = value;
+  else if( m_access == "WOC" )   m_desired = 0;
+  else if( m_access == "WOS" )   m_desired = mask;
+  else if( m_access == "W1" )    m_desired = (m_written) ? m_desired : value;
+  else if( m_access == "WO1" )   m_desired = (m_written) ? m_desired : value;
+  else                           m_desired = value;
 
   m_value = m_desired;
 }
@@ -888,12 +905,19 @@ void uvm_reg_field::poke( uvm_status_e& status, // output
   m_fname = fname;
   m_lineno = lineno;
 
-  if (value >> m_size)
+  if ((value & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
     UVM_WARNING("RegModel",
         "uvm_reg_field::poke(): Value exceeds size of field '" +
          get_name() + "'");
     value &= value & uvm_mask_size(m_size);
+  }
+
+  if (m_parent == nullptr)
+  {
+    UVM_ERROR("RegModel", "Field '" + get_full_name() + "' has no parent register");
+    status = UVM_NOT_OK;
+    return;
   }
 
   m_parent->m_atomic_check_lock(1);
@@ -956,6 +980,13 @@ void uvm_reg_field::peek( uvm_status_e& status, // output
    m_fname = fname;
    m_lineno = lineno;
 
+   if (m_parent == nullptr)
+   {
+     UVM_ERROR("RegModel", "Field '" + get_full_name() + "' has no parent register");
+     status = UVM_NOT_OK;
+     return;
+   }
+
    m_parent->peek(status, reg_value, kind, parent, extension, fname, lineno);
    value = (reg_value >> m_lsb) & uvm_mask_size(m_size); // TODO check, moved parenthesis
 }
@@ -998,6 +1029,14 @@ void uvm_reg_field::mirror( uvm_status_e& status, // output
 {
    m_fname = fname;
    m_lineno = lineno;
+
+   if (m_parent == nullptr)
+   {
+     UVM_ERROR("RegModel", "Field '" + get_full_name() + "' has no parent register");
+     status = UVM_NOT_OK;
+     return;
+   }
+
    m_parent->mirror( status, check, path, map, parent, prior, extension,
                      fname, lineno);
 }
@@ -1055,6 +1094,9 @@ bool uvm_reg_field::is_indv_accessible( uvm_path_e path,
         return false;
   }
 
+  if (m_parent == nullptr)
+    return false;
+
   // Cannot access individual fields if the container register
   // has a user-defined front-door
   if (m_parent->get_frontdoor(local_map) != nullptr)
@@ -1067,10 +1109,13 @@ bool uvm_reg_field::is_indv_accessible( uvm_path_e path,
         return false;
   }
 
+  if (local_map == nullptr)
+    return false;
+
   uvm_reg_map* system_map = local_map->get_root_map();
   uvm_reg_adapter* adapter = system_map->get_adapter();
 
-  if (adapter->supports_byte_enable)
+  if (adapter != nullptr && adapter->supports_byte_enable)
     return true;
 
   int bus_width = local_map->get_n_bytes();
@@ -1078,7 +1123,10 @@ bool uvm_reg_field::is_indv_accessible( uvm_path_e path,
 
   m_parent->get_fields(fields);
 
-  if (fields.size() != 1)
+  if (fields.size() == 1)
+    return true;
+
+  if (fields.size() > 1)
   {
     unsigned int fld_idx = 0;
 
@@ -1184,17 +1232,17 @@ bool uvm_reg_field::predict( uvm_reg_data_t value,
                              const std::string& fname,
                              int lineno )
 {
-  uvm_reg_item* rw = new uvm_reg_item();
-  rw->value[0] = value;
-  rw->path = path;
-  rw->map = map;
-  rw->fname = fname;
-  rw->lineno = lineno;
-  rw->status = UVM_NOT_OK;
+  uvm_reg_item rw;
+  rw.value[0] = value;
+  rw.path = path;
+  rw.map = map;
+  rw.fname = fname;
+  rw.lineno = lineno;
+  rw.status = UVM_IS_OK;
 
-  do_predict(rw, kind, be);
+  do_predict(&rw, kind, be);
 
-  return (rw->status != UVM_NOT_OK);
+  return (rw.status != UVM_NOT_OK);
 }
 
 
@@ -1396,33 +1444,32 @@ uvm_reg_data_t uvm_reg_field::m_update()
 
   uvm_reg_data_t update = 0;
 
-  if( m_access == "RO" )    update = m_desired;
-  if( m_access == "RW" )    update = m_desired;
-  if( m_access == "RC" )    update = m_desired;
-  if( m_access == "RS" )    update = m_desired;
-  if( m_access == "WRC" )   update = m_desired;
-  if( m_access == "WRS" )   update = m_desired;
-  if( m_access == "WC" )    update = m_desired;   // Warn if != 0
-  if( m_access == "WS" )    update = m_desired;   // Warn if != 1
-  if( m_access == "WSRC" )  update = m_desired;   // Warn if != 1
-  if( m_access == "WCRS" )  update = m_desired;   // Warn if != 0
-  if( m_access == "W1C" )   update = ~m_desired;
-  if( m_access == "W1S" )   update = m_desired;
-  if( m_access == "W1T" )   update = m_desired ^ m_mirrored;
-  if( m_access == "W0C" )   update = m_desired;
-  if( m_access == "W0S" )   update = ~m_desired;
-  if( m_access == "W0T" )   update = ~(m_desired ^ m_mirrored);
-  if( m_access == "W1SRC" ) update = m_desired;
-  if( m_access == "W1CRS" ) update = ~m_desired;
-  if( m_access == "W0SRC" ) update = ~m_desired;
-  if( m_access == "W0CRS" ) update = m_desired;
-  if( m_access == "WO" )    update = m_desired;
-  if( m_access == "WOC" )   update = m_desired;   // Warn if != 0
-  if( m_access == "WOS" )   update = m_desired;   // Warn if != 1
-  if( m_access == "W1" )    update = m_desired;
-  if( m_access == "WO1" )   update = m_desired;
-  // default:
-  update = m_desired;
+  if( m_access == "RO" )         update = m_desired;
+  else if( m_access == "RW" )    update = m_desired;
+  else if( m_access == "RC" )    update = m_desired;
+  else if( m_access == "RS" )    update = m_desired;
+  else if( m_access == "WRC" )   update = m_desired;
+  else if( m_access == "WRS" )   update = m_desired;
+  else if( m_access == "WC" )    update = m_desired;   // Warn if != 0
+  else if( m_access == "WS" )    update = m_desired;   // Warn if != 1
+  else if( m_access == "WSRC" )  update = m_desired;   // Warn if != 1
+  else if( m_access == "WCRS" )  update = m_desired;   // Warn if != 0
+  else if( m_access == "W1C" )   update = ~m_desired;
+  else if( m_access == "W1S" )   update = m_desired;
+  else if( m_access == "W1T" )   update = m_desired ^ m_mirrored;
+  else if( m_access == "W0C" )   update = m_desired;
+  else if( m_access == "W0S" )   update = ~m_desired;
+  else if( m_access == "W0T" )   update = ~(m_desired ^ m_mirrored);
+  else if( m_access == "W1SRC" ) update = m_desired;
+  else if( m_access == "W1CRS" ) update = ~m_desired;
+  else if( m_access == "W0SRC" ) update = ~m_desired;
+  else if( m_access == "W0CRS" ) update = m_desired;
+  else if( m_access == "WO" )    update = m_desired;
+  else if( m_access == "WOC" )   update = m_desired;   // Warn if != 0
+  else if( m_access == "WOS" )   update = m_desired;   // Warn if != 1
+  else if( m_access == "W1" )    update = m_desired;
+  else if( m_access == "WO1" )   update = m_desired;
+  else                           update = m_desired;
 
   update &= uvm_mask_size(m_size);
 
@@ -1439,10 +1486,24 @@ bool uvm_reg_field::m_check_access( uvm_reg_item* rw,
                                     uvm_reg_map_info*& map_info, // output
                                     const std::string& caller)
 {
+  if (m_parent == nullptr)
+  {
+    UVM_ERROR(get_type_name(),
+        "Field '" + get_full_name() + "' has no parent register (called from " + caller + ")");
+    rw->status = UVM_NOT_OK;
+    return false;
+  }
 
   if (rw->path == UVM_DEFAULT_PATH)
   {
     uvm_reg_block* blk = m_parent->get_block();
+    if (blk == nullptr)
+    {
+      UVM_ERROR(get_type_name(),
+          "Field '" + get_full_name() + "' parent register has no parent block (called from " + caller + ")");
+      rw->status = UVM_NOT_OK;
+      return false;
+    }
     rw->path = blk->get_default_path();
   }
 
@@ -1467,19 +1528,24 @@ bool uvm_reg_field::m_check_access( uvm_reg_item* rw,
     {
       UVM_ERROR(get_type_name(),
           "No transactor available to physically access memory from map '" +
-           rw->map->get_full_name() + "'");
+          ((rw->map == nullptr) ? (rw->local_map ? rw->local_map->get_full_name() : "<null>") : rw->map->get_full_name()) + "'");
       rw->status = UVM_NOT_OK;
       return false;
     }
 
     map_info = rw->local_map->get_reg_map_info(m_parent);
+    if (map_info == nullptr)
+    {
+      rw->status = UVM_NOT_OK;
+      return false;
+    }
 
     if (map_info->frontdoor == nullptr && map_info->unmapped)
     {
       UVM_ERROR("RegModel",
           "Field '" + get_full_name() +
           "' in register that is unmapped in map '" +
-          rw->map->get_full_name() +
+          ((rw->map == nullptr) ? (rw->local_map ? rw->local_map->get_full_name() : "<null>") : rw->map->get_full_name()) +
           "' and does not have a user-defined frontdoor");
       rw->status = UVM_NOT_OK;
       return false;
@@ -1501,21 +1567,33 @@ bool uvm_reg_field::m_check_access( uvm_reg_item* rw,
 
 void uvm_reg_field::do_write( uvm_reg_item* rw )
 {
-  uvm_reg_data_t value_adjust;
-  uvm_reg_map_info* map_info;
+  uvm_reg_data_t value_adjust = 0;
+  uvm_reg_map_info* map_info = nullptr;
   std::vector<uvm_reg_field*> fields;
   bool bad_side_effect = false;
 
-  m_parent->m_atomic_check_lock(true);
   m_fname  = rw->fname;
   m_lineno = rw->lineno;
 
-  if (!m_check_access(rw, map_info, "write()"))
+  if (m_parent == nullptr)
+  {
+    UVM_ERROR(get_type_name(),
+        "Field '" + get_full_name() + "' has no parent register (called from write())");
+    rw->status = UVM_NOT_OK;
     return;
+  }
+
+  m_parent->m_atomic_check_lock(true);
+
+  if (!m_check_access(rw, map_info, "write()"))
+  {
+    m_parent->m_atomic_check_lock(false);
+    return;
+  }
 
   m_write_in_progress = true;
 
-  if (rw->value[0] >> m_size)
+  if ((rw->value[0] & ~uvm_mask_size(m_size)) != 0) // value wider than the field
   {
     UVM_WARNING("RegModel",
       "uvm_reg_field::write(): Value greater than field '" +
@@ -1539,28 +1617,28 @@ void uvm_reg_field::do_write( uvm_reg_item* rw )
 
     if( (acc == "RO") || (acc == "RC") || (acc == "RS") ||
         (acc == "W1C") || (acc == "W1S") || (acc == "W1T") ||
-        (acc == "W1SRC") || (acc == "W1CRC") )
+        (acc == "W1SRC") || (acc == "W1CRS") )
     {
       // Use all 0's
       value_adjust |= 0;
     }
-
-    if( (acc == "W0C") || (acc == "W0S") || (acc == "W0T") ||
-        (acc == "W0SRC") || (acc == "W0CRS") )
+    else if( (acc == "W0C") || (acc == "W0S") || (acc == "W0T") ||
+             (acc == "W0SRC") || (acc == "W0CRS") )
     {
       // Use all 1's
       value_adjust |= uvm_mask_size(fields[i]->get_n_bits()) << fields[i]->get_lsb_pos();
     }
-
-    if( (acc == "WC") || (acc == "WS") || (acc == "WCRS") ||
-        (acc == "WSRC") || (acc == "WOC") || (acc == "WOS") )
+    else if( (acc == "WC") || (acc == "WS") || (acc == "WCRS") ||
+             (acc == "WSRC") || (acc == "WOC") || (acc == "WOS") )
     {
       // These might have side effects! Bad!
       bad_side_effect = true;
     }
-
-    //default:
-    value_adjust |= fields[i]->m_mirrored << fields[i]->get_lsb_pos();
+    else
+    {
+      //default:
+      value_adjust |= fields[i]->m_mirrored << fields[i]->get_lsb_pos();
+    }
   } // for-loop
 
 #ifdef UVM_REG_NO_INDIVIDUAL_FIELD_ACCESS
@@ -1570,7 +1648,7 @@ void uvm_reg_field::do_write( uvm_reg_item* rw )
   m_parent->do_write(rw);
 #else
 
-  if (!is_indv_accessible(rw->path, rw->local_map))
+  if (rw->path == UVM_BACKDOOR || rw->local_map == nullptr || !is_indv_accessible(rw->path, rw->local_map))
   {
     rw->element_kind = UVM_REG;
     rw->element = m_parent;
@@ -1597,24 +1675,51 @@ void uvm_reg_field::do_write( uvm_reg_item* rw )
 
     if (rw->status != UVM_IS_OK)
     {
+      delete cbs;
       m_write_in_progress = false;
       m_parent->m_set_busy(0);
       m_parent->m_atomic_check_lock(0);
       return;
     }
 
-    rw->local_map->do_write(rw);
+    if (map_info != nullptr && map_info->frontdoor != nullptr)
+    {
+      uvm_reg_frontdoor* fd = map_info->frontdoor;
+      fd->rw_info = rw;
+      if (fd->sequencer == nullptr)
+        fd->sequencer = system_map->get_sequencer();
+      fd->start(fd->sequencer, rw->parent);
+    }
+    else
+      rw->local_map->do_write(rw);
+
+    m_parent->m_set_busy(false);
 
     if (system_map->get_auto_predict())
-      // TODO from UVM-SV: Call parent.m_sample();
+    {
+      uvm_status_e status = rw->status;
+      if (rw->status != UVM_NOT_OK)
+      {
+        uvm_reg_data_t field_mask = uvm_mask_size(m_size) << m_lsb;
+        uvm_reg_data_t byte_en = 0;
+        for (unsigned int i = 0; i < m_parent->get_n_bytes(); ++i)
+          byte_en[i] = (((field_mask >> (i * 8)) & 0xff) != 0) ? 1 : 0;
+        uvm_reg_data_t reg_val =
+            (m_parent->get_mirrored_value() & ~field_mask) |
+            ((rw->value[0] & uvm_mask_size(m_size)) << m_lsb);
+        m_parent->m_sample(reg_val, byte_en, 0, rw->map);
+        uvm_reg_block* blk = m_parent->get_parent();
+        if (blk != nullptr && map_info != nullptr)
+          blk->m_sample(map_info->offset, 0, rw->map);
+      }
       do_predict(rw, UVM_PREDICT_WRITE);
-
-    post_write(rw);
+      rw->status = status;
+    }
 
     for( uvm_reg_cbs* cb = cbs->first(); cb != nullptr; cb = cbs->next())
       cb->post_write(rw);
 
-    m_parent->m_set_busy(false);
+    post_write(rw);
 
     delete cbs;
   }
@@ -1634,16 +1739,29 @@ void uvm_reg_field::do_write( uvm_reg_item* rw )
 
 void uvm_reg_field::do_read( uvm_reg_item* rw )
 {
-  uvm_reg_map_info* map_info;
+  uvm_reg_map_info* map_info = nullptr;
   bool bad_side_effect = false;
 
-  m_parent->m_atomic_check_lock(true);
   m_fname  = rw->fname;
   m_lineno = rw->lineno;
+
+  if (m_parent == nullptr)
+  {
+    UVM_ERROR(get_type_name(),
+        "Field '" + get_full_name() + "' has no parent register (called from read())");
+    rw->status = UVM_NOT_OK;
+    return;
+  }
+
+  m_parent->m_atomic_check_lock(true);
   m_read_in_progress = true;
 
   if (!m_check_access(rw, map_info, "read()"))
+  {
+    m_read_in_progress = false;
+    m_parent->m_atomic_check_lock(false);
     return;
+  }
 
 #ifdef UVM_REG_NO_INDIVIDUAL_FIELD_ACCESS
   rw->element_kind = UVM_REG;
@@ -1653,7 +1771,7 @@ void uvm_reg_field::do_read( uvm_reg_item* rw )
   bad_side_effect = true;
 #else
 
-  if (!is_indv_accessible(rw->path,rw->local_map))
+  if (rw->path == UVM_BACKDOOR || rw->local_map == nullptr || !is_indv_accessible(rw->path, rw->local_map))
   {
     rw->element_kind = UVM_REG;
     rw->element = m_parent;
@@ -1675,24 +1793,51 @@ void uvm_reg_field::do_read( uvm_reg_item* rw )
 
     if (rw->status != UVM_IS_OK)
     {
+      delete cbs;
       m_read_in_progress = false;
       m_parent->m_set_busy(false);
       m_parent->m_atomic_check_lock(false);
       return;
     }
 
-    rw->local_map->do_read(rw);
+    if (map_info != nullptr && map_info->frontdoor != nullptr)
+    {
+      uvm_reg_frontdoor* fd = map_info->frontdoor;
+      fd->rw_info = rw;
+      if (fd->sequencer == nullptr)
+        fd->sequencer = system_map->get_sequencer();
+      fd->start(fd->sequencer, rw->parent);
+    }
+    else
+      rw->local_map->do_read(rw);
+
+    m_parent->m_set_busy(false);
 
     if (system_map->get_auto_predict())
-      // TODO from UVM-SV: Call parent.m_sample();
+    {
+      uvm_status_e status = rw->status;
+      if (rw->status != UVM_NOT_OK)
+      {
+        uvm_reg_data_t field_mask = uvm_mask_size(m_size) << m_lsb;
+        uvm_reg_data_t byte_en = 0;
+        for (unsigned int i = 0; i < m_parent->get_n_bytes(); ++i)
+          byte_en[i] = (((field_mask >> (i * 8)) & 0xff) != 0) ? 1 : 0;
+        uvm_reg_data_t reg_val =
+            (m_parent->get_mirrored_value() & ~field_mask) |
+            ((rw->value[0] & uvm_mask_size(m_size)) << m_lsb);
+        m_parent->m_sample(reg_val, byte_en, 1, rw->map);
+        uvm_reg_block* blk = m_parent->get_parent();
+        if (blk != nullptr && map_info != nullptr)
+          blk->m_sample(map_info->offset, 1, rw->map);
+      }
       do_predict(rw, UVM_PREDICT_READ);
-
-    post_read(rw);
+      rw->status = status;
+    }
 
     for( uvm_reg_cbs* cb = cbs->first(); cb != nullptr; cb = cbs->next() )
       cb->post_read(rw);
 
-    m_parent->m_set_busy(0);
+    post_read(rw);
 
     delete cbs;
 
@@ -1802,7 +1947,10 @@ void uvm_reg_field::do_predict( uvm_reg_item* rw,
                   acc == "WOC" ||
                   acc == "WOS" ||
                   acc == "WO1")
+              {
+                delete cbs;
                 return;
+              }
         } // if
 
       for( uvm_reg_cbs* cb = cbs->first(); cb != nullptr; cb = cbs->next() )
@@ -1818,13 +1966,21 @@ void uvm_reg_field::do_predict( uvm_reg_item* rw,
 
     case UVM_PREDICT_DIRECT:
     {
-      if (m_parent->is_busy())
+      if (m_parent != nullptr && m_parent->is_busy())
       {
         UVM_WARNING("RegModel", "Trying to predict value of field '" +
             get_name() + "' while register '" + m_parent->get_full_name() +
             "' is being accessed");
         rw->status = UVM_NOT_OK;
+        return;
       }
+
+      uvm_reg_field_cb_iter* cbs = new uvm_reg_field_cb_iter(this);
+      for (uvm_reg_cbs* cb = cbs->first(); cb != nullptr; cb = cbs->next())
+        cb->post_predict(this, m_mirrored, field_val,
+            UVM_PREDICT_DIRECT, rw->path, rw->map);
+      field_val &= uvm_mask_size(m_size);
+      delete cbs;
       break;
     } // case
   } // switch
@@ -1840,6 +1996,141 @@ void uvm_reg_field::do_predict( uvm_reg_item* rw,
 //
 // Implementation defined
 //----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// member function: m_rng_next_instance
+//
+// Implementation defined
+//
+// Returns how many fields with full name \p name were seeded before.
+//----------------------------------------------------------------------
+
+unsigned int uvm_reg_field::m_rng_next_instance( const std::string& name )
+{
+  static std::map<std::string, unsigned int> count;
+  return count[name]++;
+}
+
+//----------------------------------------------------------------------
+// member function: randomize
+//
+//! Sets the desired value of the field to a random value which fits the
+//! size of the field, if the field was configured with ~is_rand~ (see
+//! also set_rand_mode). The value of any other field does not change.
+//! Calls pre_randomize before and post_randomize after the new value
+//! has been chosen. Always returns true.
+//!
+//! The values of a field only depend on the global seed (see
+//! uvm_set_random_seed) and on the full name which the field has when
+//! it is randomized for the first time, or for the first time after
+//! the global seed has been changed. They do not depend on the order
+//! in which the fields of a model are randomized. Fields with the same
+//! full name, as in two models which are both named "regmodel", get
+//! different values: like the seeds of uvm_create_random_seed, they are
+//! told apart by the order in which they are randomized for the first
+//! time. Only the order among fields with the same full name matters.
+//!
+//! In UVM-SystemVerilog the field is randomized with the built-in
+//! method randomize of the language.
+//----------------------------------------------------------------------
+
+bool uvm_reg_field::randomize()
+{
+  pre_randomize();
+
+  if (m_rand_mode)
+  {
+    if (!m_rng_seeded || m_rng_global_seed != uvm_get_random_seed())
+    {
+      // 64 bit FNV-1a hash of the global seed, the full name and the
+      // number of fields with this full name which were randomized
+      // before this one. The seed table of uvm_create_random_seed is
+      // not used: it is cleared when the global seed changes, so the
+      // number would depend on the order in which fields are reseeded.
+      const std::string name = get_full_name();
+
+      if (!m_rng_seeded)
+        m_rng_instance = m_rng_next_instance(name);
+
+      m_rng_global_seed = uvm_get_random_seed();
+      m_rng_state = 0xcbf29ce484222325ULL ^ m_rng_global_seed;
+      m_rng_state *= 0x100000001b3ULL;
+      for (std::string::size_type i = 0; i < name.size(); i++)
+      {
+        m_rng_state ^= static_cast<unsigned char>(name[i]);
+        m_rng_state *= 0x100000001b3ULL;
+      }
+      // The first field with a name keeps the values it had before
+      // fields with the same name were told apart. A zero byte, which
+      // a name does not contain, and four bytes of the number follow
+      // the name, so that no other name gives the same state.
+      if (m_rng_instance != 0)
+      {
+        m_rng_state *= 0x100000001b3ULL;
+        for (int i = 0; i < 32; i += 8)
+        {
+          m_rng_state ^= (m_rng_instance >> i) & 0xff;
+          m_rng_state *= 0x100000001b3ULL;
+        }
+      }
+      m_rng_seeded = true;
+    }
+
+    // a field which is larger than uvm_reg_data_t has been reported by configure
+    const unsigned int size = (m_size < UVM_REG_DATA_WIDTH) ? m_size : UVM_REG_DATA_WIDTH;
+
+    uvm_reg_data_t value = 0;
+
+    for (unsigned int lsb = 0; lsb < size; lsb += 64)
+    {
+      // SplitMix64: a small generator, since a register model can have
+      // a very large number of fields
+      m_rng_state += 0x9e3779b97f4a7c15ULL;
+      sc_dt::uint64 bits = m_rng_state;
+      bits = (bits ^ (bits >> 30)) * 0xbf58476d1ce4e5b9ULL;
+      bits = (bits ^ (bits >> 27)) * 0x94d049bb133111ebULL;
+      bits ^= bits >> 31;
+
+      value |= uvm_reg_data_t(bits) << lsb;
+    }
+
+    if (size < UVM_REG_DATA_WIDTH)
+      value &= (uvm_reg_data_t(1) << size) - 1;
+
+    m_value = value;
+  }
+
+  post_randomize();
+
+  return true;
+}
+
+//----------------------------------------------------------------------
+// member function: set_rand_mode
+//
+//! Implementation defined
+//!
+//! Turns the randomization of the field by the member function
+//! randomize on or off (value.rand_mode() in UVM-SystemVerilog).
+//----------------------------------------------------------------------
+
+void uvm_reg_field::set_rand_mode( bool on )
+{
+  m_rand_mode = on;
+}
+
+//----------------------------------------------------------------------
+// member function: get_rand_mode
+//
+//! Implementation defined
+//!
+//! Returns true if the field is changed by the member function randomize.
+//----------------------------------------------------------------------
+
+bool uvm_reg_field::get_rand_mode() const
+{
+  return m_rand_mode;
+}
 
 void uvm_reg_field::pre_randomize()
 {
@@ -1898,12 +2189,17 @@ std::string uvm_reg_field::convert2string() const
     else
       m_str << "";
 
-  cvt_str << prefix << " " << get_access() << " " << reg_->get_name()
-          << "[" << get_lsb_pos() + get_n_bits() - 1
+  std::string reg_name = (reg_ != nullptr) ? reg_->get_name() : "<unconfigured>";
+  std::string bin_str = (get_n_bits() > 0)
+      ? m_desired.range(get_n_bits()-1,0).to_string(sc_dt::SC_BIN_US, false)
+      : "0";
+
+  cvt_str << prefix << " " << get_access() << " " << reg_name
+          << "[" << (get_n_bits() > 0 ? static_cast<int>(get_lsb_pos() + get_n_bits() - 1) : 0)
           << ":" << get_lsb_pos()
           << "] = 0x"
           << std::hex << m_desired.to_uint64()
-          << " (0b" << m_desired.range(get_n_bits()-1,0).to_string(sc_dt::SC_BIN_US, false)
+          << " (0b" << bin_str
           << ")"<< m_str.str();
 
   if(m_read_in_progress)
@@ -1945,8 +2241,16 @@ uvm_object* uvm_reg_field::clone()
 
 void uvm_reg_field::do_copy( const uvm_object& rhs )
 {
-  UVM_WARNING("RegModel","RegModel field copy not yet implemented");
-  // TODO just a set(rhs.get()) ?
+  const uvm_reg_field* rhs_ = dynamic_cast<const uvm_reg_field*>(&rhs);
+  if (rhs_ == nullptr)
+  {
+    UVM_WARNING("RegModel", "Attempted to copy non-uvm_reg_field into uvm_reg_field");
+    return;
+  }
+  const uvm_reg_data_t mask = uvm_mask_size(m_size);
+  m_desired = rhs_->m_desired & mask;
+  m_mirrored = rhs_->m_mirrored & mask;
+  m_value = rhs_->m_value & mask;
 }
 
 
@@ -1959,9 +2263,20 @@ void uvm_reg_field::do_copy( const uvm_object& rhs )
 bool uvm_reg_field::do_compare( const uvm_object& rhs,
                                 const uvm_comparer* comparer ) const
 {
-  UVM_WARNING("RegModel","RegModel field compare not yet implemented");
-  // TODO just a return (get() == rhs.get()) ?
-  return false;
+  const uvm_reg_field* rhs_ = dynamic_cast<const uvm_reg_field*>(&rhs);
+  if (rhs_ == nullptr)
+    return false;
+  if (comparer != nullptr)
+  {
+    const int len = static_cast<int>(m_size > 0 ? m_size : 1);
+    sc_dt::sc_bv_base lhs_bv(len);
+    sc_dt::sc_bv_base rhs_bv(len);
+    lhs_bv = m_desired;
+    rhs_bv = rhs_->m_desired;
+    return comparer->compare_field(
+        get_name(), uvm_bitstream_t(lhs_bv), uvm_bitstream_t(rhs_bv), m_size);
+  }
+  return m_desired == rhs_->m_desired;
 }
 
 //----------------------------------------------------------------------

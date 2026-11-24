@@ -34,6 +34,8 @@
 #include <iomanip>
 #include <sstream>
 #include <cstdarg>
+#include <map>
+#include <utility>
 
 #include <systemc>
 
@@ -46,6 +48,50 @@
 using namespace sc_core;
 
 namespace uvm {
+
+//----------------------------------------------------------------------
+// Local functions for the UVM_STRING and UVM_TIME radixes
+//----------------------------------------------------------------------
+
+// Format "%0s": each group of 8 bits, starting from the most significant
+// one, is a character; leading null characters are not printed
+static std::string m_uvm_bits_to_ascii( const sc_dt::sc_unsigned& value, int size )
+{
+  std::string str;
+  for( int i = (size + 7) / 8 - 1; i >= 0; i-- )
+  {
+    int hi = std::min(8 * i + 7, size - 1);
+    char c = static_cast<char>(value.range(hi, 8 * i).to_uint());
+    if (c == 0 && str.empty())
+      continue;
+    str += c;
+  }
+  return str;
+}
+
+// Formats "%0b", "%0o" and "%0x": the digits without leading zeros
+static std::string m_uvm_strip_leading_zeros( const std::string& digits )
+{
+  std::string::size_type first = digits.find_first_not_of('0');
+  if (first == std::string::npos)
+    return "0";
+  return digits.substr(first);
+}
+
+// Format "%0t": the value is a number of time resolution units.
+// Building or printing an sc_time fixes the time resolution, which may
+// still be set while the simulation is not running; print the plain
+// number of time resolution units then, as %0t does by default.
+static std::string m_uvm_value_to_time( sc_dt::uint64 value )
+{
+  if (!sc_core::sc_is_running())
+  {
+    std::ostringstream str;
+    str << value;
+    return str.str();
+  }
+  return sc_core::sc_time::from_value(value).to_string();
+}
 
 //----------------------------------------------------------------------
 // Global function: uvm_vector_to_string
@@ -65,7 +111,8 @@ std::string uvm_vector_to_string(const uvm_integral_t& val,
   switch(radix) {
     case UVM_BIN:      // format "%0s%0b"
     {
-      rstr << radix_str << std::bitset<16>(value);
+      rstr << radix_str
+           << m_uvm_strip_leading_zeros(std::bitset<64>(reduced_value.to_uint64()).to_string());
       return rstr.str();
     }
     case UVM_OCT:      // format "%0s%0o"
@@ -75,17 +122,19 @@ std::string uvm_vector_to_string(const uvm_integral_t& val,
     }
     case UVM_UNSIGNED: // format "%0s%0d"
     {
-      rstr << radix_str << std::dec << value;
+      rstr << radix_str << std::dec << reduced_value.to_uint64();
       return rstr.str();
     }
     case UVM_STRING:  // format "%0s%0s"
     {
-      rstr << radix_str << (char)value;
+      sc_dt::sc_unsigned uvalue(size);
+      uvalue = reduced_value.to_uint64();
+      rstr << radix_str << m_uvm_bits_to_ascii(uvalue, size);
       return rstr.str();
     }
-    case UVM_TIME:    // format "%0s%0t" ??
+    case UVM_TIME:    // format "%0s%0t"
     {
-      rstr << radix_str << value; // TODO what should be the time format?
+      rstr << radix_str << m_uvm_value_to_time(reduced_value.to_uint64());
       return rstr.str();
     }
     case UVM_DEC:    // format "%0s%0d"
@@ -122,27 +171,31 @@ std::string uvm_vector_to_string( const uvm_bitstream_t& val,
   switch(radix) {
     case UVM_BIN:      // format "%0s%0b"
     {
-      rstr << radix_str << value.to_string(sc_dt::SC_BIN_US, false); // TODO no prefix?
+      rstr << radix_str << m_uvm_strip_leading_zeros(value.to_string(sc_dt::SC_BIN_US, false));
       return rstr.str();
     }
     case UVM_OCT:      // format "%0s%0o"
     {
-      rstr << radix_str << value.to_string(sc_dt::SC_OCT_US, false);
+      rstr << radix_str << m_uvm_strip_leading_zeros(value.to_string(sc_dt::SC_OCT_US, false));
       return rstr.str();
     }
     case UVM_UNSIGNED: // format "%0s%0d"
     {
-      rstr << radix_str << std::dec << value.to_uint();
+      rstr << radix_str << value.to_string(sc_dt::SC_DEC, false);
       return rstr.str();
     }
     case UVM_STRING:  // format "%0s%0s"
     {
-      rstr << radix_str << (char)value.to_int();
+      rstr << radix_str << m_uvm_bits_to_ascii(value, size);
       return rstr.str();
     }
-    case UVM_TIME:    // format "%0s%0t" ??
+    case UVM_TIME:    // format "%0s%0t"
     {
-      rstr << radix_str << value; // TODO what should be the time format?
+      // saturate a value that does not fit in sc_time
+      sc_dt::uint64 t = ~sc_dt::UINT64_ZERO;
+      if (size <= 64 || (value >> 64) == 0)
+        t = value.to_uint64();
+      rstr << radix_str << m_uvm_value_to_time(t);
       return rstr.str();
     }
     case UVM_DEC:    // format "%0s%0d"
@@ -152,7 +205,7 @@ std::string uvm_vector_to_string( const uvm_bitstream_t& val,
     }
     default:         //  format "%0s%0x"
     {
-      rstr << radix_str << value.to_string(sc_dt::SC_HEX_US, false);
+      rstr << radix_str << m_uvm_strip_leading_zeros(value.to_string(sc_dt::SC_HEX_US, false));
       return rstr.str();
     }
   }
@@ -174,6 +227,109 @@ std::string uvm_flatten_name( const std::string& full_name, const char* scope_se
   return s;
 }
 
+
+//----------------------------------------------------------------------
+// Random seeding
+//
+// The global seed and the table of the seeds which were created from it.
+// Both are function-local statics so that they can be used during static
+// initialization.
+//----------------------------------------------------------------------
+
+namespace {
+
+unsigned int& m_global_random_seed()
+{
+  static unsigned int seed = 1;
+  return seed;
+}
+
+typedef std::map<std::pair<std::string, std::string>,
+                 std::pair<unsigned int, unsigned int> > uvm_seed_table_t;
+
+uvm_seed_table_t& m_random_seed_table()
+{
+  static uvm_seed_table_t table;
+  return table;
+}
+
+// FNV-1a hash. std::hash is not used, since its result differs between
+// standard library implementations.
+unsigned int m_oneway_hash( const std::string& str, unsigned int seed )
+{
+  unsigned int hash = 2166136261u ^ seed;
+  for (std::string::size_type i = 0; i < str.size(); i++)
+  {
+    hash ^= static_cast<unsigned char>(str[i]);
+    hash *= 16777619u;
+  }
+  return hash;
+}
+
+} // anonymous namespace
+
+//----------------------------------------------------------------------
+// Global function: uvm_set_random_seed
+//
+//! Implementation defined
+//!
+//! Sets the global seed from which all seeds returned by
+//! uvm_create_random_seed are derived. Seeds which were created before
+//! are forgotten. Should be called before run_test.
+//----------------------------------------------------------------------
+
+void uvm_set_random_seed( unsigned int seed )
+{
+  m_global_random_seed() = seed;
+  m_random_seed_table().clear();
+}
+
+//----------------------------------------------------------------------
+// Global function: uvm_get_random_seed
+//
+//! Implementation defined
+//!
+//! Returns the global seed (uvm_global_random_seed in UVM-SystemVerilog).
+//----------------------------------------------------------------------
+
+unsigned int uvm_get_random_seed()
+{
+  return m_global_random_seed();
+}
+
+//----------------------------------------------------------------------
+// Global function: uvm_create_random_seed
+//
+//! Creates a seed which is unique for the combination of the type name
+//! \p type_id and the instance name \p inst_id. The seed only depends on
+//! these two names and on the global seed, so it is stable when other
+//! parts of the environment change. Repeated calls with the same names
+//! return a new seed each time.
+//----------------------------------------------------------------------
+
+unsigned int uvm_create_random_seed( const std::string& type_id,
+                                     const std::string& inst_id )
+{
+  const std::string inst = inst_id.empty() ? "__global__" : inst_id;
+
+  uvm_seed_table_t& table = m_random_seed_table();
+  std::pair<std::string, std::string> key(inst, type_id);
+
+  uvm_seed_table_t::iterator it = table.find(key);
+  if (it == table.end())
+  {
+    unsigned int seed = m_oneway_hash(type_id + "::" + inst, m_global_random_seed());
+    it = table.insert(std::make_pair(key, std::make_pair(seed, 0u))).first;
+  }
+
+  unsigned int& seed = it->second.first;
+  unsigned int& count = it->second.second;
+
+  seed += count;
+  count++;
+
+  return seed;
+}
 
 //----------------------------------------------------------------------
 // Global function: uvm_leaf_scope

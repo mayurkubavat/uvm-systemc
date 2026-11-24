@@ -9,7 +9,7 @@ Mem[6] = 0a1abd7f3042ae12f
 Mem[7] = 06c6f1e45458246e8
 UVM_INFO @ 0 s: reporter [RNTST] Running test test...
 test: (test@<removed by verify-uvm.pl>) {
-  drv: (user_driver@<removed by verify-uvm.pl>) @123
+  drv: (user_driver@<removed by verify-uvm.pl>) @127
   sqr: (user_sequencer@<removed by verify-uvm.pl>) {
     arbitration_queue: -
     lock_queue: -
@@ -23,7 +23,7 @@ model: (mmap_type@<removed by verify-uvm.pl>) {
   default_map: (uvm_reg_map@<removed by verify-uvm.pl>) {
     endian: UVM_LITTLE_ENDIAN
     effective sequencer: test.sqr
-    mem: (mem_type@<removed by verify-uvm.pl> + 0x100) @120 + 0x100
+    mem: (mem_type@<removed by verify-uvm.pl> + 0x100) @122 + 0x100
   }
 }
 UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter@@user_test_seq [TEST_SEQ] <><><><><><><><><><><><><><><><><><><><><><><>
@@ -41,6 +41,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 2 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 1 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -51,6 +52,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 3 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 2 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -61,6 +63,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 4 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 3 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -71,6 +74,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 5 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 4 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -81,6 +85,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 6 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 5 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -91,6 +96,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 7 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 6 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -101,6 +107,7 @@ txn: (user_transaction@<removed by verify-uvm.pl>) {
 }
 UVM_INFO <removed by verify-uvm.pl> @ 8 us: test.drv [USRDRV] Received following transaction :
 txn: (user_transaction@<removed by verify-uvm.pl>) {
+  begin_time: 7 us
   depth: 2
   parent sequence (name): user_test_seq
   parent sequence (full name): user_test_seq
@@ -117,6 +124,14 @@ Mem[4] = 02726252423222120
 Mem[5] = 02f2e2d2c2b2a2928
 Mem[6] = 03736353433323130
 Mem[7] = 03f3e3d3c3b3a3938
+Backdoor read Mem[0] UVM_IS_OK = 00706050403020100
+Backdoor read Mem[1] UVM_IS_OK = 00f0e0d0c0b0a0908
+Backdoor read Mem[2] UVM_IS_OK = 01716151413121110
+Backdoor read Mem[3] UVM_IS_OK = 01f1e1d1c1b1a1918
+Backdoor read Mem[4] UVM_IS_OK = 02726252423222120
+Backdoor read Mem[5] UVM_IS_OK = 02f2e2d2c2b2a2928
+Backdoor read Mem[6] UVM_IS_OK = 03736353433323130
+Backdoor read Mem[7] UVM_IS_OK = 03f3e3d3c3b3a3938
 ** UVM TEST PASSED **
 UVM_INFO <removed by verify-uvm.pl> @ 8 us: reporter [UVM/REPORT/CATCHER]
 --- UVM Report catcher Summary ---

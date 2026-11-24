@@ -253,9 +253,10 @@ void uvm_config_db<T>::set( uvm_component* cntxt,
 
     if(r == nullptr)
     {
-      std::map< std::string, uvm_resource<T>* > pool;
-      std::string key = loc_instname+field_name;
-      m_rsc[cntxt] = pool;
+      std::map< std::string, uvm_resource<T>* >& pool = m_rsc[cntxt];
+      std::string key = loc_instname;
+      key.push_back('\0');
+      key += field_name;
       r = new uvm_resource<T>(field_name, loc_instname);
       pool[key] = r;
     }
@@ -284,14 +285,26 @@ void uvm_config_db<T>::set( uvm_component* cntxt,
       r->set_override();
     }
 
-    if(m_waiters.find(field_name) != m_waiters.end()) // if exists
+    if(!m_waiters.empty())
     {
-      m_uvm_waiter* w;
-      for(int i = 0; i < m_waiters[field_name]->size(); i++)
+      const std::string inst_re = uvm_glob_to_re(loc_instname);
+      const std::string field_re = uvm_glob_to_re(field_name);
+      for(waiters_mapItT it = m_waiters.begin(); it != m_waiters.end(); ++it)
       {
-        w = m_waiters[field_name]->get(i);
-        if( uvm_re_match( uvm_glob_to_re(inst_name), w->inst_name ) )
-          w->trigger.notify(sc_core::SC_ZERO_TIME);
+        if(!uvm_re_match(field_re, it->first))
+        {
+          uvm_queue<m_uvm_waiter*>* wq = it->second;
+          if(wq == nullptr)
+            continue;
+          for(int i = 0; i < wq->size(); i++)
+          {
+            m_uvm_waiter* w = wq->get(i);
+            // match the full path of the setting, as stored in the resource;
+            // uvm_re_match returns false for a match
+            if( !uvm_re_match( inst_re, w->inst_name ) )
+              w->trigger.notify(sc_core::SC_ZERO_TIME);
+          }
+        }
       }
     }
 
@@ -322,7 +335,7 @@ bool uvm_config_db<T>::get( uvm_component* cntxt,
 {
   uvm_resource<T>* r = nullptr;
   uvm_resource_pool* rp = uvm_resource_pool::get();
-  uvm_resource_types::rsrc_q_t* rq = nullptr;
+  uvm_resource_types::rsrc_q_t rq;
   uvm_root* top = nullptr;
   uvm_coreservice_t* cs = nullptr;
 
@@ -339,8 +352,8 @@ bool uvm_config_db<T>::get( uvm_component* cntxt,
     if( (!cntxt->get_full_name().empty()) && (cntxt != top) )
       loc_instname = cntxt->get_full_name() + "." + inst_name;
 
-  rq = rp->lookup_regex_names(loc_instname, field_name, uvm_resource<T>::get_type() );
-  r = uvm_resource<T>::get_highest_precedence(rq);
+  rp->m_lookup_regex_names(rq, loc_instname, field_name, uvm_resource<T>::get_type() );
+  r = uvm_resource<T>::get_highest_precedence(&rq);
 
   if(r == nullptr)
   {
@@ -383,18 +396,26 @@ bool uvm_config_db<T>::exists( uvm_component* cntxt,
                                bool spell_chk )
 {
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
+  uvm_root* top = cs->get_root();
 
   std::string loc_inst_name = inst_name;
   if(cntxt == nullptr)
-    cntxt = cs->get_root();
+    cntxt = top;
 
+  // build the scope in the same way as set() and get() do
   if(inst_name.empty())
     loc_inst_name = cntxt->get_full_name();
   else
-    if(!cntxt->get_full_name().empty())
+    if( (!cntxt->get_full_name().empty()) && (cntxt != top) )
       loc_inst_name = cntxt->get_full_name() + "." + inst_name;
 
-  return (uvm_resource_db<T>::get_by_name(loc_inst_name, field_name, spell_chk) != nullptr);
+  uvm_resource_pool* rp = uvm_resource_pool::get();
+  uvm_resource_types::rsrc_q_t rq;
+  rp->m_lookup_regex_names(rq, loc_inst_name, field_name, uvm_resource<T>::get_type());
+  uvm_resource<T>* r = uvm_resource<T>::get_highest_precedence(&rq);
+  if(r == nullptr && spell_chk)
+    rp->spell_check(field_name);
+  return (r != nullptr);
 }
 
 //----------------------------------------------------------------------
@@ -418,38 +439,66 @@ void uvm_config_db<T>::wait_modified( uvm_component* cntxt,
   m_uvm_waiter* waiter = nullptr;
   std::string loc_inst_name = inst_name;
 
-  if(cntxt == nullptr)
-    cntxt = cs->get_root();
+  uvm_root* top = cs->get_root();
 
-  if(cntxt != cs->get_root())
-  {
-    if(!inst_name.empty())
+  if(cntxt == nullptr)
+    cntxt = top;
+
+  // build the instance name in the same way as set() and get() do
+  if(inst_name.empty())
+    loc_inst_name = cntxt->get_full_name();
+  else
+    if( (!cntxt->get_full_name().empty()) && (cntxt != top) )
       loc_inst_name = cntxt->get_full_name() + "." + inst_name;
-    else
-      loc_inst_name = cntxt->get_full_name();
-  }
 
   waiter = new m_uvm_waiter(loc_inst_name, field_name);
 
-  if(m_waiters.find(field_name) == m_waiters.end() ) // not exist
-    m_waiters[field_name] = new uvm_queue<m_uvm_waiter*>;
+  uvm_queue<m_uvm_waiter*>* wq = nullptr;
+  waiters_mapItT wit = m_waiters.find(field_name);
+  if(wit == m_waiters.end() ) // not exist
+  {
+    wq = new uvm_queue<m_uvm_waiter*>;
+    m_waiters[field_name] = wq;
+  }
+  else
+    wq = wit->second;
 
-  m_waiters[field_name]->push_back(waiter);
+  wq->push_back(waiter);
 
   //p.set_randstate(rstate); // TODO randstate
 
+  struct waiter_guard
+  {
+    waiters_mapT& waiters;
+    const std::string& field;
+    m_uvm_waiter* w;
+
+    ~waiter_guard()
+    {
+      waiters_mapItT it = waiters.find(field);
+      if(it != waiters.end() && it->second != nullptr)
+      {
+        uvm_queue<m_uvm_waiter*>* q = it->second;
+        for(int i = 0; i < q->size(); ++i)
+        {
+          if(q->get(i) == w)
+          {
+            q->do_delete(i);
+            break;
+          }
+        }
+        if(q->size() == 0)
+        {
+          delete q;
+          waiters.erase(it);
+        }
+      }
+      delete w;
+    }
+  } guard{m_waiters, field_name, waiter};
+
   // wait on the waiter to trigger
   sc_core::wait(waiter->trigger);
-
-  // Remove the waiter from the waiter list
-  for(int i = 0; i < m_waiters[field_name]->size(); ++i)
-  {
-     if(m_waiters[field_name]->get(i) == waiter)
-     {
-       m_waiters[field_name]->do_delete(i); // TODO also delete from memory?
-       break;
-     }
-  }
 }
 
 
@@ -471,18 +520,19 @@ uvm_resource<T>* uvm_config_db<T>::m_get_resource_match( uvm_component* cntxt,
                                                          const std::string& field_name,
                                                          const std::string& inst_name)
 {
-  std::map< std::string, uvm_resource<T>* > pool;
-  std::string lookup;
-
-  if( m_rsc.find(cntxt) == m_rsc.end() )
+  typename rsc_t::const_iterator pool_it = m_rsc.find(cntxt);
+  if( pool_it == m_rsc.end() )
     return nullptr;
 
-  lookup = inst_name+field_name;
-  pool = m_rsc[cntxt];
+  const std::map< std::string, uvm_resource<T>* >& pool = pool_it->second;
+  std::string lookup = inst_name;
+  lookup.push_back('\0');
+  lookup += field_name;
 
-  if(pool.find(lookup) == pool.end()) return nullptr;
+  typename std::map< std::string, uvm_resource<T>* >::const_iterator it = pool.find(lookup);
+  if(it == pool.end()) return nullptr;
 
-  return (pool.find(lookup))->second;
+  return it->second;
 }
 
 } // namespace uvm

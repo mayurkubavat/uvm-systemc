@@ -22,12 +22,14 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
 #include <sstream>
 #include <systemc>
 #include "sysc/kernel/sc_dynamic_processes.h"
 
 #include "uvmsc/seq/uvm_sequence_base.h"
 #include "uvmsc/seq/uvm_sequencer_base.h"
+#include "uvmsc/policy/uvm_recorder.h"
 #include "uvmsc/report/uvm_report_object.h"
 #include "uvmsc/base/uvm_object_globals.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
@@ -43,7 +45,8 @@ namespace uvm {
 //----------------------------------------------------------------------
 
 uvm_sequence_base::uvm_sequence_base( uvm_object_name name_ )
- : uvm_sequence_item( name_ ), m_sequence_state(UVM_CREATED)
+ : uvm_sequence_item( name_ ), do_not_randomize(false),
+   m_sequence_state(UVM_CREATED)
 {
   m_wait_for_grant_semaphore = 0;
   m_next_transaction_id = 1;
@@ -53,11 +56,14 @@ uvm_sequence_base::uvm_sequence_base( uvm_object_name name_ )
 
   m_priority = -1;
   m_use_response_handler = false;
-  response_queue_depth = -1; // no limit on depth
+  response_queue_depth = 8;
   response_queue_error_report_disabled = false;
 
   response_queue.clear();
   m_tr_handle = 0;
+  m_tr_seq_sqr = nullptr;
+  m_tr_items.clear();
+  m_auto_phase_obj_raised = false;
 
   is_rel_default = true;
   wait_rel_default = false;
@@ -73,6 +79,23 @@ uvm_sequence_base::uvm_sequence_base( uvm_object_name name_ )
 
 uvm_sequence_base::~uvm_sequence_base()
 {
+  m_cleanup_active_tr_items();
+  if (m_tr_seq_sqr != nullptr)
+  {
+    m_tr_seq_sqr->m_detach_active_tr_seq(this);
+    m_tr_seq_sqr->m_erase_tr_handle(this, get_inst_id());
+    m_tr_seq_sqr = nullptr;
+  }
+  if (m_tr_handle != 0)
+  {
+    uvm_recorder* seq_rec = uvm_recorder::get_recorder_from_handle(m_tr_handle);
+    if (seq_rec != nullptr)
+    {
+      seq_rec->close();
+      seq_rec->free();
+    }
+    m_tr_handle = 0;
+  }
   m_clear();
 }
 
@@ -160,6 +183,12 @@ void uvm_sequence_base::start(
 
   m_priority = this_priority;
 
+  if (m_tr_seq_sqr != nullptr)
+  {
+    m_tr_seq_sqr->m_detach_active_tr_seq(this);
+    m_tr_seq_sqr = nullptr;
+  }
+
   if (get_sequencer() != nullptr)
   {
     if (m_parent_sequence == nullptr)
@@ -167,11 +196,20 @@ void uvm_sequence_base::start(
     else
       m_tr_handle = m_sequencer->begin_child_tr( *this, m_parent_sequence->m_tr_handle,
                                                  get_root_sequence_name());
+    m_tr_seq_sqr = m_sequencer;
+    m_tr_seq_sqr->m_attach_active_tr_seq(this);
+  }
+  else
+  {
+    m_tr_handle = 0;
   }
 
   // Ensure that the sequence_id is initialized in case this sequence
   // has been stopped previously
   set_sequence_id(-1);
+  m_wait_for_grant_semaphore = 0;
+  m_end_active_tr_items();
+  m_auto_phase_obj_raised = false;
 
   // Remove all sqr_seq_ids
   m_sqr_seq_ids.clear();
@@ -185,12 +223,19 @@ void uvm_sequence_base::start(
   m_sequence_state = UVM_PRE_START;
   m_sequence_state_ev.notify();
 
-  SC_FORK
-    m_sequence_process = sc_spawn(sc_bind(&uvm_sequence_base::m_start_core, this, parent_sequence, call_pre_post))
-  SC_JOIN
+  m_sequence_process = sc_spawn(sc_bind(&uvm_sequence_base::m_start_core, this, parent_sequence, call_pre_post));
+  if (m_sequence_process.valid() && !m_sequence_process.terminated())
+    sc_core::wait(m_sequence_process.terminated_event());
 
-  if (m_sequencer != nullptr)
+  m_end_active_tr_items();
+  if (m_sequencer != nullptr && (m_tr_handle != 0 || is_active()))
     m_sequencer->end_tr(*this);
+  if (m_tr_seq_sqr != nullptr)
+  {
+    m_tr_seq_sqr->m_detach_active_tr_seq(this);
+    m_tr_seq_sqr = nullptr;
+  }
+  m_tr_handle = 0;
 
   // Clean up any sequencer queues after exiting; if we
   // were forcibly stopped, this step has already taken place
@@ -581,6 +626,8 @@ void uvm_sequence_base::ungrab( uvm_sequencer_base* sequencer )
 
 bool uvm_sequence_base::is_blocked() const
 {
+  if (m_sequencer == nullptr)
+    return false;
   return m_sequencer->is_blocked(this);
 }
 
@@ -596,6 +643,8 @@ bool uvm_sequence_base::is_blocked() const
 
 bool uvm_sequence_base::has_lock()
 {
+  if (m_sequencer == nullptr)
+    return false;
   return m_sequencer->has_lock(this);
 }
 
@@ -624,7 +673,7 @@ void uvm_sequence_base::kill()
       m_kill();
 
       // We need to drop the objection if we raised it...
-      if (get_automatic_phase_objection())
+      if (m_auto_phase_obj_raised && get_automatic_phase_objection())
          m_safe_drop_starting_phase("automatic phase objection");
 
       return;
@@ -634,7 +683,7 @@ void uvm_sequence_base::kill()
     m_sequencer->m_kill_sequence(this);
 
     // We need to drop the objection if we raised it...
-    if (get_automatic_phase_objection())
+    if (m_auto_phase_obj_raised && get_automatic_phase_objection())
        m_safe_drop_starting_phase("automatic phase objection");
     return;
   }
@@ -689,8 +738,6 @@ uvm_sequence_item* uvm_sequence_base::create_item( uvm_object_wrapper* type_var,
 //! initialized using #create_item, then it will be initialized here to use
 //! the default sequencer specified by #m_sequencer.  Randomization
 //! may be done between #start_item and #finish_item to ensure late generation
-//!
-//!  TODO - randomization not implemented
 //----------------------------------------------------------------------
 
 void uvm_sequence_base::start_item( uvm_sequence_item* item,
@@ -741,8 +788,10 @@ void uvm_sequence_base::start_item( uvm_sequence_item* item,
   sequencer->wait_for_grant(this, set_priority);
 
 #ifndef UVM_DISABLE_AUTO_ITEM_RECORDING
-  // TODO transaction recording
-  //sequencer->begin_child_tr(item, m_tr_handle, item->get_root_sequence_name()));
+  if (item->m_tr_seq != nullptr)
+    item->m_tr_seq->m_end_tr_item(item);
+  const int item_tr_handle = sequencer->begin_child_tr(*item, m_tr_handle, item->get_root_sequence_name());
+  m_register_tr_item(item, sequencer, item_tr_handle);
 #endif
   pre_do(true);
 }
@@ -776,6 +825,7 @@ void uvm_sequence_base::finish_item( uvm_sequence_item* item,
   uvm_sequence_item* latest_item = sequencer->m_current_sequence_item;
 
 #ifndef UVM_DISABLE_AUTO_ITEM_RECORDING
+  m_detach_tr_item(item);
   sequencer->end_tr(*item);
 #endif
 
@@ -955,6 +1005,12 @@ void uvm_sequence_base::clear_response_queue()
   if (response_queue.size() != 0)
     uvm_report_error(get_full_name(), "Response queue was not empty from previous runs! Response queue is now cleared for upcoming transactions.", UVM_NONE);
 
+  for (response_queue_listT::iterator
+       it = response_queue.begin();
+       it != response_queue.end();
+       it++)
+    delete *it;
+
   response_queue.clear();
 }
 
@@ -1099,6 +1155,8 @@ void uvm_sequence_base::put_base_response( const uvm_sequence_item& response )
 
   if (!response_queue_error_report_disabled)
     uvm_report_error(get_full_name(), "Response queue overflow, response was dropped", UVM_NONE);
+
+  delete item;
 }
 
 //----------------------------------------------------------------------
@@ -1163,24 +1221,300 @@ void uvm_sequence_base::m_set_sqr_sequence_id( int sequencer_id,
 //! Implementation-defined member function
 //----------------------------------------------------------------------
 
+namespace {
+
+struct KillScopeState
+{
+  int depth = 0;
+  std::vector<sc_core::sc_process_handle> deferred_procs;
+};
+
+KillScopeState& get_kill_scope_state()
+{
+  static KillScopeState state;
+  return state;
+}
+
+} // namespace
+
+uvm_sequence_base::m_kill_scope_guard::m_kill_scope_guard()
+: m_active(true)
+{
+  ++get_kill_scope_state().depth;
+}
+
+uvm_sequence_base::m_kill_scope_guard::~m_kill_scope_guard()
+{
+  if (m_active)
+  {
+    KillScopeState& state = get_kill_scope_state();
+    if (--state.depth == 0)
+      state.deferred_procs.clear();
+  }
+}
+
+void uvm_sequence_base::m_kill_scope_guard::finish()
+{
+  if (!m_active)
+    return;
+  m_active = false;
+  KillScopeState& state = get_kill_scope_state();
+  if (--state.depth == 0 && !state.deferred_procs.empty())
+  {
+    std::vector<sc_core::sc_process_handle> procs;
+    procs.swap(state.deferred_procs);
+    sc_core::sc_process_handle top;
+    for (std::size_t i = 0; i < procs.size(); ++i)
+    {
+      if (!procs[i].valid() || procs[i].terminated())
+        continue;
+      if (!top.valid() || m_process_contains(procs[i], top))
+        top = procs[i];
+    }
+    if (top.valid() && !top.terminated())
+    {
+      sc_core::sc_process_handle cur = sc_core::sc_get_current_process_handle();
+      if (top == cur)
+      {
+        cur.kill(sc_core::SC_INCLUDE_DESCENDANTS);
+      }
+      else
+      {
+        // Build process path from cur up to top.
+        std::vector<sc_core::sc_process_handle> path;
+        sc_core::sc_object* top_obj = top.get_process_object();
+        for (sc_core::sc_object* obj = cur.get_process_object();
+             obj != nullptr;
+             obj = obj->get_parent_object())
+        {
+          sc_core::sc_process_handle h(obj);
+          if (h.valid())
+            path.push_back(h);
+          if (obj == top_obj)
+            break;
+        }
+        // Pass 1: kill all non-cur-containing sibling child processes while
+        // every ancestor in path is still alive (safe for sc_join monitors).
+        for (std::size_t idx = 1; idx < path.size(); ++idx)
+        {
+          sc_core::sc_process_handle p = path[idx];
+          if (!p.valid() || p.terminated())
+            continue;
+          std::vector<sc_core::sc_object*> children = p.get_child_objects();
+          for (std::size_t c = 0; c < children.size(); ++c)
+          {
+            sc_core::sc_process_handle ch(children[c]);
+            if (ch.valid() && !ch.terminated() && !m_process_contains(ch, cur))
+              ch.kill(sc_core::SC_INCLUDE_DESCENDANTS);
+          }
+        }
+        // Pass 2: kill intermediate ancestors p != cur bottom-up (SC_NO_DESCENDANTS)
+        // so wrapper/child threads disconnect before parent sc_join unwinds.
+        for (std::size_t idx = 1; idx < path.size(); ++idx)
+        {
+          sc_core::sc_process_handle p = path[idx];
+          if (p.valid() && !p.terminated())
+            p.kill(sc_core::SC_NO_DESCENDANTS);
+        }
+        // Pass 3: unwind cur last.
+        if (cur.valid() && !cur.terminated())
+          cur.kill(sc_core::SC_INCLUDE_DESCENDANTS);
+      }
+    }
+  }
+}
+
+bool uvm_sequence_base::m_process_contains(
+  const sc_core::sc_process_handle& ancestor,
+  const sc_core::sc_process_handle& target )
+{
+  if (!ancestor.valid() || !target.valid())
+    return false;
+  sc_core::sc_object* anc_obj = ancestor.get_process_object();
+  for (sc_core::sc_object* obj = target.get_process_object();
+       obj != nullptr;
+       obj = obj->get_parent_object())
+  {
+    if (obj == anc_obj)
+      return true;
+  }
+  return false;
+}
+
+void uvm_sequence_base::m_defer_kill_process(
+  const sc_core::sc_process_handle& proc )
+{
+  if (proc.valid() && !proc.terminated())
+    get_kill_scope_state().deferred_procs.push_back(proc);
+}
+
+void uvm_sequence_base::m_register_tr_item(
+  uvm_sequence_item* item,
+  uvm_sequencer_base* sqr,
+  int sqr_handle )
+{
+  if (item == nullptr)
+    return;
+  item->m_tr_seq = this;
+  item->m_tr_sqr = sqr;
+  item->m_tr_sqr_handle = sqr_handle;
+  if (sqr != nullptr)
+    sqr->m_attach_active_tr_item(item);
+  if (std::find(m_tr_items.begin(), m_tr_items.end(), item) == m_tr_items.end())
+    m_tr_items.push_back(item);
+}
+
+void uvm_sequence_base::m_detach_tr_item( uvm_sequence_item* item )
+{
+  if (item == nullptr)
+    return;
+  std::vector<uvm_sequence_item*>::iterator it =
+    std::find(m_tr_items.begin(), m_tr_items.end(), item);
+  if (it != m_tr_items.end())
+    m_tr_items.erase(it);
+  if (item->m_tr_seq == this)
+  {
+    if (item->m_tr_sqr != nullptr)
+      item->m_tr_sqr->m_detach_active_tr_item(item);
+    item->m_tr_seq = nullptr;
+    item->m_tr_sqr = nullptr;
+    item->m_tr_sqr_handle = 0;
+  }
+}
+
+void uvm_sequence_base::m_end_tr_item( uvm_sequence_item* item )
+{
+  if (item == nullptr)
+    return;
+  uvm_sequencer_base* sqr = item->m_tr_sqr;
+  const int sqr_h = item->m_tr_sqr_handle;
+  m_detach_tr_item(item);
+
+  if (sqr != nullptr)
+  {
+    sqr->end_tr(*item);
+  }
+  else
+  {
+    if (sqr_h != 0)
+    {
+      uvm_recorder* sqr_rec = uvm_recorder::get_recorder_from_handle(sqr_h);
+      if (sqr_rec != nullptr)
+      {
+        sqr_rec->close();
+        sqr_rec->free();
+      }
+    }
+    if (item->is_active())
+      item->end_tr();
+  }
+}
+
+void uvm_sequence_base::m_end_active_tr_items()
+{
+  while (!m_tr_items.empty())
+  {
+    uvm_sequence_item* item = m_tr_items.back();
+    m_end_tr_item(item);
+  }
+}
+
+void uvm_sequence_base::m_cleanup_active_tr_items()
+{
+  while (!m_tr_items.empty())
+  {
+    uvm_sequence_item* item = m_tr_items.back();
+    if (item == nullptr)
+    {
+      m_tr_items.pop_back();
+      continue;
+    }
+    uvm_sequencer_base* sqr = item->m_tr_sqr;
+    const int sqr_h = item->m_tr_sqr_handle;
+    m_detach_tr_item(item);
+
+    if (sqr != nullptr)
+      sqr->m_erase_tr_handle(item, item->get_inst_id());
+
+    if (sqr_h != 0)
+    {
+      uvm_recorder* sqr_rec = uvm_recorder::get_recorder_from_handle(sqr_h);
+      if (sqr_rec != nullptr)
+      {
+        sqr_rec->close();
+        sqr_rec->free();
+      }
+    }
+
+    const int own_handle = item->get_tr_handle();
+    if (own_handle != 0)
+    {
+      uvm_recorder* own_rec = uvm_recorder::get_recorder_from_handle(own_handle);
+      if (own_rec != nullptr)
+      {
+        own_rec->close();
+        own_rec->free();
+      }
+    }
+    item->m_reset_tr_state();
+  }
+}
+
 void uvm_sequence_base::m_kill()
 {
+  if (m_sequence_state == UVM_STOPPED)
+    return;
+
+  m_kill_scope_guard kill_guard;
+
+  // Transition to UVM_STOPPED before do_kill() to stop reentrant/mutual kill().
+  m_sequence_state = UVM_STOPPED;
+
+#ifndef UVM_DISABLE_AUTO_ITEM_RECORDING
+  m_end_active_tr_items();
+#endif
+
+  if (m_sequencer != nullptr && (m_tr_handle != 0 || is_active()))
+  {
+    m_sequencer->end_tr(*this);
+    m_tr_handle = 0;
+  }
+  if (m_tr_seq_sqr != nullptr)
+  {
+    m_tr_seq_sqr->m_detach_active_tr_seq(this);
+    m_tr_seq_sqr = nullptr;
+  }
+
   do_kill();
 
-  for( children_array_ItT it = children_array.begin();
-       it != children_array.end();
-       ++it )
-     it->first->kill();
-
-  if (m_sequence_process.valid())
-  {
-    m_sequence_process.kill(SC_INCLUDE_DESCENDANTS); // TODO check
-    //m_sequence_process = null;
-  }
-  m_sequence_state = UVM_STOPPED;
+  m_wait_for_grant_semaphore = 0;
+  m_sequence_state_ev.notify();
 
   if ((m_parent_sequence != nullptr) && (m_parent_sequence->children_array.find(this)!= m_parent_sequence->children_array.end()))
     m_parent_sequence->children_array.erase(this); // TODO also delete pointer here?
+
+  while (!children_array.empty())
+  {
+    uvm_sequence_base* child = children_array.begin()->first;
+    children_array.erase(children_array.begin());
+    if (child != nullptr)
+      child->kill();
+  }
+
+  if (m_auto_phase_obj_raised && get_automatic_phase_objection())
+    m_safe_drop_starting_phase("automatic phase objection");
+
+  if (m_sequence_process.valid() && !m_sequence_process.terminated())
+  {
+    sc_core::sc_process_handle cur = sc_core::sc_get_current_process_handle();
+    if (m_process_contains(m_sequence_process, cur))
+      m_defer_kill_process(m_sequence_process);
+    else
+      m_sequence_process.kill(SC_INCLUDE_DESCENDANTS); // TODO check
+    //m_sequence_process = null;
+  }
+
+  kill_guard.finish();
 }
 
 //----------------------------------------------------------------------
@@ -1198,6 +1532,7 @@ void uvm_sequence_base::m_clear()
        it++)
     delete *it;
 
+  response_queue.clear();
   m_clear_phase_daps();
 }
 
@@ -1249,7 +1584,10 @@ void uvm_sequence_base::m_safe_raise_starting_phase( std::string description,
 {
   uvm_phase* starting_phase = get_starting_phase();
   if (starting_phase != nullptr)
+  {
     starting_phase->raise_objection(this, description, count);
+    m_auto_phase_obj_raised = true;
+  }
 
 }
 
@@ -1264,7 +1602,10 @@ void uvm_sequence_base::m_safe_drop_starting_phase( std::string description,
 {
   uvm_phase* starting_phase = get_starting_phase();
   if (starting_phase != nullptr)
+  {
     starting_phase->drop_objection(this, description, count);
+    m_auto_phase_obj_raised = false;
+  }
 }
 
 //----------------------------------------------------------------------

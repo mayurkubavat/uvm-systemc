@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "uvmsc/reg/uvm_reg_map.h"
+#include "uvmsc/reg/uvm_reg_transaction_order_policy.h"
 #include "uvmsc/reg/uvm_reg_block.h"
 #include "uvmsc/reg/uvm_reg_model.h"
 #include "uvmsc/reg/uvm_reg_item.h"
@@ -43,50 +44,6 @@
 #include "uvmsc/seq/uvm_sequence.h"
 
 namespace uvm {
-
-class reg_rw : public uvm_sequence_item
-{
-  using uvm_sequence_item::uvm_report;
-  using uvm_sequence_item::uvm_report_info;
-  using uvm_sequence_item::uvm_report_warning;
-  using uvm_sequence_item::uvm_report_error;
-  using uvm_sequence_item::uvm_report_fatal;
-
- public:
-
-  bool read; // TODO randomize these 4
-  sc_dt::sc_bv<32> addr;
-  sc_dt::sc_lv<32> data;
-  sc_dt::sc_lv<4>  byte_en;
-
-  reg_rw (const std::string& name = "reg_rw") : uvm_sequence_item(name)
-  {}
-
-  UVM_OBJECT_UTILS(reg_rw);
-
-  /* TODO implement other methods
-   `uvm_object_utils_begin(reg_rw)
-     `uvm_field_int(read, UVM_ALL_ON | UVM_NOPACK);
-     `uvm_field_int(addr, UVM_ALL_ON | UVM_NOPACK);
-     `uvm_field_int(data, UVM_ALL_ON | UVM_NOPACK);
-     `uvm_field_int(byte_en, UVM_ALL_ON | UVM_NOPACK);
-   `uvm_object_utils_end
-   */
-
-  std::string convert2string() const
-  {
-    std::ostringstream str;
-
-    str << "reg_rw: "
-        << ((read) ? "READ" : "WRITE" )
-        << " addr = 0x" << addr.to_string(sc_dt::SC_HEX_US, false)
-        << " data = 0x" << data.to_string(sc_dt::SC_HEX_US, false)
-        << " byte_en = " << byte_en;
-    return str.str();
-  }
-
-}; // class reg_rw
-
 
 //------------------------------------------------------------------------------
 // static data member initialization
@@ -122,6 +79,7 @@ uvm_reg_map::uvm_reg_map( const std::string& name )
 
   m_auto_predict = false;
   m_check_on_read = false;
+  m_policy = nullptr;
 
 }
 
@@ -335,7 +293,7 @@ void uvm_reg_map::add_submap( uvm_reg_map* child_map,
         "Submap '" + child_map->get_full_name() + "' may not be added to this " +
         "address map, '" + get_full_name() + "', as the submap's parent block, '" +
         child_blk->get_full_name() + "', is not a child of this map's parent block, '" +
-        m_parent->get_full_name() + "'");
+        ((m_parent != nullptr) ? m_parent->get_full_name() : "<null>") + "'");
     return;
   }
 
@@ -400,7 +358,7 @@ void uvm_reg_map::set_submap_offset( uvm_reg_map* submap, uvm_reg_addr_t offset)
 
   m_submaps[submap] = offset;
 
-  if (m_parent->is_locked())
+  if (m_parent != nullptr && m_parent->is_locked())
   {
     uvm_reg_map* root_map = get_root_map();
     root_map->m_init_address_map();
@@ -449,7 +407,7 @@ void uvm_reg_map::set_base_addr( uvm_reg_addr_t offset )
   else
   {
     m_base_addr = offset;
-    if(m_parent->is_locked())
+    if(m_parent != nullptr && m_parent->is_locked())
     {
       uvm_reg_map* top_map = get_root_map();
       top_map->m_init_address_map();
@@ -958,7 +916,7 @@ int uvm_reg_map::get_physical_addresses( uvm_reg_addr_t base_addr,
 uvm_reg* uvm_reg_map::get_reg_by_offset( uvm_reg_addr_t offset,
                                          bool read ) const
 {
-  if (!m_parent->is_locked())
+  if (m_parent != nullptr && !m_parent->is_locked())
   {
     UVM_ERROR("RegModel",
       "Cannot get register by offset: Block " + m_parent->get_full_name() + " is not locked.");
@@ -990,7 +948,7 @@ uvm_reg* uvm_reg_map::get_reg_by_offset( uvm_reg_addr_t offset,
 
 uvm_mem* uvm_reg_map::get_mem_by_offset( uvm_reg_addr_t offset ) const
 {
-  if (!m_parent->is_locked())
+  if (m_parent != nullptr && !m_parent->is_locked())
   {
     UVM_ERROR("RegModel",
       "Cannot memory register by offset: Block " + m_parent->get_full_name() + " is not locked.");
@@ -1054,6 +1012,31 @@ void uvm_reg_map::set_auto_predict( bool on )
 bool uvm_reg_map::get_auto_predict() const
 {
   return m_auto_predict;
+}
+
+
+//----------------------------------------------------------------------
+// member function: set_transaction_order_policy
+//
+//! Sets the policy which orders the bus transactions of one register
+//! access. The map does not own the policy; nullptr removes it.
+//----------------------------------------------------------------------
+
+void uvm_reg_map::set_transaction_order_policy( uvm_reg_transaction_order_policy* pol )
+{
+  m_policy = pol;
+}
+
+
+//----------------------------------------------------------------------
+// member function: get_transaction_order_policy
+//
+//! Returns the policy which orders the bus transactions, or nullptr
+//----------------------------------------------------------------------
+
+uvm_reg_transaction_order_policy* uvm_reg_map::get_transaction_order_policy() const
+{
+  return m_policy;
 }
 
 
@@ -1135,6 +1118,8 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
   for( unsigned int val_idx = 0; val_idx < rw->value.size(); val_idx++ )
   {
     uvm_reg_data_t value = rw->value[val_idx];
+    byte_en = -1;
+    n_access_extra = 0;
 
     /* calculate byte_enables */
     if (rw->element_kind == UVM_FIELD)
@@ -1166,44 +1151,81 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
       for (int i = 0; i < skip; i++)
         addrs.erase(addrs.begin()); // pop_front()
 
-      while (addrs.size() > (n_bits_init/(bus_width*8) + 1))
+      unsigned int needed_beats = (n_bits_init + n_access_extra > 0)
+          ? ((n_bits_init + n_access_extra - 1) / (bus_width * 8) + 1)
+          : 1;
+      while (addrs.size() > needed_beats)
         addrs.pop_back();
     }
 
     curr_byte = 0;
     n_bits= n_bits_init;
 
+    // the bus transactions of this value, in the order of their addresses
+    std::vector<uvm_reg_bus_op> accesses;
+    unsigned int total_span = (rw->element_kind == UVM_FIELD)
+        ? (n_bits_init + static_cast<unsigned int>(n_access_extra))
+        : n_bits_init;
+
     for( unsigned int i = 0; i < addrs.size(); i++ )
     {
-      uvm_sequence_item* bus_req;
       uvm_reg_bus_op rw_access;
-      uvm_reg_data_t data;
 
-      // TODO check
-      // eq: (value >> (curr_byte*8)) & (( 1 << (bus_width * 8))-1);
-      data = (value >> (curr_byte*8)) & uvm_mask_size(bus_width * 8);
+      if (rw->element_kind == UVM_FIELD)
+      {
+        for( unsigned int z = 0; z < bus_width; z++ )
+        {
+          if (curr_byte + z < UVM_REG_BYTENABLE_WIDTH)
+            rw_access.byte_en[z] = byte_en[curr_byte+z];
+          else
+            rw_access.byte_en[z] = 0;
+        }
+      }
+      else
+      {
+        rw_access.byte_en = byte_en;
+      }
+
+      unsigned int rem_span = (total_span > curr_byte * 8)
+          ? (total_span - curr_byte * 8)
+          : 0;
+      unsigned int mask_bits = (rem_span > bus_width * 8) ? (bus_width * 8) : rem_span;
+      unsigned int max_xfer = (i == 0 && rw->element_kind == UVM_FIELD)
+          ? (bus_width * 8 - static_cast<unsigned int>(n_access_extra))
+          : (bus_width * 8);
+      unsigned int xfer_bits = (n_bits > max_xfer) ? max_xfer : n_bits;
+
+      rw_access.kind = rw->access_kind;
+      rw_access.addr = addrs[i];
+      rw_access.data = (value >> (curr_byte*8)) & uvm_mask_size(mask_bits);
+      rw_access.n_bits = xfer_bits;
+
+      accesses.push_back(rw_access);
+
+      curr_byte += bus_width;
+      n_bits -= xfer_bits;
+    }
+
+    // Other than in UVM-SV, which orders the transactions of all the
+    // values of a burst at once, the policy orders those of each value.
+    if (m_policy != nullptr)
+      m_policy->order(accesses);
+
+    for( unsigned int i = 0; i < accesses.size(); i++ )
+    {
+      uvm_sequence_item* bus_req;
+      uvm_reg_bus_op& rw_access = accesses[i];
+      uvm_reg_data_t data = rw_access.data;
 
       std::ostringstream str;
       str << "Writing 0x"
           <<  data.to_string(sc_dt::SC_HEX_US, false)
           << " at address 0x"
-          << std::hex << addrs[i].to_uint64()
+          << std::hex << rw_access.addr.to_uint64()
           << " via map '"
           << rw->map->get_full_name()
           << "'...";
       UVM_INFO(get_type_name(), str.str(), UVM_FULL);
-
-      if (rw->element_kind == UVM_FIELD)
-      {
-        for( unsigned int z = 0; z < bus_width; z++ )
-          rw_access.byte_en[z] = byte_en[curr_byte+z];
-      }
-
-      rw_access.kind = rw->access_kind;
-      rw_access.addr = addrs[i];
-      rw_access.data = data;
-      rw_access.n_bits = (n_bits > bus_width*8) ? bus_width*8 : n_bits;
-      rw_access.byte_en = byte_en;
 
       adapter->m_set_item(rw);
       bus_req = adapter->reg2bus(rw_access);
@@ -1233,7 +1255,7 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
       else
         adapter->bus2reg(bus_req, rw_access);
 
-       if (rw->parent != nullptr && i == addrs.size()-1)
+       if (rw->parent != nullptr && i == accesses.size()-1)
         rw->parent->post_do(rw);
 
       rw->status = rw_access.status;
@@ -1242,7 +1264,7 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
       str1 << "Wrote 0x"
            << data.to_string(sc_dt::SC_HEX_US, false)
            << " at address 0x"
-           << std::hex << addrs[i].to_uint64()
+           << std::hex << rw_access.addr.to_uint64()
            << " via map '"
            << rw->map->get_full_name()
            << "': "
@@ -1253,10 +1275,7 @@ void uvm_reg_map::do_bus_write( uvm_reg_item* rw,
       if (rw->status == UVM_NOT_OK)
         break;
 
-      curr_byte += bus_width;
-      n_bits -= bus_width * 8;
-
-    } // for-addr
+    } // for-access
 
     for( unsigned int i = 0; i < addrs.size(); i++ )
       addrs[i] = addrs[i] + map_info->mem_range.stride;
@@ -1303,6 +1322,9 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
 
   for( unsigned int val_idx = 0; val_idx < rw->value.size(); val_idx++ )
   {
+    byte_en = -1;
+    n_access_extra = 0;
+
     /* calculate byte_enables */
     if (rw->element_kind == UVM_FIELD)
     {
@@ -1328,36 +1350,119 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
       for( int i = 0; i<skip; i++ )
         addrs.erase(addrs.begin()); // pop_front()
 
-      while (addrs.size() > (n_bits/(bus_width*8) + 1))
+      unsigned int needed_beats = (n_bits + n_access_extra > 0)
+          ? ((n_bits + n_access_extra - 1) / (bus_width * 8) + 1)
+          : 1;
+      while (addrs.size() > needed_beats)
         addrs.pop_back();
     } // if
 
     curr_byte = 0;
     rw->value[val_idx] = 0;
 
+    // the bus transactions of this value, in the order of their addresses,
+    // and the byte of the value which each of them reads
+    std::vector<uvm_reg_bus_op> accesses;
+    std::vector<unsigned int> first_bytes;
+    std::vector<unsigned int> beat_masks;
+    unsigned int n_bits_left = n_bits;
+    unsigned int total_span = (rw->element_kind == UVM_FIELD)
+        ? (n_bits + static_cast<unsigned int>(n_access_extra))
+        : n_bits;
+
     for( unsigned int i = 0; i < addrs.size(); i++ )
     {
-      uvm_sequence_item* bus_req;
       uvm_reg_bus_op rw_access;
-      uvm_reg_data_logic_t data;
-
-      std::ostringstream inf;
-      inf << "Reading address 0x"
-          << std::hex << addrs[i].to_uint64()
-          << " via map '"
-          << get_full_name()
-          << "'...";
-      UVM_INFO(get_type_name(), inf.str(), UVM_FULL);
 
       if (rw->element_kind == UVM_FIELD)
+      {
         for( unsigned int z = 0; z < bus_width; z++)
-          rw_access.byte_en[z] = byte_en[curr_byte+z];
+        {
+          if (curr_byte + z < UVM_REG_BYTENABLE_WIDTH)
+            rw_access.byte_en[z] = byte_en[curr_byte+z];
+          else
+            rw_access.byte_en[z] = 0;
+        }
+      }
+      else
+      {
+        rw_access.byte_en = byte_en;
+      }
+
+      unsigned int rem_span = (total_span > curr_byte * 8)
+          ? (total_span - curr_byte * 8)
+          : 0;
+      unsigned int mask_bits = (rem_span > bus_width * 8) ? (bus_width * 8) : rem_span;
+      unsigned int max_xfer = (i == 0 && rw->element_kind == UVM_FIELD)
+          ? (bus_width * 8 - static_cast<unsigned int>(n_access_extra))
+          : (bus_width * 8);
+      unsigned int xfer_bits = (n_bits_left > max_xfer) ? max_xfer : n_bits_left;
 
       rw_access.kind = rw->access_kind;
       rw_access.addr = addrs[i];
       rw_access.data = 0;
-      rw_access.byte_en = byte_en;
-      rw_access.n_bits = (n_bits > bus_width*8) ? bus_width*8 : n_bits;
+      rw_access.n_bits = xfer_bits;
+
+      accesses.push_back(rw_access);
+      first_bytes.push_back(curr_byte);
+      beat_masks.push_back(mask_bits);
+
+      curr_byte += bus_width;
+      n_bits_left -= xfer_bits;
+    }
+
+    if (m_policy != nullptr)
+    {
+      std::vector<uvm_reg_bus_op> in_address_order = accesses;
+      m_policy->order(accesses);
+
+      // Other than in UVM-SV, the data of each transaction goes to its own
+      // bytes of the value, whatever order the policy chose.
+      std::vector<unsigned int> ordered_bytes;
+      std::vector<unsigned int> ordered_masks;
+      for( unsigned int i = 0; i < accesses.size(); i++ )
+      {
+        unsigned int byte_pos = 0;
+        unsigned int mask_pos = 0;
+        bool found = false;
+        for( unsigned int j = 0; j < in_address_order.size(); j++ )
+          if (in_address_order[j].addr == accesses[i].addr)
+          {
+            byte_pos = first_bytes[j];
+            mask_pos = beat_masks[j];
+            found = true;
+          }
+
+        if (!found)
+        {
+          std::ostringstream str;
+          str << "The transaction order policy of map '" << get_full_name()
+              << "' returned a read at address 0x" << std::hex << accesses[i].addr.to_uint64()
+              << ", which is not one of the addresses of the access; its data is not used";
+          UVM_ERROR("RegMem", str.str());
+          byte_pos = static_cast<unsigned int>(-1);
+          mask_pos = 0;
+        }
+        ordered_bytes.push_back(byte_pos);
+        ordered_masks.push_back(mask_pos);
+      }
+      first_bytes = ordered_bytes;
+      beat_masks = ordered_masks;
+    }
+
+    for( unsigned int i = 0; i < accesses.size(); i++ )
+    {
+      uvm_sequence_item* bus_req;
+      uvm_reg_bus_op& rw_access = accesses[i];
+      uvm_reg_data_logic_t data;
+
+      std::ostringstream inf;
+      inf << "Reading address 0x"
+          << std::hex << rw_access.addr.to_uint64()
+          << " via map '"
+          << get_full_name()
+          << "'...";
+      UVM_INFO(get_type_name(), inf.str(), UVM_FULL);
 
       adapter->m_set_item(rw);
       bus_req = adapter->reg2bus(rw_access);
@@ -1387,7 +1492,7 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
       else
         adapter->bus2reg(bus_req, rw_access);
 
-      data = rw_access.data & uvm_mask_size(bus_width*8);
+      data = rw_access.data & uvm_mask_size(beat_masks[i]);
       rw->status = rw_access.status;
 
       std::string data_str = data.to_string(); // convert logic vector in string
@@ -1400,7 +1505,7 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
       str1 << "Read 0x"
            << data.to_string(sc_dt::SC_HEX_US, false)
            << " at address 0x"
-           << std::hex << addrs[i].to_uint64()
+           << std::hex << rw_access.addr.to_uint64()
            << " via map '"
            << get_full_name()
            << "': "
@@ -1412,16 +1517,16 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
       if (rw->status == UVM_NOT_OK)
         break;
 
-      uvm_reg_data_t val = rw->value[val_idx];
-      uvm_reg_data_t val2 = data << curr_byte * 8;
-      val |= val2;
-      rw->value[val_idx] = val;
+      if (first_bytes[i] != static_cast<unsigned int>(-1))
+      {
+        uvm_reg_data_t val = rw->value[val_idx];
+        uvm_reg_data_t val2 = data << first_bytes[i] * 8;
+        val |= val2;
+        rw->value[val_idx] = val;
+      }
 
-      if (rw->parent != nullptr && i == addrs.size()-1)
+      if (rw->parent != nullptr && i == accesses.size()-1)
         rw->parent->post_do(rw);
-
-      curr_byte += bus_width;
-      n_bits -= bus_width * 8;
     }
 
     for( unsigned int i = 0; i < addrs.size(); i++ )
@@ -1429,6 +1534,8 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
 
     if (rw->element_kind == UVM_FIELD)
       rw->value[val_idx] = (rw->value[val_idx] >> (n_access_extra)) & uvm_mask_size(size);
+    else
+      rw->value[val_idx] &= uvm_mask_size(size);
   }
 }
 
@@ -1440,6 +1547,7 @@ void uvm_reg_map::do_bus_read( uvm_reg_item* rw,
 
 void uvm_reg_map::do_write( uvm_reg_item* rw )
 {
+  uvm_sequence_base* orig_parent = rw->parent;
   uvm_sequence_base* tmp_parent_seq = nullptr;
   uvm_reg_map* system_map = get_root_map();
   uvm_reg_adapter* adapter = system_map->get_adapter();
@@ -1474,7 +1582,14 @@ void uvm_reg_map::do_write( uvm_reg_item* rw )
     do_bus_write(rw, sequencer, adapter);
 
   if (tmp_parent_seq != nullptr)
-    sequencer->m_sequence_exiting(tmp_parent_seq);
+  {
+    if (sequencer != nullptr)
+      sequencer->m_sequence_exiting(tmp_parent_seq);
+    if (rw->get_parent_sequence() == tmp_parent_seq)
+      rw->set_parent_sequence(orig_parent);
+    rw->parent = orig_parent;
+    delete tmp_parent_seq;
+  }
 }
 
 //----------------------------------------------------------------------
@@ -1485,6 +1600,7 @@ void uvm_reg_map::do_write( uvm_reg_item* rw )
 
 void uvm_reg_map::do_read( uvm_reg_item* rw )
 {
+  uvm_sequence_base* orig_parent = rw->parent;
   uvm_sequence_base* tmp_parent_seq = nullptr;
   uvm_reg_map* system_map = get_root_map();
   uvm_reg_adapter* adapter = system_map->get_adapter();
@@ -1504,7 +1620,7 @@ void uvm_reg_map::do_read( uvm_reg_item* rw )
   if (rw->parent == nullptr)
   {
     uvm_sequence_base* seq = new uvm_sequence_base("default_parent_seq");
-    rw->parent = seq; // TODO check/delete afterwards
+    rw->parent = seq;
     tmp_parent_seq = rw->parent;
   }
 
@@ -1519,7 +1635,14 @@ void uvm_reg_map::do_read( uvm_reg_item* rw )
     do_bus_read(rw, sequencer, adapter);
 
   if (tmp_parent_seq != nullptr)
-    sequencer->m_sequence_exiting(tmp_parent_seq);
+  {
+    if (sequencer != nullptr)
+      sequencer->m_sequence_exiting(tmp_parent_seq);
+    if (rw->get_parent_sequence() == tmp_parent_seq)
+      rw->set_parent_sequence(orig_parent);
+    rw->parent = orig_parent;
+    delete tmp_parent_seq;
+  }
 }
 
 
@@ -1638,7 +1761,7 @@ void uvm_reg_map::m_set_reg_offset( uvm_reg* rg,
   std::vector<uvm_reg_addr_t> addrs;
 
   // if block is not locked, m_init_address_map will resolve map when block is locked
-  if (blk->is_locked())
+  if (blk != nullptr && blk->is_locked())
   {
     // remove any existing cached addresses
     if (!info->unmapped)
@@ -1754,6 +1877,30 @@ void uvm_reg_map::m_set_reg_offset( uvm_reg* rg,
 }
 
 //----------------------------------------------------------------------
+// member function: m_get_mem_stride
+//
+// Implementation defined
+// Returns the address interval between consecutive locations of a
+// memory, from the addresses of its first (first_addr) and last
+// (last_addr) location. A memory with one location gets the interval
+// it would have with two.
+//----------------------------------------------------------------------
+
+unsigned long uvm_reg_map::m_get_mem_stride( uvm_mem* mem,
+                                             uvm_reg_addr_t offset,
+                                             uvm_reg_addr_t first_addr,
+                                             uvm_reg_addr_t last_addr )
+{
+  if (mem->get_size() > 1)
+    return (last_addr.to_uint64() - first_addr.to_uint64()) / (mem->get_size() - 1);
+
+  std::vector<uvm_reg_addr_t> addrs_next;
+  get_physical_addresses(offset, 1, mem->get_n_bytes(), addrs_next);
+
+  return addrs_next[0].to_uint64() - first_addr.to_uint64();
+}
+
+//----------------------------------------------------------------------
 // member function: m_set_mem_offset
 //
 // Implementation defined
@@ -1778,18 +1925,19 @@ void uvm_reg_map::m_set_mem_offset( uvm_mem* mem,
   std::vector<uvm_reg_addr_t> addrs;
 
   // if block is not locked, m_init_address_map will resolve map when block is locked
-  if (blk->is_locked())
+  if (blk != nullptr && blk->is_locked())
   {
     // remove any existing cached addresses
     if (!info->unmapped)
     {
       for( m_mems_by_offset_itt it = top_map->m_mems_by_offset.begin();
-           it != top_map->m_mems_by_offset.end();
-           it++ )
+           it != top_map->m_mems_by_offset.end(); )
       {
-        uvm_reg_map_addr_range* range = (*it).first;
-        if (top_map->m_mems_by_offset[range] == mem)
-          top_map->m_mems_by_offset.erase(range);
+        // erasing invalidates the iterator of the erased element only
+        if ((*it).second == mem)
+          it = top_map->m_mems_by_offset.erase(it);
+        else
+          it++;
       }
     }
 
@@ -1811,8 +1959,9 @@ void uvm_reg_map::m_set_mem_offset( uvm_mem* mem,
       max = (addrs_max[0] > addrs_max[addrs_max.size()-1]) ?
           addrs_max[0] : addrs_max[addrs_max.size()-1];
       max2 = addrs_max[0];
+
       // address interval between consecutive mem locations
-      stride = (max2 - max)/(mem->get_size()-1);
+      stride = m_get_mem_stride(mem, offset, min2, max2);
 
       // make sure new offset does not conflict with others
       for( m_regs_by_offset_itt it = top_map->m_regs_by_offset.begin();
@@ -2192,7 +2341,7 @@ void uvm_reg_map::m_init_address_map()
       max2 = addrs_max[0];
 
       // address interval between consecutive mem offsets
-      stride = (max2 - min2)/(mem->get_size()-1);
+      stride = m_get_mem_stride(mem, m_mems_info[mem]->offset, min2, max2);
 
       for( m_regs_by_offset_itt ita = top_map->m_regs_by_offset.begin();
           ita != top_map->m_regs_by_offset.end();
@@ -2319,15 +2468,14 @@ std::string uvm_reg_map::convert2string() const
 //----------------------------------------------------------------------
 // member function: clone
 //
-// TODO: not implemented yet
+//! An address map cannot be cloned. Reports a fatal error and
+//! returns nullptr.
 //----------------------------------------------------------------------
 
 uvm_object* uvm_reg_map::clone()
 {
-  //uvm_rag_map* me; // TODO reg_map clone
-  //me = new this;
-  //return me;
-  return nullptr; // dummy
+  UVM_FATAL("UVM/REGMAP/NOCLONE", "uvm_reg_map does not support clone()");
+  return nullptr;
 }
 
 //----------------------------------------------------------------------

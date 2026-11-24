@@ -34,10 +34,10 @@
 #include "uvmsc/macros/uvm_object_defines.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 
-// forward declaration
-class uvm_object;
-
 namespace uvm {
+
+// forward declarations
+class uvm_object;
 
 //----------------------------------------------------------------------------
 // Class: uvm_get_to_lock_dap
@@ -95,7 +95,7 @@ class uvm_get_to_lock_dap : public uvm_set_get_dap_base<T>
 //----------------------------------------------------------------------------
 template <typename T>
 uvm_get_to_lock_dap<T>::uvm_get_to_lock_dap( const std::string& name )
-: uvm_set_get_dap_base<T>(name), m_value(0), m_locked(false)
+: uvm_set_get_dap_base<T>(name), m_value(), m_locked(false)
 {}
 
 //----------------------------------------------------------------------------

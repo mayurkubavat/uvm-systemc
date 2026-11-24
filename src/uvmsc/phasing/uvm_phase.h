@@ -71,6 +71,8 @@ class uvm_phase : public uvm_object
                       uvm_phase_type phase_type = UVM_PHASE_SCHEDULE,
                       uvm_phase* parent = nullptr );
 
+  virtual ~uvm_phase();
+
   uvm_phase_type get_phase_type() const;
 
   //-------------
@@ -165,6 +167,21 @@ class uvm_phase : public uvm_object
 
  private:
 
+  // Schedule containers are ordered by creation (instance id), not by the
+  // address of the phase nodes, so that successors of a node are always
+  // started in the same order on every platform and in every run.
+  struct m_phase_less
+  {
+    bool operator()( const uvm_phase* lhs, const uvm_phase* rhs ) const
+    {
+      return lhs->get_inst_id() < rhs->get_inst_id();
+    }
+  };
+
+  typedef std::map<uvm_phase*, bool, m_phase_less> m_schedulemapT;
+  typedef m_schedulemapT::iterator m_schedulemapItT;
+  typedef m_schedulemapT::const_iterator m_schedulemapcItT;
+
   virtual void execute( uvm_component* comp,
                         uvm_phase* phase );
 
@@ -218,7 +235,7 @@ class uvm_phase : public uvm_object
   void clear_successors( uvm_phase_state state = UVM_PHASE_DORMANT,
                          uvm_phase* end_state = nullptr );
 
-  void get_predecessors_for_successors( std::map<uvm_phase*, bool>& pred_of_succ );
+  void get_predecessors_for_successors( m_schedulemapT& pred_of_succ );
 
   void m_wait_for_pred();
 
@@ -226,7 +243,9 @@ class uvm_phase : public uvm_object
 
   bool m_is_domain();
 
-  static std::map<uvm_phase*, bool>& m_executing_phases();
+  static m_schedulemapT& m_executing_phases();
+
+  static void m_unlink_phase_node( uvm_phase* node );
 
   static uvm_phase* m_phase_nodes(const std::string& name, uvm_phase* phase = nullptr);
 
@@ -253,9 +272,6 @@ class uvm_phase : public uvm_object
   // Schedule
   //--------------------------
   uvm_phase* m_end_node;
-  typedef std::map<uvm_phase*, bool> m_schedulemapT;
-  typedef m_schedulemapT::iterator m_schedulemapItT;
-  typedef m_schedulemapT::const_iterator m_schedulemapcItT;
   m_schedulemapT m_predecessors;
   m_schedulemapT m_successors;
 
@@ -274,6 +290,9 @@ class uvm_phase : public uvm_object
   uvm_phase_state m_state;
   sc_core::sc_event m_state_ev;
   int m_run_count;
+
+  // sets m_state and calls the uvm_phase_cb callbacks
+  void m_set_state( uvm_phase_state state );
 
   // Overall Control
   //---------------------------------
@@ -297,6 +316,9 @@ class uvm_phase : public uvm_object
  public:
   static bool m_phase_trace;
   bool m_use_ovm_run_semantic;
+
+  // registers the uvm_phase_cb callback type
+  virtual bool m_register_cb();
 
 }; // class uvm_phase
 

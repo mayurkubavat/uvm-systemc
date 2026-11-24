@@ -1,0 +1,15 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test ...
+UVM_INFO <removed by verify-uvm.pl> @ 60 ns: tb.cov [COVERAGE] Coverage of tb.cov: 72.2222% (addr_cvp 66.6667%, kind_cvp 100%, addr_kind_cross 50%)
+UVM_INFO <removed by verify-uvm.pl> @ 60 ns: tb.cov [COVERAGE] UCIS coverage database saved to coverage_results.xml
+UVM_INFO <removed by verify-uvm.pl> @ 60 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   3
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[COVERAGE]              2
+[RNTST]                 1
+UVM_INFO @ 60 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

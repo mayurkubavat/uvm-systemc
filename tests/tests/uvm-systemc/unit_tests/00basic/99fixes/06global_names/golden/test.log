@@ -1,0 +1,4 @@
+SystemC Simulation
+global uvm_object is ev
+printer and callback are unset
+** UVM TEST PASSED **

@@ -1,0 +1,94 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+ok: the library has the two sequences which were added by type
+ok: the sequences are in the order in which they were added
+ok: another library type has its own sequences
+caught SEQLIB/BAD_SEQ_TYPE
+ok: a sequence is added once, and only a sequence is added
+caught SEQ_LIB/GET_SEQ
+ok: there is no sequence beyond the last one
+ok: a sequence added to one library is not in the next one
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [SEQLIB/START] Starting sequence library seq_lib in unknown phase: 6 iterations in mode UVM_SEQ_LIB_RANDC
+UVM_INFO <removed by verify-uvm.pl> @ 60 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+driven: seq_c seq_a seq_b seq_c seq_b seq_a
+ok: six sequences were executed
+ok: random cyclic selection runs every sequence twice in six
+ok: the library counts the sequences it executed
+UVM_INFO <removed by verify-uvm.pl> @ 60 ns: reporter [SEQLIB/START] Starting sequence library seq_lib in unknown phase: 5 iterations in mode UVM_SEQ_LIB_RAND
+UVM_INFO <removed by verify-uvm.pl> @ 110 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+driven: seq_b seq_a seq_a seq_b seq_b
+ok: the number of sequences is between the minimum and the maximum
+ok: random selection runs the sequences of the library
+UVM_INFO <removed by verify-uvm.pl> @ 110 ns: reporter [SEQLIB/START] Starting sequence library seq_lib in unknown phase: 5 iterations in mode UVM_SEQ_LIB_USER
+UVM_INFO <removed by verify-uvm.pl> @ 160 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+driven: seq_a seq_c seq_a seq_c seq_a
+ok: user selection goes through the sequences in turn by default
+UVM_INFO <removed by verify-uvm.pl> @ 160 ns: reporter [SEQLIB/START] Starting sequence library seq_lib in unknown phase: 3 iterations in mode UVM_SEQ_LIB_ITEM
+UVM_INFO <removed by verify-uvm.pl> @ 190 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+driven: library library library
+ok: item mode sends items, no sequences
+UVM_INFO <removed by verify-uvm.pl> @ 190 ns: reporter [SEQLIB/START] Starting sequence library user_lib in unknown phase: 2 iterations in mode UVM_SEQ_LIB_USER
+UVM_INFO <removed by verify-uvm.pl> @ 210 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+driven: seq_b seq_b
+ok: select_sequence can be overridden
+UVM_INFO <removed by verify-uvm.pl> @ 210 ns: reporter [SEQLIB/START] Starting sequence library seq_lib in unknown phase: 4 iterations in mode UVM_SEQ_LIB_RANDC
+UVM_INFO <removed by verify-uvm.pl> @ 250 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+driven: seq_d seq_a seq_c seq_b
+ok: the library takes its configuration object from the database
+ok: four sequences in random cyclic mode are four different ones
+UVM_INFO <removed by verify-uvm.pl> @ 250 ns: reporter [SEQLIB/START] Starting sequence library seq_lib in unknown phase: 4 iterations in mode UVM_SEQ_LIB_USER
+UVM_INFO <removed by verify-uvm.pl> @ 290 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+driven: seq_a seq_b seq_a seq_b
+ok: the library takes its fields from the database
+ok: the number of sequences is within the configured limits
+caught SEQLIB/MIN_GT_MAX
+UVM_INFO <removed by verify-uvm.pl> @ 290 ns: reporter [SEQLIB/START] Starting sequence library seq_lib in unknown phase: 2 iterations in mode UVM_SEQ_LIB_RAND
+UVM_INFO <removed by verify-uvm.pl> @ 310 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+ok: a minimum above the maximum is set to the maximum
+caught SEQLIB/NOSEQS
+ok: an empty library runs nothing
+UVM_INFO <removed by verify-uvm.pl> @ 310 ns: reporter [SEQLIB/START] Starting sequence library uvm_sequence_library #(REQ,RSP) in unknown phase: 1 iterations in mode UVM_SEQ_LIB_ITEM
+caught SEQLIB/BASE_ITEM
+UVM_INFO <removed by verify-uvm.pl> @ 310 ns: reporter [SEQLIB/END] Ending sequence library in phase unknown
+ok: a library of the base item sends no items
+caught SEQLIB/BAD_SEQ_TYPE
+ok: a sequence added by type at run time is in the libraries created afterwards
+-----------------------------------------------------------------
+Name                Type                   Size  Value
+-----------------------------------------------------------------
+lib                 seq_lib                -     -
+  min_random_count  int unsigned           32    3
+  max_random_count  int unsigned           32    3
+  selection_mode    uvm_sequence_lib_mode  32    UVM_SEQ_LIB_ITEM
+  sequence_count    int unsigned           32    3
+  sequences         queue_object_types     2     -
+    [0]             uvm_object_wrapper     -1    seq_a
+    [1]             uvm_object_wrapper     -1    seq_c
+  seqs_distrib      as_int_string          4     -
+    [item]          int unsigned           32    3
+    [seq_a]         int unsigned           32    5
+    [seq_b]         int unsigned           32    2
+    [seq_c]         int unsigned           32    4
+-----------------------------------------------------------------
+TEST PASSED
+UVM_INFO <removed by verify-uvm.pl> @ 310 ns: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :    6
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 310 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :  20
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[SEQLIB/END]            9
+[SEQLIB/START]          9
+[UVM/REPORT/CATCHER]    1
+UVM_INFO @ 310 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

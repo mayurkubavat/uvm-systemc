@@ -35,12 +35,23 @@ namespace uvm {
 uvm_reg_item::uvm_reg_item( const std::string& name ) : uvm_sequence_item(name)
   , value(1)
 {
+  element_kind = UVM_REG;
   element = nullptr;
+  access_kind = UVM_READ;
+  offset = 0;
+  status = UVM_IS_OK;
   local_map = nullptr;
+  map = nullptr;
+  path = UVM_DEFAULT_PATH;
   parent = nullptr;
-  extension = nullptr;
-
   prior = -1;
+  extension = nullptr;
+  lineno = 0;
+}
+
+uvm_object* uvm_reg_item::create( const std::string& name )
+{
+  return new uvm_reg_item(name);
 }
 
 
@@ -101,8 +112,6 @@ void uvm_reg_item::do_copy( const uvm_object& rhs )
     UVM_ERROR("WRONG_TYPE","Provided rhs is not of type uvm_reg_item");
     return;
   }
-
-  uvm_sequence_item::copy(rhs);
 
   element_kind = rhs_->element_kind;
   element = rhs_->element;

@@ -24,6 +24,7 @@
 //   permissions and limitations under the License.
 //----------------------------------------------------------------------
 
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -31,6 +32,7 @@
 #include "uvmsc/base/uvm_object_globals.h"
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_globals.h"
+#include "uvmsc/base/uvm_cmdline_settings.h"
 #include "uvmsc/base/uvm_root.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
@@ -40,6 +42,9 @@
 #include "uvmsc/report/uvm_report_object.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 #include "uvmsc/phasing/uvm_objection.h"
+#include "uvmsc/phasing/uvm_objection_callback.h"
+#include "uvmsc/macros/uvm_callback_defines.h"
+#include "uvmsc/cb/uvm_callback_iter.h"
 
 using namespace sc_core;
 
@@ -50,6 +55,20 @@ namespace uvm {
 //----------------------------------------------------------------------
 
 //none
+
+//----------------------------------------------------------------------
+// Constructor of uvm_objection_callback
+//
+// Registers the callback type for objections, so that a callback can be
+// added for all objections before any objection exists.
+//----------------------------------------------------------------------
+
+uvm_objection_callback::uvm_objection_callback( const std::string& name )
+: uvm_callback(name)
+{
+  uvm_callbacks<uvm_objection, uvm_objection_callback>::m_register_pair(
+    "uvm_objection", "uvm_objection_callback");
+}
 
 //----------------------------------------------------------------------
 // Constructors
@@ -63,6 +82,21 @@ uvm_objection::uvm_objection() : uvm_object( sc_core::sc_gen_unique_name("object
 uvm_objection::uvm_objection( const std::string& name ) : uvm_object(name)
 {
   m_objection_init();
+}
+
+uvm_objection::~uvm_objection()
+{
+  m_objections_list& objs = m_objections();
+  objs.erase(std::remove(objs.begin(), objs.end(), this), objs.end());
+
+  m_objection_list_t& sched = m_scheduled_list();
+  for (m_scheduled_list_itt it = sched.begin(); it != sched.end(); )
+  {
+    if ((*it)->objection == this)
+      it = sched.erase(it);
+    else
+      ++it;
+  }
 }
 
 //----------------------------------------------------------------------
@@ -313,6 +347,9 @@ void uvm_objection::raised( uvm_object* obj,
   if (comp != nullptr)
     comp->raised(this, source_obj, description, count);
 
+  UVM_DO_CALLBACKS(uvm_objection, uvm_objection_callback,
+    raised(this, obj, source_obj, description, count))
+
   if (m_events.find(obj) != m_events.end()) //exists
     m_events[obj]->raised.notify();
 }
@@ -333,6 +370,9 @@ void uvm_objection::dropped( uvm_object* obj,
   uvm_component* comp = dynamic_cast<uvm_component*>(obj);
   if(comp != nullptr)
     comp->dropped(this, source_obj, description, count);
+
+  UVM_DO_CALLBACKS(uvm_objection, uvm_objection_callback,
+    dropped(this, obj, source_obj, description, count))
 
   if (m_events.find(obj) != m_events.end()) // if exists
     m_events[obj]->dropped.notify();
@@ -356,6 +396,9 @@ void uvm_objection::all_dropped( uvm_object* obj,
   comp = dynamic_cast<uvm_component*>(obj);
   if(comp != nullptr)
     comp->all_dropped(this, source_obj, description, count);
+
+  UVM_DO_CALLBACKS(uvm_objection, uvm_objection_callback,
+    all_dropped(this, obj, source_obj, description, count))
 
   if (m_events.find(obj) != m_events.end()) // if exists
     m_events[obj]->all_dropped.notify();
@@ -532,7 +575,8 @@ void uvm_objection::m_objection_init()
 
   m_events.clear();
   m_cleared = false;
-  m_trace_mode = false;
+  // +UVM_OBJECTION_TRACE on the command line turns on tracing
+  m_trace_mode = uvm_cmdline_settings::has_arg("+UVM_OBJECTION_TRACE");
   m_hier_mode = true;
 
   m_ctxt = nullptr;
@@ -552,8 +596,8 @@ void uvm_objection::m_objection_init()
 
 uvm_objection::m_objections_list& uvm_objection::m_objections()
 {
-  static m_objections_list list;
-  return list;
+  static m_objections_list* list = new m_objections_list();
+  return *list;
 }
 
 //----------------------------------------------------------------------
@@ -564,8 +608,9 @@ uvm_objection::m_objections_list& uvm_objection::m_objections()
 
 std::vector<uvm_objection_context_object*>& uvm_objection::m_scheduled_list()
 {
-  static std::vector<uvm_objection_context_object*> list;
-  return list;
+  static std::vector<uvm_objection_context_object*>* list =
+    new std::vector<uvm_objection_context_object*>();
+  return *list;
 }
 
 //----------------------------------------------------------------------

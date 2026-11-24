@@ -38,6 +38,7 @@ uvm_factory_override::uvm_factory_override( const std::string& full_inst_path_,
                                             const std::string& orig_type_name_,
                                             uvm_object_wrapper* orig_type_,
                                             uvm_object_wrapper* ovrd_type_ )
+  : selected(false)
 {
   if (ovrd_type_ == nullptr)
     uvm_report_fatal( "NULLWR",

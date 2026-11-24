@@ -3,11 +3,11 @@ UVM_INFO @ 0 s: reporter [RNTST] Running test arb_test...
 UVM_INFO @ 0 s: arb_test [arb_test:] Sequencer Arbitration selected: SEQ_ARB_STRICT_RANDOM
 UVM_INFO @ 1 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:1 SEQ_2:0 SEQ_3:0 SEQ_4:0
 UVM_INFO @ 11 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:2 SEQ_2:0 SEQ_3:0 SEQ_4:0
-UVM_INFO @ 21 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:3 SEQ_2:0 SEQ_3:0 SEQ_4:0
-UVM_INFO @ 31 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:4 SEQ_2:0 SEQ_3:0 SEQ_4:0
-UVM_INFO @ 41 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:4 SEQ_2:1 SEQ_3:0 SEQ_4:0
-UVM_INFO @ 51 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:4 SEQ_2:2 SEQ_3:0 SEQ_4:0
-UVM_INFO @ 61 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:4 SEQ_2:3 SEQ_3:0 SEQ_4:0
+UVM_INFO @ 21 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:2 SEQ_2:1 SEQ_3:0 SEQ_4:0
+UVM_INFO @ 31 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:2 SEQ_2:2 SEQ_3:0 SEQ_4:0
+UVM_INFO @ 41 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:3 SEQ_2:2 SEQ_3:0 SEQ_4:0
+UVM_INFO @ 51 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:3 SEQ_2:3 SEQ_3:0 SEQ_4:0
+UVM_INFO @ 61 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:3 SEQ_2:4 SEQ_3:0 SEQ_4:0
 UVM_INFO @ 71 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:4 SEQ_2:4 SEQ_3:0 SEQ_4:0
 UVM_INFO @ 81 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:4 SEQ_2:4 SEQ_3:1 SEQ_4:0
 UVM_INFO @ 91 ms: arb_test.m_driver [RECEIVED_SEQ] Access totals: SEQ_1:4 SEQ_2:4 SEQ_3:2 SEQ_4:0

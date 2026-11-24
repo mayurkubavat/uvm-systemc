@@ -159,7 +159,7 @@ void uvm_report_info( const std::string& id,
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
   uvm_root* top = cs->get_root();
 
-  top->uvm_report_info(id, message, verbosity, filename, line);
+  top->uvm_report_info(id, message, verbosity, filename, line, context_name, report_enabled_checked);
 }
 
 
@@ -175,7 +175,7 @@ void uvm_report_warning( const std::string& id,
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
   uvm_root* top = cs->get_root();
 
-  top->uvm_report_warning(id, message, verbosity, filename, line);
+  top->uvm_report_warning(id, message, verbosity, filename, line, context_name, report_enabled_checked);
 }
 
 void uvm_report_error( const std::string& id,
@@ -189,7 +189,7 @@ void uvm_report_error( const std::string& id,
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
   uvm_root* top = cs->get_root();
 
-  top->uvm_report_error(id, message, verbosity, filename, line);
+  top->uvm_report_error(id, message, verbosity, filename, line, context_name, report_enabled_checked);
 }
 
 void uvm_report_fatal( const std::string& id,
@@ -204,7 +204,7 @@ void uvm_report_fatal( const std::string& id,
   uvm_coreservice_t* cs = uvm_coreservice_t::get();
   uvm_root* top = cs->get_root();
 
-  top->uvm_report_fatal(id, message, verbosity, filename, line);
+  top->uvm_report_fatal(id, message, verbosity, filename, line, context_name, report_enabled_checked);
 }
 
 // TODO temporary set verbosity level. Should be moved to
@@ -327,15 +327,18 @@ const char* uvm_glob_to_re_char(const char *glob)
     return glob;
   }
 
-  // If either of the following cases appear then return an empty string
+  // If either of the following cases appear then return the expression
+  // which matches the empty string only
   //
   //  1.  The glob string is empty (it has zero characters)
   //  2.  The glob string has a single character that is the
   //      uvm_re_bracket_char  (i.e. "/")
   if(len == 0 || (len == 1 && *glob == uvm_re_bracket_char))
   {
-    uvm_re[0] = '\0';
-    return &uvm_re[0];  // return an empty string
+    // an empty expression would match every string; as in UVM-SV, match
+    // only the empty string
+    std::strcpy(uvm_re, "/^$/");
+    return &uvm_re[0];
   }
 
   // If bracketed with the /glob/, then it's already a regex
@@ -425,7 +428,9 @@ const char* uvm_glob_to_re_char(const char *glob)
 // up in the regex cache to see if it has already been compiled.  If
 // so, the compile version is retrieved from the cache.  Otherwise, it
 // is compiled and cached for future use.  After compilation the
-// matching is done using regexec().
+// matching is done using regexec(), which searches the expression in
+// the string. Globs converted by uvm_glob_to_re are anchored with ^
+// and $, so they still match the whole string.
 //--------------------------------------------------------------------
 
 bool uvm_re_match( const std::string& re, const std::string& str )
@@ -443,10 +448,10 @@ bool uvm_re_match( const std::string& re, const std::string& str )
 #if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER < 1700)
   // MSVC 2008 and 2010: regex is in nested namespace std::tr1
   std::tr1::regex regex(rex, std::tr1::regex::extended);
-  match = std::tr1::regex_match(str.begin(), str.end(), regex);
+  match = std::tr1::regex_search(str.begin(), str.end(), regex);
 #else
   std::regex regex(rex, std::regex::extended);
-  match = std::regex_match(str.begin(), str.end(), regex);
+  match = std::regex_search(str.begin(), str.end(), regex);
 #endif
   err = !match;
 #else

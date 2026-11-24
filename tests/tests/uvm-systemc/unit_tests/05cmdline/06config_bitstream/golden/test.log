@@ -1,0 +1,40 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_int=test,number,1_000
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test,bad,-_1" : value "-_1" is not an integral value.
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test,bad,18446744073709551615" : value "18446744073709551615" is not an integral value.
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_bitstream=test,mask,'hFFFF_FFFF
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_bitstream=test,wide,0x123456789abcdef0
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_bitstream=*,count,12
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_bitstream=test,flags,'b1010
+UVM_INFO @ 0 s: reporter [UVM_CMDLINE_PROC] Applying config setting from the command line: +uvm_set_config_bitstream=test,all_ones,18446744073709551615
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test,bad,_1" : value "_1" is not an integral value.
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test,bad,many" : value "many" is not an integral value.
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test,bad" missing value: component is "test"  field is "bad"
+UVM_ERROR @ 0 s: reporter [UVM_CMDLINE_PROC] Invalid +uvm_set_config command"test,bad,1,2" : expected only 3 fields (component, field and value).
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+mask as uvm_bitstream_t = 0xffffffff
+mask not found as int
+wide as uvm_bitstream_t = 0x123456789abcdef0
+wide not found as int
+count as uvm_bitstream_t = 0xc
+count not found as int
+flags as uvm_bitstream_t = 0xa
+flags not found as int
+all_ones as uvm_bitstream_t = 0xffffffffffffffff
+all_ones not found as int
+number as uvm_bitstream_t = 0x3e8
+number as int = 1000
+bad not found as uvm_bitstream_t
+bad not found as int
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   7
+UVM_WARNING   :   0
+UVM_ERROR     :   6
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[UVM_CMDLINE_PROC]     12
+UVM_INFO @ 0 s: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

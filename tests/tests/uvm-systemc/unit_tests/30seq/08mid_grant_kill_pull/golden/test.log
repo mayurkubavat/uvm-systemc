@@ -1,0 +1,52 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+12 ns: driver(get_next_item) got item 100
+22 ns: driver(get_next_item) got item 101
+UVM_ERROR <removed by verify-uvm.pl> @ 24 ns: test.sqr [SEQREQZMB] The task responsible for requesting a wait_for_grant on sequencer 'test.sqr' for sequence 'zseq' has been killed, to avoid a deadlock the sequence will be removed from the arbitration queues.
+34 ns: driver(get_next_item) got item 200
+44 ns: driver(get_next_item) got item 201
+56 ns: driver(get) got item 300
+66 ns: driver(get) got item 301
+78 ns: driver(peek) got item 400
+88 ns: driver(peek) got item 401
+99 ns: driver(try_next_item) got item 500
+112 ns: driver(get_next_item) got item 601
+124 ns: driver(get_next_item) got item 700
+134 ns: driver(get_next_item) got item 701
+134 ns: attached parent kill term=1 state=128 c0=128 c1=128
+146 ns: driver(get_next_item) got item 800
+146 ns: virtual parent kill term=1 state=128 c0=128
+166 ns: driver(get_next_item) got item 900
+166 ns: child-kills-parent(predo) term=1 state=128 c0=128 c1=128 after_join=0
+186 ns: driver(get_next_item) got item 910
+186 ns: child-kills-parent(body) term=1 state=128 c0=128 c1=128 after_join=0
+206 ns: driver(get_next_item) got item 920
+206 ns: grandchild-kills-grandparent term=1 gp=128 p=128 c0=128 c1=128 after_join=0
+224 ns: driver(get_next_item) got item 1000
+224 ns: lowest-id stop_sequences terms=1,1,1 states=128,128,128
+226 ns: auto_obj self-kill leaked_counts=0,0 states=128,128
+UVM_INFO @ 226 ns: reporter [test.sqr] Sequences stopped.  Removing all requests from sequencer FIFO.
+236 ns: driver(get_next_item) got item 1200
+236 ns: pull self-stop fifo_used=0 flags1=0,0 flags2=0,0 surv_done=1
+UVM_INFO @ 236 ns: reporter [test.psqr] Sequences stopped.  Removing all requests from sequencer FIFO.
+241 ns: push_driver got item 1201
+251 ns: push self-stop fifo_used=0 recv_count=1 first_recv=1201
+254 ns: do_kill reentrancy states=128,128,128,128 calls=1,1,1,1
+266 ns: driver(get_next_item) got item 1400
+266 ns: scfork child-kills-parent term=1 state=128 c0=128 c1=128 after_join=0
+278 ns: driver(get_next_item) got item 1410
+278 ns: scfork child-stop-sequences term=1 state=128 c0=128 c1=128 after_join=0
+sequencer is free
+UVM_INFO <removed by verify-uvm.pl> @ 278 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   3
+UVM_WARNING   :   0
+UVM_ERROR     :   1
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+[SEQREQZMB]             1
+[test.psqr]             1
+[test.sqr]              1
+UVM_INFO @ 278 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

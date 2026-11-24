@@ -1,0 +1,18 @@
+SystemC Simulation
+q: [1 2 3]
+q: [1 10 2 3]
+q: [0 1 10 2 3]
+q: [0 1 10 2 20 3]
+UVM_WARNING @ 0 s: reporter [QUEUEINS] insert: given index out of range for queue of size 6. Ignoring insert request
+UVM_WARNING @ 0 s: reporter [QUEUEINS] insert: given index out of range for queue of size 6. Ignoring insert request
+q: [0 1 10 2 20 3]
+pop_back = 3
+pop_front = 0
+pop_back = 20
+q: [1 10 2]
+s: [a b c]
+pop_back = c
+pop_back = b
+pop_back = a
+pop_back on empty queue =
+** UVM TEST PASSED **

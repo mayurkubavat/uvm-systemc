@@ -63,8 +63,6 @@ class uvm_reg_block;
 //! Register operations do not require extending this class if none of the above
 //! services are needed. Register test sequences can be extend from the base
 //! <uvm_sequence<REQ, RSP> base class or even from outside a sequence.
-//!
-//! Note- The convenience API not yet implemented.
 //----------------------------------------------------------------------
 
 template <typename BASE = uvm_sequence<uvm_reg_item> >

@@ -23,18 +23,18 @@
 //
 // These routines provide an interface to the DPI/PLI
 // implementation of backdoor access used by registers.
-//
-// TODO implementation not done yet
 //----------------------------------------------------------------------
 
 #ifndef UVM_HDL_H_
 #define UVM_HDL_H_
 
-#include <systemc>
+#include <cstdint>
 #include <sstream>
+#include <type_traits>
+
+#include <systemc>
 
 #include "uvmsc/base/uvm_globals.h"
-
 #include "uvmsc/reg/uvm_sc_if.h"
 
 namespace uvm {
@@ -43,24 +43,179 @@ namespace uvm {
 #define UVM_HDL_MAX_WIDTH 1024
 #endif
 
-/* 
- * VARIABLE: uvm_hdl_max_width
- *
- * Sets the maximum size bit vector for backdoor access. 
- * This parameter will be looked up by the 
- * DPI-C code using:
- *   vpi_handle_by_name(
- *     "uvm_pkg::UVM_HDL_MAX_WIDTH", 0);
- *
- * TODO - do we define a variable for UVM-SC?
- * parameter int uvm_hdl_max_width = `UVM_HDL_MAX_WIDTH;
- */
-
 typedef sc_dt::sc_uint_base uvm_hdl_data_t;
 
 bool uvm_hdl_check_path(const std::string& path );
 bool uvm_hdl_release(const std::string& path);
 bool uvm_hdl_release_time( const std::string& path, sc_core::sc_time time );
+
+namespace detail {
+
+inline unsigned int hdl_bit_width(const bool&)
+{
+  return 1u;
+}
+
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value && !std::is_same<T, bool>::value,
+                        unsigned int>::type
+hdl_bit_width(const T&)
+{
+  return static_cast<unsigned int>(sizeof(T) * 8u);
+}
+
+template <typename T>
+typename std::enable_if<!std::is_integral<T>::value, unsigned int>::type
+hdl_bit_width(const T& v)
+{
+  return static_cast<unsigned int>(v.length());
+}
+
+inline bool hdl_bounds_valid(unsigned int width, int start, int stop)
+{
+  if (start == -1 && stop == -1)
+    return true;
+  if (start < 0 || static_cast<unsigned int>(start) >= width)
+    return false;
+  if (stop == -1)
+    return true;
+  if (stop < 0 || static_cast<unsigned int>(stop) >= width || start < stop)
+    return false;
+  return true;
+}
+
+inline bool hdl_slice_read(const bool& full, bool& out, int start, int stop)
+{
+  if (!hdl_bounds_valid(1u, start, stop))
+    return false;
+  out = full;
+  return true;
+}
+
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value && !std::is_same<T, bool>::value,
+                        bool>::type
+hdl_slice_read(const T& full, T& out, int start, int stop)
+{
+  const unsigned int width = hdl_bit_width(full);
+  if (!hdl_bounds_valid(width, start, stop))
+    return false;
+  if (start == -1 && stop == -1)
+  {
+    out = full;
+    return true;
+  }
+  const int lo = (stop == -1) ? start : stop;
+  const unsigned int slice_w = static_cast<unsigned int>(start - lo + 1);
+  using U = typename std::make_unsigned<T>::type;
+  const uint64_t ufull = static_cast<uint64_t>(static_cast<U>(full));
+  const uint64_t mask = (slice_w >= 64u) ? ~uint64_t(0) : ((uint64_t(1) << slice_w) - 1u);
+  out = static_cast<T>(static_cast<U>((ufull >> lo) & mask));
+  return true;
+}
+
+template <typename T>
+typename std::enable_if<!std::is_integral<T>::value, bool>::type
+hdl_slice_read(const T& full, T& out, int start, int stop)
+{
+  const unsigned int width = hdl_bit_width(full);
+  if (!hdl_bounds_valid(width, start, stop))
+    return false;
+  if (start == -1 && stop == -1)
+  {
+    out = full;
+    return true;
+  }
+  if (stop == -1 || start == stop)
+  {
+    out = 0;
+    out[0] = full[start];
+    return true;
+  }
+  out = 0;
+  out.range(start - stop, 0) = full.range(start, stop);
+  return true;
+}
+
+inline bool hdl_slice_write(bool& cur, const bool& val, int start, int stop)
+{
+  if (!hdl_bounds_valid(1u, start, stop))
+    return false;
+  cur = val;
+  return true;
+}
+
+template <typename T>
+typename std::enable_if<std::is_integral<T>::value && !std::is_same<T, bool>::value,
+                        bool>::type
+hdl_slice_write(T& cur, const T& val, int start, int stop)
+{
+  const unsigned int width = hdl_bit_width(cur);
+  if (!hdl_bounds_valid(width, start, stop))
+    return false;
+  if (start == -1 && stop == -1)
+  {
+    cur = val;
+    return true;
+  }
+  const int lo = (stop == -1) ? start : stop;
+  const unsigned int slice_w = static_cast<unsigned int>(start - lo + 1);
+  using U = typename std::make_unsigned<T>::type;
+  const uint64_t ucur = static_cast<uint64_t>(static_cast<U>(cur));
+  const uint64_t uval = static_cast<uint64_t>(static_cast<U>(val));
+  const uint64_t mask = (slice_w >= 64u) ? ~uint64_t(0) : ((uint64_t(1) << slice_w) - 1u);
+  const uint64_t cleared = ucur & ~(mask << lo);
+  const uint64_t inserted = (uval & mask) << lo;
+  cur = static_cast<T>(static_cast<U>(cleared | inserted));
+  return true;
+}
+
+template <typename T>
+typename std::enable_if<!std::is_integral<T>::value, bool>::type
+hdl_slice_write(T& cur, const T& val, int start, int stop)
+{
+  const unsigned int width = hdl_bit_width(cur);
+  if (!hdl_bounds_valid(width, start, stop))
+    return false;
+  if (start == -1 && stop == -1)
+  {
+    cur = val;
+    return true;
+  }
+  if (stop == -1 || start == stop)
+  {
+    cur[start] = val[0];
+    return true;
+  }
+  cur.range(start, stop) = val.range(start - stop, 0);
+  return true;
+}
+
+template <typename T>
+sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* hdl_resolve_deposit_sig(sc_core::sc_object* obj)
+{
+  auto* sig = dynamic_cast<sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>*>(obj);
+  if (sig != nullptr)
+    return sig;
+  auto* port = dynamic_cast<sc_core::sc_port_base*>(obj);
+  if (port != nullptr)
+    return dynamic_cast<sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>*>(port->get_interface());
+  return nullptr;
+}
+
+template <typename T>
+const sc_core::sc_signal_in_if<T>* hdl_resolve_read_if(const sc_core::sc_object* obj)
+{
+  const auto* rd_if = dynamic_cast<const sc_core::sc_signal_in_if<T>*>(obj);
+  if (rd_if != nullptr)
+    return rd_if;
+  const auto* port = dynamic_cast<const sc_core::sc_port_base*>(obj);
+  if (port != nullptr)
+    return dynamic_cast<const sc_core::sc_signal_in_if<T>*>(port->get_interface());
+  return nullptr;
+}
+
+} // namespace detail
 
 //----------------------------------------------------------------------
 // Function: uvm_hdl_deposit
@@ -68,6 +223,20 @@ bool uvm_hdl_release_time( const std::string& path, sc_core::sc_time time );
 // Sets the given HDL ~path~ to the specified ~value~.
 // Returns 1 if the call succeeded, 0 otherwise.
 //----------------------------------------------------------------------
+
+// Message for an object in the design which cannot be accessed with
+// the type T used for the access
+inline std::string uvm_hdl_type_mismatch( const std::string& path,
+                                          const sc_core::sc_object* obj,
+                                          unsigned int n_bits )
+{
+  std::ostringstream str;
+  str << "Object " << path << " (" << obj->kind() << ") cannot be accessed: it is "
+      << "not a uvm_sc_if<T> or an sc_signal<T, SC_MANY_WRITERS>, or an sc_vector of "
+      << "them, with exactly the value type T of the access, a type of " << n_bits
+      << " bits (register and memory backdoor accesses use uvm_reg_data_t).";
+  return str.str();
+}
 
 template <typename T>
 bool uvm_hdl_deposit( const std::string& path, const T& value )
@@ -82,17 +251,6 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
   // check again, perhaps we've hit a vector
   uvm_extract_path_index(objname1, objname2, vidx_start, vidx_stop);
 
-  /*
-  std::cout << " uvm_hdl_deposit to path " << path << std::endl;
-  std::cout << " objname1 " << objname1 << std::endl;
-  std::cout << " idx_start: " << idx_start << std::endl;
-  std::cout << " idx_stop: " << idx_stop << std::endl;
-
-  std::cout << " objname2 " << objname2 << std::endl;
-  std::cout << " vidx_start: " << vidx_start << std::endl;
-  std::cout << " vidx_stop: " << vidx_stop << std::endl;
-  */
-
   sc_core::sc_object* obj = sc_core::sc_find_object(objname2.c_str());
 
   if (obj == nullptr)
@@ -101,17 +259,22 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
     return false;
   }
 
-  // possibility 1: backdoor register represented by object of type sc_signal
-  sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* sig_md = dynamic_cast<sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* > (obj);
+  const unsigned int width = detail::hdl_bit_width(value);
+
+  // possibility 1: backdoor register represented by sc_signal<T, SC_MANY_WRITERS>
+  // or a port bound to one
+  sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* sig_md =
+      detail::hdl_resolve_deposit_sig<T>(obj);
   if (sig_md != nullptr)
   {
-    if ((idx_start != -1) && (idx_stop != -1))
+    T next_val = sig_md->read();
+    if (!detail::hdl_slice_write(next_val, value, idx_start, idx_stop))
     {
-      uvm_report_error("HDL_DEPOSIT", "Writing part-select on sc_signal<T> is not supported. ");
+      uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
       return false;
     }
 
-    sig_md->write(value); // write all bits
+    sig_md->write(next_val);
 
     std::ostringstream str;
     str << "Value 0x" << std::hex << value << " written to " << path << ".";
@@ -123,8 +286,7 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
   uvm_sc_if<T>* interf = dynamic_cast<uvm_sc_if<T>* > (obj);
   if (interf != nullptr)
   {
-    if ( (idx_start > (value.length()-1)) || (idx_start < -1) ||
-         (idx_stop > (value.length()-1)) || (idx_stop < -1) )
+    if (!detail::hdl_bounds_valid(width, idx_start, idx_stop))
     {
       uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
       return false;
@@ -137,11 +299,10 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
     return true;
   }
 
-  // // possibility 3: backdoor registers represented by sc_vector containing object of type uvm_sc_if or sc_signal
+  // possibility 3: sc_vector containing uvm_sc_if, sc_signal, or port
   sc_core::sc_vector_base* vec = dynamic_cast<sc_core::sc_vector_base* > (obj);
   if (vec != nullptr)
   {
-    // vector found, but no index, meaning the first index was valid
     if (vidx_start == -1)
     {
       vidx_start = idx_start;
@@ -157,34 +318,34 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
       return false;
     }
 
-    uvm_sc_if<T>* interf = dynamic_cast<uvm_sc_if<T>* > (vec_element[vidx_start]);
-    if (interf != nullptr)
+    uvm_sc_if<T>* elem_if = dynamic_cast<uvm_sc_if<T>* > (vec_element[vidx_start]);
+    if (elem_if != nullptr)
     {
-
-      if ( (idx_start > (value.length()-1)) || (idx_start < -1) ||
-           (idx_stop > (value.length()-1)) || (idx_stop < -1) )
+      if (!detail::hdl_bounds_valid(width, idx_start, idx_stop))
       {
         uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
         return false;
       }
 
-      interf->write(value, idx_start, idx_stop);
+      elem_if->write(value, idx_start, idx_stop);
       std::ostringstream str;
       str << "Value 0x" << std::hex << value << " written to " << path << ".";
       uvm_report_info("HDL_DEPOSIT", str.str(), uvm::UVM_FULL);
       return true;
     }
 
-    sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* sig_md = dynamic_cast<sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* > (vec_element[vidx_start]);
-    if (sig_md != nullptr)
+    sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* elem_sig =
+        detail::hdl_resolve_deposit_sig<T>(vec_element[vidx_start]);
+    if (elem_sig != nullptr)
     {
-      if ((idx_start != -1) && (idx_stop != -1))
+      T next_val = elem_sig->read();
+      if (!detail::hdl_slice_write(next_val, value, idx_start, idx_stop))
       {
-        uvm_report_error("HDL_DEPOSIT", "Writing part-select on sc_signal<T> is not supported. ");
+        uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
         return false;
       }
 
-      sig_md->write(value);
+      elem_sig->write(next_val);
       std::ostringstream str;
       str << "Value 0x" << std::hex << value << " written to " << path << ".";
       uvm_report_info("HDL_DEPOSIT", str.str(), uvm::UVM_FULL);
@@ -192,7 +353,7 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
     }
   }
 
-  uvm_report_error("HDL_DEPOSIT", "Object " + objname2 + " is not of type uvm_sc_if or sc_signal.");
+  uvm_report_error("HDL_DEPOSIT", uvm_hdl_type_mismatch(objname2, obj, width));
   return false;
 }
 
@@ -203,7 +364,7 @@ bool uvm_hdl_deposit( const std::string& path, const T& value )
 //----------------------------------------------------------------------
 
 template <typename T>
-bool uvm_hdl_force( const std::string& path, const T& value )
+bool uvm_hdl_force( const std::string&, const T& )
 {
   uvm_report_error("HDL_FORCE", "HDL signal force not available without DPI.");
   return false;
@@ -218,7 +379,7 @@ bool uvm_hdl_force( const std::string& path, const T& value )
 //----------------------------------------------------------------------
 
 template <typename T>
-bool uvm_hdl_force_time( const std::string& path, const T& value, sc_core::sc_time force_time )
+bool uvm_hdl_force_time( const std::string&, const T&, sc_core::sc_time )
 {
   uvm_report_error("HDL_FORCE_TIME", "HDL signal force with time not available without DPI.");
   return false;
@@ -229,16 +390,11 @@ bool uvm_hdl_force_time( const std::string& path, const T& value, sc_core::sc_ti
 // Function: uvm_hdl_release_and_read
 //
 // Releases a value previously set with <uvm_hdl_force>.
-// Returns 1 if the call succeeded, 0 otherwise. ~value~ is set to
-// the HDL value after the release. For 'reg', the value will still be
-// the forced value until it has bee procedurally reassigned. For 'wire',
-// the value will change immediately to the resolved value of its
-// continuous drivers, if any. If none, its value remains as forced until
-// the next direct assignment.
+// Returns 1 if the call succeeded, 0 otherwise.
 //----------------------------------------------------------------------
 
 template <typename T>
-bool uvm_hdl_release_and_read( const std::string& path, T& value )
+bool uvm_hdl_release_and_read( const std::string&, T& )
 {
   uvm_report_error("HDL_RELEASE_READ", "HDL signal release and read not available without DPI.");
   return false;
@@ -265,16 +421,6 @@ bool uvm_hdl_read( const std::string& path, T& value )
   // check again, perhaps we've hit a vector
   uvm_extract_path_index(objname1, objname2, vidx_start, vidx_stop);
 
-  /*
-  std::cout << " uvm_hdl_read to path " << path << std::endl;
-  std::cout << " objname1 " << objname1 << std::endl;
-  std::cout << " idx_start: " << idx_start << std::endl;
-  std::cout << " idx_stop: " << idx_stop << std::endl;
-
-  std::cout << " objname2 " << objname2 << std::endl;
-  std::cout << " vidx_start: " << vidx_start << std::endl;
-  std::cout << " vidx_stop: " << vidx_stop << std::endl;
-  */
   sc_core::sc_object* obj = sc_core::sc_find_object(objname2.c_str());
 
   if (obj == nullptr)
@@ -283,17 +429,18 @@ bool uvm_hdl_read( const std::string& path, T& value )
     return false;
   }
 
-  // possibility 1: backdoor register represented by object of type sc_signal
-  sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* sig_md = dynamic_cast<sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* > (obj);
-  if (sig_md != nullptr)
+  const unsigned int width = detail::hdl_bit_width(value);
+
+  // possibility 1: any sc_signal_in_if<T> (SC_ONE_WRITER or SC_MANY_WRITERS)
+  // or sc_in<T>/sc_out<T>/sc_inout<T> port bound to one
+  const sc_core::sc_signal_in_if<T>* sig_rd = detail::hdl_resolve_read_if<T>(obj);
+  if (sig_rd != nullptr)
   {
-    if ((idx_start != -1) && (idx_stop != -1))
+    if (!detail::hdl_slice_read(sig_rd->read(), value, idx_start, idx_stop))
     {
-      uvm_report_error("HDL_DEPOSIT", "Reading part-select on sc_signal<T> is not supported. ");
+      uvm_report_error("HDL_READ", "Specified index for bit select is out of range.");
       return false;
     }
-
-    value = sig_md->read();
 
     std::ostringstream str;
     str << "Value 0x" << std::hex << value << " read from " << path << ".";
@@ -305,10 +452,9 @@ bool uvm_hdl_read( const std::string& path, T& value )
   uvm_sc_if<T>* interf = dynamic_cast<uvm_sc_if<T>* > (obj);
   if (interf != nullptr)
   {
-    if ( (idx_start > (value.length()-1)) || (idx_start < -1) ||
-         (idx_stop > (value.length()-1)) || (idx_stop < -1) )
+    if (!detail::hdl_bounds_valid(width, idx_start, idx_stop))
     {
-      uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
+      uvm_report_error("HDL_READ", "Specified index for bit select is out of range.");
       return false;
     }
 
@@ -319,11 +465,10 @@ bool uvm_hdl_read( const std::string& path, T& value )
     return true;
   }
 
-  // // possibility 3: backdoor registers represented by sc_vector containing object of type uvm_sc_if or sc_signal
+  // possibility 3: sc_vector containing uvm_sc_if, sc_signal, or port
   sc_core::sc_vector_base* vec = dynamic_cast<sc_core::sc_vector_base* > (obj);
   if (vec != nullptr)
   {
-    // vector found, but no index, meaning the first index was valid
     if (vidx_start == -1)
     {
       vidx_start = idx_start;
@@ -335,37 +480,36 @@ bool uvm_hdl_read( const std::string& path, T& value )
 
     if ( (vidx_start > (((int)vec_element.size())-1)) || (vidx_start < 0) )
     {
-      uvm_report_error("HDL_DEPOSIT", "Specified index of sc_vector out of range.");
+      uvm_report_error("HDL_READ", "Specified index of sc_vector out of range.");
       return false;
     }
 
-    uvm_sc_if<T>* interf = dynamic_cast<uvm_sc_if<T>* > (vec_element[vidx_start]);
-    if (interf != nullptr)
+    uvm_sc_if<T>* elem_if = dynamic_cast<uvm_sc_if<T>* > (vec_element[vidx_start]);
+    if (elem_if != nullptr)
     {
-      if ( (idx_start > (value.length()-1)) || (idx_start < -1) ||
-           (idx_stop > (value.length()-1)) || (idx_stop < -1) )
+      if (!detail::hdl_bounds_valid(width, idx_start, idx_stop))
       {
-        uvm_report_error("HDL_DEPOSIT", "Specified index for bit select is out of range.");
+        uvm_report_error("HDL_READ", "Specified index for bit select is out of range.");
         return false;
       }
 
-      value = interf->read(idx_start, idx_stop);
+      value = elem_if->read(idx_start, idx_stop);
       std::ostringstream str;
       str << "Value 0x" << std::hex << value << " read from " << path << ".";
       uvm_report_info("HDL_READ", str.str(), uvm::UVM_FULL);
       return true;
     }
 
-    sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* sig_md = dynamic_cast<sc_core::sc_signal<T, sc_core::SC_MANY_WRITERS>* > (vec_element[vidx_start]);
-    if (sig_md != nullptr)
+    const sc_core::sc_signal_in_if<T>* elem_rd =
+        detail::hdl_resolve_read_if<T>(vec_element[vidx_start]);
+    if (elem_rd != nullptr)
     {
-      if ((idx_start != -1) && (idx_stop != -1))
+      if (!detail::hdl_slice_read(elem_rd->read(), value, idx_start, idx_stop))
       {
-        uvm_report_error("HDL_DEPOSIT", "Reading part-select on sc_signal<T> is not supported. ");
+        uvm_report_error("HDL_READ", "Specified index for bit select is out of range.");
         return false;
       }
 
-      value = sig_md->read();
       std::ostringstream str;
       str << "Value 0x" << std::hex << value << " read from " << path << ".";
       uvm_report_info("HDL_READ", str.str(), uvm::UVM_FULL);
@@ -373,7 +517,7 @@ bool uvm_hdl_read( const std::string& path, T& value )
     }
   }
 
-  uvm_report_error("HDL_READ", "Object " + objname2 + " is not of type uvm_sc_if or sc_signal.");
+  uvm_report_error("HDL_READ", uvm_hdl_type_mismatch(objname2, obj, width));
   return false;
 }
 

@@ -57,7 +57,7 @@ class uvm_reg_cbs : public uvm_callback
 
   virtual void post_predict( uvm_reg_field* fld,
                              uvm_reg_data_t previous,
-                             uvm_reg_data_t value,
+                             uvm_reg_data_t& value,
                              uvm_predict_e  kind,
                              uvm_path_e     path,
                              uvm_reg_map*   map ) {}

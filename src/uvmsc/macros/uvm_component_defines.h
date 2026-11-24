@@ -21,6 +21,10 @@
 #ifndef UVM_COMPONENT_DEFINES_H_
 #define UVM_COMPONENT_DEFINES_H_
 
+namespace uvm {
+class uvm_object_wrapper;
+} // namespace uvm
+
 // -------------------------------------------
 // MACRO: UVM_COMPONENT_UTILS
 //
@@ -35,11 +39,21 @@
 
 #define UVM_COMPONENT_UTILS(...) \
   M_UVM_COMPONENT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
-  M_UVM_COMPONENT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__) \
+  M_UVM_COMPONENT_GET_OBJECT_TYPE_FUNC \
+  M_UVM_COMPONENT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
 
 #define UVM_COMPONENT_PARAM_UTILS(...) \
   M_UVM_COMPONENT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
-  M_UVM_COMPONENT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__) \
+  M_UVM_COMPONENT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
+
+#define UVM_COMPONENT_ABSTRACT_UTILS(...) \
+  M_UVM_COMPONENT_ABSTRACT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
+  M_UVM_COMPONENT_GET_OBJECT_TYPE_FUNC \
+  M_UVM_COMPONENT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
+
+#define UVM_COMPONENT_PARAM_ABSTRACT_UTILS(...) \
+  M_UVM_COMPONENT_ABSTRACT_REGISTRY_INTERNAL_PARAM(__VA_ARGS__) \
+  M_UVM_COMPONENT_GET_TYPE_NAME_FUNC_PARAM(__VA_ARGS__)
 
 // ----------------------------------------------
 // MACRO: M_UVM_COMPONENT_REGISTRY_INTERNAL_PARAM
@@ -55,13 +69,22 @@
   using ::uvm::uvm_report_object::uvm_report_info; \
   using ::uvm::uvm_report_object::uvm_report_warning; \
   using ::uvm::uvm_report_object::uvm_report_error; \
-  using ::uvm::uvm_report_object::uvm_report_fatal; \
+  using ::uvm::uvm_report_object::uvm_report_fatal;
 
-/* TODO need this macro addition?
-  virtual uvm_component_wrapper get_object_type() const { \
-     return type_id::get(); \
-   }
-*/
+#define M_UVM_COMPONENT_ABSTRACT_REGISTRY_INTERNAL_PARAM(...) \
+  static const std::string m_register_type_name() { \
+    return std::string(#__VA_ARGS__); } \
+  typedef ::uvm::uvm_abstract_component_registry<__VA_ARGS__ > type_id; \
+  static type_id* get_type() { return type_id::get(); } \
+  using ::uvm::uvm_report_object::uvm_report_info; \
+  using ::uvm::uvm_report_object::uvm_report_warning; \
+  using ::uvm::uvm_report_object::uvm_report_error; \
+  using ::uvm::uvm_report_object::uvm_report_fatal;
+
+#define M_UVM_COMPONENT_GET_OBJECT_TYPE_FUNC \
+  virtual const ::uvm::uvm_object_wrapper* get_object_type() const { \
+    return type_id::get(); \
+  }
 
 // -------------------------------------------
 // MACRO: M_UVM_GET_TYPE_NAME_FUNC_PARAM

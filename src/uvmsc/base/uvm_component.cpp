@@ -35,6 +35,7 @@
 
 #include "uvmsc/base/uvm_root.h"
 #include "uvmsc/base/uvm_component.h"
+#include "uvmsc/base/uvm_cmdline_settings.h"
 #include "uvmsc/base/uvm_component_name.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/factory/uvm_factory.h"
@@ -46,6 +47,12 @@
 #include "uvmsc/print/uvm_printer.h"
 #include "uvmsc/macros/uvm_message_defines.h"
 #include "uvmsc/report/uvm_report_object.h"
+#include "uvmsc/policy/uvm_links.h"
+#include "uvmsc/policy/uvm_recorder.h"
+#include "uvmsc/policy/uvm_tr_database.h"
+#include "uvmsc/policy/uvm_tr_stream.h"
+#include "uvmsc/seq/uvm_sequence_base.h"
+#include "uvmsc/seq/uvm_sequence_item.h"
 
 using namespace sc_core;
 
@@ -68,12 +75,26 @@ bool uvm_component::_print_config_matches = false;
 //----------------------------------------------------------------------------
 
 uvm_component::uvm_component( uvm_component_name nm )
-: sc_module( nm.name() ), uvm_report_object((std::string)nm.name())
+: sc_module( nm.name() ), uvm_report_object((std::string)nm.name()),
+  m_comp_parent(nullptr)
 {
   // prevent recursive registration of uvm_root module
   bool top = ( strstr(nm, "uvm_top") != nullptr );
 
+  // uvm_top has no parent
+  m_comp_parent = nullptr;
+
   set_name(std::string(nm));
+
+  // SystemC generates the module name object_<n> for an empty name; use
+  // it as leaf name (UVM-SV generates COMP_<n>). Other names are kept as
+  // given, also when SystemC corrects the module name, so that duplicate
+  // names are still detected by the parent and lookup finds the name.
+  if (get_name().empty())
+  {
+    uvm_object::set_name(this->basename());
+    m_set_full_name();
+  }
 
   start_report_handler(this->name());
 
@@ -114,6 +135,10 @@ uvm_component::uvm_component( uvm_component_name nm )
       m_domain = uvm_domain::get_uvm_domain();
     }
 
+    // apply the report settings given on the command line
+    uvm_cmdline_settings::init(uvm_coreservice_t::get()->get_root());
+    uvm_cmdline_settings::apply_report_settings(this);
+
   }
   else
   {
@@ -126,8 +151,23 @@ uvm_component::uvm_component( uvm_component_name nm )
   m_build_done = false;
   m_phasing_active = 0;
   recording_detail = UVM_NONE;
+  m_tr_database = nullptr;
   m_current_phase = nullptr;
   m_children.clear();
+
+  // As in UVM-SV, recording_detail may be set in the configuration
+  // database, as an int or as a uvm_bitstream_t, before the component is
+  // created
+  if (m_comp_parent != nullptr)
+  {
+    int detail_int = 0;
+    uvm_bitstream_t detail_bits = 0;
+
+    if (uvm_config_db<int>::get(this, "", "recording_detail", detail_int))
+      recording_detail = static_cast<unsigned int>(detail_int);
+    else if (uvm_config_db<uvm_bitstream_t>::get(this, "", "recording_detail", detail_bits))
+      recording_detail = detail_bits.to_uint();
+  }
 }
 
 
@@ -669,10 +709,13 @@ void uvm_component::define_domain( uvm_domain& domain )
 
   if (m_schedule == nullptr)
   {
+    // The schedule becomes part of the domain, and other components and
+    // the common domain refer to it, so it lives as long as the domain
+    // and is not deleted with this component.
     m_schedule = new uvm_phase("uvm_sched", UVM_PHASE_SCHEDULE);
-    m_schedule_list.push_back(m_schedule); // TODO keep track of added schedules (to be deleted afterwards)
     uvm_domain::add_uvm_phases(m_schedule);
     domain.add(m_schedule);
+    domain.m_schedule = m_schedule;
 
     m_common = uvm_domain::get_common_domain();
     if (m_common->find(&domain, false) == nullptr)
@@ -1282,7 +1325,9 @@ void uvm_component::pre_abort()
 void uvm_component::accept_tr( const uvm_transaction& tr,
                                const sc_time& accept_time )
 {
-  //TODO - add transaction recording
+  uvm_transaction* t = const_cast<uvm_transaction*>(&tr);
+  t->accept_tr(accept_time);
+  do_accept_tr(tr);
 }
 
 //----------------------------------------------------------------------------
@@ -1294,14 +1339,15 @@ void uvm_component::accept_tr( const uvm_transaction& tr,
 //----------------------------------------------------------------------------
 
 void uvm_component::do_accept_tr( const uvm_transaction& tr )
-{
-  //TODO - add transaction recording
-}
+{}
 
 //----------------------------------------------------------------------------
 // member function: begin_tr
 //
 //! This function marks the start of a transaction, \p tr, by this component.
+//! When recording is enabled for this component (see recording_detail), it
+//! opens a recorder on the stream \p stream_name of this component, and
+//! returns its handle; it returns 0 otherwise.
 //----------------------------------------------------------------------------
 
 int uvm_component::begin_tr( const uvm_transaction& tr,
@@ -1311,8 +1357,7 @@ int uvm_component::begin_tr( const uvm_transaction& tr,
                              const sc_time& begin_time,
                              int parent_handle )
 {
-  // TODO - add transaction recording
-  return 0; //!dummy
+  return m_begin_tr(tr, parent_handle, stream_name, label, desc, begin_time);
 }
 
 //----------------------------------------------------------------------------
@@ -1320,9 +1365,8 @@ int uvm_component::begin_tr( const uvm_transaction& tr,
 //
 //! This function marks the start of a child transaction, \p tr, by this
 //! component. Its operation is identical to that of #begin_tr, except that
-//! an association is made between this transaction and the provided parent
-//! transaction.
-//! This association is vendor-specific.
+//! the transaction is linked as a child to the transaction of
+//! \p parent_handle.
 //----------------------------------------------------------------------------
 
 int uvm_component::begin_child_tr( const uvm_transaction& tr,
@@ -1332,8 +1376,7 @@ int uvm_component::begin_child_tr( const uvm_transaction& tr,
                                    const std::string& desc,
                                    const sc_time& begin_time )
 {
-  // TODO - add transaction recording
-  return 0; // dummy
+  return m_begin_tr(tr, parent_handle, stream_name, label, desc, begin_time);
 }
 
 //----------------------------------------------------------------------------
@@ -1347,25 +1390,50 @@ int uvm_component::begin_child_tr( const uvm_transaction& tr,
 void uvm_component::do_begin_tr( const uvm_transaction& tr,
                                  const std::string& stream_name,
                                  int tr_handle )
-{
-  // TODO - add transaction recording
-}
+{}
 
 //----------------------------------------------------------------------------
 // member function: end_tr
 //
 //! This function marks the end of a transaction, \p tr, by this component.
+//! When the transaction is recorded, its fields are recorded and its
+//! recorder is closed, and freed unless \p free_handle is false.
 //----------------------------------------------------------------------------
 
 void uvm_component::end_tr( const uvm_transaction& tr,
                             const sc_time& end_time,
                             bool free_handle )
 {
-  // TODO - add transaction recording
+  uvm_transaction* t = const_cast<uvm_transaction*>(&tr);
+  uvm_recorder* recorder = nullptr;
 
-  uvm_transaction* t;
-  t = const_cast<uvm_transaction*>(&tr);
-  t->end_tr(end_time, free_handle); // TODO make const method to avoid const_casting?
+  t->end_tr(end_time, free_handle);
+
+  std::map<const uvm_transaction*, std::pair<int, int> >::iterator it = m_tr_h.find(&tr);
+  if (it != m_tr_h.end())
+  {
+    if (it->second.first == tr.get_inst_id())
+      recorder = uvm_recorder::get_recorder_from_handle(it->second.second);
+    m_tr_h.erase(it);
+  }
+
+  do_end_tr(tr, (recorder == nullptr) ? 0 : recorder->get_handle());
+
+  if (recorder != nullptr)
+  {
+    t->record(recorder);
+    recorder->close(end_time);
+
+    if (free_handle)
+      recorder->free();
+  }
+}
+
+void uvm_component::m_erase_tr_handle( const uvm_transaction* tr, int inst_id )
+{
+  std::map<const uvm_transaction*, std::pair<int, int> >::iterator it = m_tr_h.find(tr);
+  if (it != m_tr_h.end() && it->second.first == inst_id)
+    m_tr_h.erase(it);
 }
 
 //----------------------------------------------------------------------------
@@ -1378,9 +1446,7 @@ void uvm_component::end_tr( const uvm_transaction& tr,
 
 void uvm_component::do_end_tr( const uvm_transaction& tr,
                                int tr_handle )
-{
-  // TODO - add transaction recording
-}
+{}
 
 //----------------------------------------------------------------------------
 // member function: record_error_tr
@@ -1397,8 +1463,8 @@ int uvm_component::record_error_tr( const std::string& stream_name,
                                     const sc_time& error_time,
                                     bool keep_active )
 {
-  // TODO - add transaction recording
-  return 0; // dummy
+  return m_record_tr(stream_name, info, label, desc, error_time, keep_active,
+    keep_active ? "Error, Link" : "Error");
 }
 
 //----------------------------------------------------------------------------
@@ -1414,11 +1480,248 @@ int uvm_component::record_event_tr( const std::string& stream_name,
                                     const sc_time& event_time,
                                     bool keep_active  )
 {
-  // TODO - add transaction recording
-  return 0; // dummy
+  return m_record_tr(stream_name, info, label, desc, event_time, keep_active,
+    keep_active ? "Event, Link" : "Event");
 }
 
+//----------------------------------------------------------------------------
+// member function: get_tr_stream (virtual)
+//
+//! Returns the stream \p name of this component, and opens it when it
+//! does not exist yet
+//----------------------------------------------------------------------------
 
+uvm_tr_stream* uvm_component::get_tr_stream( const std::string& name,
+                                             const std::string& stream_type_name )
+{
+  uvm_tr_stream*& stream = m_streams[name][stream_type_name];
+
+  if (stream == nullptr)
+    stream = get_tr_database()->open_stream(name, get_full_name(), stream_type_name);
+
+  return stream;
+}
+
+//----------------------------------------------------------------------------
+// member function: free_tr_stream (virtual)
+//
+//! Frees a stream of this component which get_tr_stream() returned
+//----------------------------------------------------------------------------
+
+void uvm_component::free_tr_stream( uvm_tr_stream* stream )
+{
+  if (stream == nullptr)
+    return;
+
+  std::map<std::string, std::map<std::string, uvm_tr_stream*> >::iterator it =
+    m_streams.find(stream->get_name());
+
+  if (it == m_streams.end())
+    return;
+
+  std::map<std::string, uvm_tr_stream*>::iterator jt = it->second.find(stream->get_stream_type_name());
+
+  if (jt == it->second.end() || jt->second != stream)
+    return;
+
+  it->second.erase(jt);
+
+  if (it->second.empty())
+    m_streams.erase(it);
+
+  if (stream->is_open() || stream->is_closed())
+    stream->free();
+}
+
+//----------------------------------------------------------------------------
+// member functions: get_tr_database, set_tr_database (virtual)
+//
+//! The transaction database of this component; by default the one of
+//! uvm_coreservice_t::get_default_tr_database()
+//----------------------------------------------------------------------------
+
+uvm_tr_database* uvm_component::get_tr_database()
+{
+  if (m_tr_database == nullptr)
+    m_tr_database = uvm_coreservice_t::get()->get_default_tr_database();
+
+  return m_tr_database;
+}
+
+void uvm_component::set_tr_database( uvm_tr_database* db )
+{
+  m_tr_database = db;
+}
+
+//----------------------------------------------------------------------------
+// member functions: get_recording_enabled, set_recording_enabled(_hier)
+//
+//! Recording is enabled when recording_detail is not UVM_NONE. It is read
+//! from the configuration database when the component is created.
+//----------------------------------------------------------------------------
+
+bool uvm_component::get_recording_enabled() const
+{
+  return recording_detail != UVM_NONE;
+}
+
+void uvm_component::set_recording_enabled( bool enabled )
+{
+  if (get_recording_enabled() != enabled)
+    recording_detail = enabled ? UVM_LOW : UVM_NONE;
+}
+
+void uvm_component::set_recording_enabled_hier( bool enabled )
+{
+  set_recording_enabled(enabled);
+
+  for (m_children_mapcItT it = m_children.begin(); it != m_children.end(); it++)
+    it->second->set_recording_enabled_hier(enabled);
+}
+
+//----------------------------------------------------------------------------
+// member function: m_begin_tr
+//
+// Implementation defined
+//----------------------------------------------------------------------------
+
+int uvm_component::m_begin_tr( const uvm_transaction& tr,
+                               int parent_handle,
+                               const std::string& stream_name,
+                               const std::string& label,
+                               const std::string& desc,
+                               const sc_time& begin_time )
+{
+  uvm_transaction* t = const_cast<uvm_transaction*>(&tr);
+  uvm_recorder* parent_recorder = nullptr;
+  uvm_recorder* link_recorder = nullptr;
+  uvm_recorder* recorder = nullptr;
+  int handle = 0;
+
+  if (parent_handle != 0)
+  {
+    parent_recorder = uvm_recorder::get_recorder_from_handle(parent_handle);
+
+    if (parent_recorder == nullptr)
+      uvm_report_error("ILLHNDL", "begin_tr was passed a non-0 parent handle that "
+        "corresponds to a null recorder", UVM_NONE);
+  }
+  else
+  {
+    // a sequence item is the child of its sequence
+    const uvm_sequence_item* item = dynamic_cast<const uvm_sequence_item*>(&tr);
+    uvm_sequence_base* parent_seq = (item != nullptr) ? item->get_parent_sequence() : nullptr;
+
+    if (parent_seq != nullptr)
+      parent_recorder = uvm_recorder::get_recorder_from_handle(parent_seq->m_tr_handle);
+  }
+
+  const int link_handle = (parent_recorder != nullptr)
+    ? t->begin_tr(begin_time, parent_recorder->get_handle())
+    : t->begin_tr(begin_time);
+
+  if (link_handle != 0)
+    link_recorder = uvm_recorder::get_recorder_from_handle(link_handle);
+
+  const std::string name = tr.get_name().empty() ? tr.get_type_name() : tr.get_name();
+
+  if (get_recording_enabled())
+  {
+    uvm_tr_stream* stream = get_tr_stream(stream_name.empty() ? "main" : stream_name, "TVM");
+
+    if (stream != nullptr)
+    {
+      recorder = stream->open_recorder(name, begin_time,
+        (parent_recorder == nullptr) ? "Begin_No_Parent, Link" : "Begin_End, Link");
+
+      if (recorder != nullptr)
+      {
+        if (!label.empty())
+          recorder->record_string("label", label);
+
+        if (!desc.empty())
+          recorder->record_string("desc", desc);
+
+        if (parent_recorder != nullptr)
+        {
+          uvm_parent_child_link link("pc_link");
+          link.set(parent_recorder, recorder);
+          get_tr_database()->establish_link(&link);
+        }
+
+        if (link_recorder != nullptr)
+        {
+          uvm_related_link link("related_link");
+          link.set(recorder, link_recorder);
+          get_tr_database()->establish_link(&link);
+        }
+
+        // a transaction which is begun again before it ended frees the
+        // recorder of its earlier begin
+        std::map<const uvm_transaction*, std::pair<int, int> >::iterator it = m_tr_h.find(&tr);
+        if (it != m_tr_h.end() && it->second.first == tr.get_inst_id())
+        {
+          uvm_recorder* earlier = uvm_recorder::get_recorder_from_handle(it->second.second);
+          if (earlier != nullptr && earlier != recorder)
+            earlier->free();
+        }
+
+        handle = recorder->get_handle();
+        m_tr_h[&tr] = std::make_pair(tr.get_inst_id(), handle);
+      }
+    }
+  }
+
+  do_begin_tr(tr, stream_name, handle);
+
+  return handle;
+}
+
+//----------------------------------------------------------------------------
+// member function: m_record_tr
+//
+// Implementation defined
+// Records an error or an event transaction
+//----------------------------------------------------------------------------
+
+int uvm_component::m_record_tr( const std::string& stream_name,
+                                uvm_object* info,
+                                const std::string& label,
+                                const std::string& desc,
+                                const sc_time& tr_time,
+                                bool keep_active,
+                                const std::string& kind )
+{
+  const sc_time t = (tr_time == SC_ZERO_TIME) ? sc_time_stamp() : tr_time;
+  uvm_tr_stream* stream = get_tr_stream(stream_name.empty() ? "main" : stream_name, "TVM");
+  int handle = 0;
+
+  if (stream == nullptr)
+    return 0;
+
+  uvm_recorder* recorder = stream->open_recorder(label, t, kind);
+
+  if (recorder == nullptr)
+    return 0;
+
+  if (!label.empty())
+    recorder->record_string("label", label);
+
+  if (!desc.empty())
+    recorder->record_string("desc", desc);
+
+  if (info != nullptr)
+    info->record(recorder);
+
+  recorder->close(t);
+
+  if (keep_active)
+    handle = recorder->get_handle();
+  else
+    recorder->free();
+
+  return handle;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -1432,10 +1735,23 @@ int uvm_component::record_event_tr( const std::string& stream_name,
 
 uvm_component::~uvm_component()
 {
-  // clean memory of dynamically added elements
-  while(!m_schedule_list.empty())
-    delete m_schedule_list.back(), m_schedule_list.pop_back();
+  // the parent shall not refer to a child which is gone
+  if (m_comp_parent != nullptr)
+  {
+    std::map<std::string, uvm_component*>::iterator it =
+      m_comp_parent->m_children.find(get_name());
 
+    if (it != m_comp_parent->m_children.end() && it->second == this)
+      m_comp_parent->m_children.erase(it);
+
+    m_comp_parent->m_children_by_handle.erase(this);
+  }
+
+  // children which outlive this component no longer have a parent
+  for (m_children_mapcItT it = m_children.begin(); it != m_children.end(); it++)
+    it->second->m_comp_parent = nullptr;
+
+  // clean memory of dynamically added elements
   while(!m_config_object_wrapper_list.empty())
     delete m_config_object_wrapper_list.back(), m_config_object_wrapper_list.pop_back();
 }
@@ -1470,7 +1786,7 @@ void uvm_component::do_print( const uvm_printer& printer ) const
   // It is printed only if its value is other than the default (UVM_NONE)
   if(recording_detail != UVM_NONE)
   {
-    int size = 0 ; // TODO get real size of recording_detail?
+    int size = 32; // as in UVM-SV
     static char separator[] = ".";
     switch (recording_detail)
     {
@@ -1558,7 +1874,7 @@ void uvm_component::end_of_simulation()
 
 void uvm_component::m_apply_verbosity_settings( uvm_phase* phase )
 {
-  // TODO
+  uvm_cmdline_settings::apply_verbosity_settings(this, phase->get_name());
 }
 
 //----------------------------------------------------------------------------

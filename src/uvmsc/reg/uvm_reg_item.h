@@ -57,6 +57,8 @@ class uvm_reg_item : public uvm_sequence_item
 
   virtual std::string convert2string() const;
 
+  virtual uvm_object* create( const std::string& name = "" );
+
   virtual void do_copy( const uvm_object& rhs );
 
   UVM_OBJECT_UTILS(uvm_reg_item)

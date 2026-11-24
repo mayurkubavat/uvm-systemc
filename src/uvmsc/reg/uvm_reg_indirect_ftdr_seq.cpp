@@ -43,9 +43,21 @@ uvm_reg_indirect_ftdr_seq::uvm_reg_indirect_ftdr_seq( uvm_reg* addr_reg,
 
 void uvm_reg_indirect_ftdr_seq::body()
 {
-   uvm_reg_item* rw;
+   if (rw_info == nullptr || m_addr_reg == nullptr || m_data_reg == nullptr)
+   {
+     if (rw_info != nullptr)
+       rw_info->status = UVM_NOT_OK;
+     return;
+   }
 
-   rw = dynamic_cast<uvm_reg_item*>(rw_info->clone());
+   uvm_reg_item* rw = dynamic_cast<uvm_reg_item*>(rw_info->clone());
+   if (rw == nullptr)
+   {
+     rw_info->status = UVM_NOT_OK;
+     return;
+   }
+   if (rw->value.empty())
+     rw->value.resize(1);
 
    rw->element = m_addr_reg;
    rw->access_kind = UVM_WRITE;
@@ -57,9 +69,26 @@ void uvm_reg_indirect_ftdr_seq::body()
    m_addr_reg->do_write(rw);
 
    if (rw->status == UVM_NOT_OK)
+   {
+     rw_info->status = UVM_NOT_OK;
+     delete rw;
+     m_addr_reg->m_atomic_check_lock(false);
+     m_data_reg->m_atomic_check_lock(false);
      return;
+   }
 
+   delete rw;
    rw = dynamic_cast<uvm_reg_item*>(rw_info->clone());
+   if (rw == nullptr)
+   {
+     rw_info->status = UVM_NOT_OK;
+     m_addr_reg->m_atomic_check_lock(false);
+     m_data_reg->m_atomic_check_lock(false);
+     return;
+   }
+   if (rw->value.empty())
+     rw->value.resize(1);
+
    rw->element = m_data_reg;
 
    if (rw_info->access_kind == UVM_WRITE)
@@ -67,6 +96,8 @@ void uvm_reg_indirect_ftdr_seq::body()
    else
    {
      m_data_reg->do_read(rw);
+     if (rw_info->value.empty())
+       rw_info->value.resize(1);
      rw_info->value[0] = rw->value[0];
    }
 
@@ -74,6 +105,7 @@ void uvm_reg_indirect_ftdr_seq::body()
    m_data_reg->m_atomic_check_lock(false);
 
    rw_info->status = rw->status;
+   delete rw;
 }
 
 } // namespace uvm

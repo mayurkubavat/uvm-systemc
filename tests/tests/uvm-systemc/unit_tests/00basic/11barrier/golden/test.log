@@ -1,0 +1,44 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+barrier from the pool: sync
+25 ns: two arrived: 2 waiting, threshold 3
+  passed at 30 ns a1
+  passed at 30 ns a2
+  passed at 30 ns a3
+50 ns: after the third: 0 waiting, threshold 3
+60 ns: one more arrived: 1 waiting, threshold 3
+  passed at 60 ns b1
+70 ns: threshold lowered: 0 waiting, threshold 1
+80 ns: after cancel: 1 waiting, threshold 4
+  passed at 80 ns c1
+  passed at 80 ns c2
+90 ns: after reset: 0 waiting, threshold 4
+95 ns: after reset without wakeup: 0 waiting, threshold 3
+100 ns: two new ones: 2 waiting, threshold 3
+  passed at 100 ns e3
+  passed at 100 ns e4
+  passed at 100 ns e5
+105 ns: the third new one: 0 waiting, threshold 3
+  passed at 110 ns d1
+  passed at 110 ns d2
+  passed at 115 ns d3
+125 ns: barrier stays open: 0 waiting, threshold 2
+----------------------------------------
+Name            Type         Size  Value
+----------------------------------------
+sync            uvm_barrier  -     @<removed by verify-uvm.pl>
+  threshold     int          32    2
+  num_waiters   int          32    0
+  at_threshold  bit          1     'b1
+  auto_reset    bit          1     'b0
+----------------------------------------
+UVM_INFO <removed by verify-uvm.pl> @ 125 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   1
+UVM_WARNING   :   0
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[RNTST]                 1
+UVM_INFO @ 125 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

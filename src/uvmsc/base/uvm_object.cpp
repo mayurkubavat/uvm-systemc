@@ -91,6 +91,25 @@ uvm_object::uvm_object( uvm_object_name name)
   m_register_cb();
 }
 
+uvm_object::uvm_object( const uvm_object& rhs )
+  : m_leaf_name( rhs.m_leaf_name ),
+    m_full_name( rhs.m_full_name ),
+    m_inst_id( g_inst_count++ )
+{
+  if (uvm_object::__m_uvm_status_container == nullptr)
+    __m_uvm_status_container = new uvm_status_container();
+}
+
+uvm_object& uvm_object::operator=( const uvm_object& rhs )
+{
+  if (this != &rhs)
+  {
+    m_leaf_name = rhs.m_leaf_name;
+    m_full_name = rhs.m_full_name;
+  }
+  return *this;
+}
+
 //----------------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------------
@@ -363,10 +382,9 @@ std::string uvm_object::convert2string() const
 //! overloaded. To include additional fields in the record operation, derived
 //! classes should override the member function #do_record.
 //!
-//! The optional ~recorder~ argument specifies the recording policy, which
-//! governs how recording takes place. If a recorder policy is not provided
-//!explicitly, then the global #uvm_default_recorder policy is used. See
-//! uvm_recorder for information.
+//! The ~recorder~ argument specifies the recorder, which governs how
+//! recording takes place. Without a recorder nothing is recorded, as in
+//! UVM-SV. See uvm_recorder for information.
 //!
 //! A simulator's recording mechanism is vendor-specific. By providing access
 //! via a common interface, the uvm_recorder policy provides vendor-independent
@@ -375,24 +393,12 @@ std::string uvm_object::convert2string() const
 
 void uvm_object::record( uvm_recorder* recorder )
 {
-  if(recorder == nullptr)
-    recorder = new uvm_recorder();
-
-  if(!recorder->tr_handle)
+  if (recorder == nullptr)
     return;
 
   __m_uvm_status_container->recorder = recorder;
 
-  recorder->recording_depth++;
-  //__m_uvm_field_automation(null, UVM_RECORD, ""); // TODO field automation
-  do_record(*recorder);
-
-  recorder->recording_depth--;
-
-  if(recorder->recording_depth == 0)
-  {
-    recorder->tr_handle = 0;
-  }
+  recorder->record_object(get_name(), this);
 }
 
 //----------------------------------------------------------------------------

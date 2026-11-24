@@ -54,7 +54,26 @@ template <typename REQ = uvm_sequence_item, typename RSP = REQ>
 class uvm_sequencer_param_base : public uvm_sequencer_base
 {
  public:
-  tlm::tlm_fifo<REQ> m_req_fifo;
+  class uvm_req_fifo : public tlm::tlm_fifo<REQ>
+  {
+   public:
+    uvm_req_fifo( const char* name_, int size_ ) : tlm::tlm_fifo<REQ>(name_, size_) {}
+
+    bool clear_all()
+    {
+      const bool had_items = (this->buffer.used() > 0) || (this->m_num_written > 0);
+      this->buffer.clear();
+      this->m_num_readable = 0;
+      this->m_num_read = 0;
+      this->m_num_written = 0;
+      this->m_expand = false;
+      this->m_num_read_no_notify = 0;
+      this->m_data_written_event.cancel();
+      return had_items;
+    }
+  };
+
+  uvm_req_fifo m_req_fifo;
   //tlm::tlm_analysis_fifo<REQ> m_req_fifo; // TODO add analysis fifo
 
   uvm_analysis_export<RSP> rsp_export;
@@ -92,11 +111,15 @@ class uvm_sequencer_param_base : public uvm_sequencer_base
   virtual const char* kind() const; // SystemC API
   virtual const std::string get_type_name() const;
   void put_response_base( const RSP& rsp );
+  virtual void analysis_write( const uvm_sequence_item& t );
   void m_last_req_push_front( const REQ& item );
   void m_last_rsp_push_front( const RSP& item );
 
   virtual void connect_phase( uvm_phase& phase );
   virtual void build_phase( uvm_phase& phase );
+
+ protected:
+  bool m_wait_for_req_item();
 
  private:
   // class data members
@@ -186,6 +209,28 @@ void uvm_sequencer_param_base<REQ,RSP>::build_phase(uvm_phase& phase)
 }
 
 //----------------------------------------------------------------------
+// member function: analysis_write (virtual)
+//
+// Implementation defined
+// Passes a response which a driver wrote to rsp_export on to its
+// sequence, as put_response() does.
+//----------------------------------------------------------------------
+
+template <typename REQ, typename RSP>
+void uvm_sequencer_param_base<REQ,RSP>::analysis_write( const uvm_sequence_item& t )
+{
+  const RSP* response = dynamic_cast<const RSP*>(&t);
+
+  if (response == nullptr)
+  {
+    uvm_report_fatal("ANALWRT", "Failure to cast analysis port write item", UVM_NONE);
+    return;
+  }
+
+  put_response_base(*response);
+}
+
+//----------------------------------------------------------------------
 // member function: send_request
 //
 //! The send_request function may only be called after a #wait_for_grant call.
@@ -214,17 +259,13 @@ void uvm_sequencer_param_base<REQ,RSP>::send_request( uvm_sequence_base* sequenc
 
   if (param_tp != nullptr)
   {
-    param_t = *param_tp; // TODO workaround: dereference to get const REQ& for the TLM put. Alternative?
-
     if (rerandomize)
     {
-      // TODO no randomization for UVM-SC yet
-      // report error is dummy for now
-      uvm_report_error("SEQR-RND", "Randomization not implemented and thus skipped", UVM_NONE);
-
-      //if (!param_t->randomize())
-      //  uvm_report_warning("SQRSNDREQ", "Failed to rerandomize sequence item in send_request");
+      if (!seq_item->m_uvm_randomize())
+        uvm_report_warning("SQRSNDREQ", "Failed to rerandomize sequence item in send_request");
     }
+
+    param_t = *param_tp; // TODO workaround: dereference to get const REQ& for the TLM put. Alternative?
 
     if (param_t.get_transaction_id() == -1)
       param_t.set_transaction_id(sequence_ptr->m_next_transaction_id++);
@@ -237,6 +278,7 @@ void uvm_sequencer_param_base<REQ,RSP>::send_request( uvm_sequence_base* sequenc
     uvm_report_fatal(name(),"Send_request failed to cast sequence item", UVM_NONE);
 
   seq_item->set_sequencer(this);
+  this->m_mark_grant_fulfilled(sequence_ptr);
 
   if (!m_req_fifo.nb_put(param_t))
   {
@@ -473,7 +515,9 @@ void uvm_sequencer_param_base<REQ,RSP>::put_response_base(const RSP& rsp)
       sequence_ptr->response_handler(&rsp);
       return;
     }
-    sequence_ptr->put_response(rsp);
+    RSP* item = new RSP(rsp.get_name() + "_q");
+    *item = rsp;
+    sequence_ptr->put_response(*item);
   }
   else
   {
@@ -481,6 +525,23 @@ void uvm_sequencer_param_base<REQ,RSP>::put_response_base(const RSP& rsp)
     str << "Dropping response for sequence '" << rsp.get_name() << "' (id= " << rsp.get_sequence_id() << "), since sequence is not found. Probable cause: sequence exited or has been killed.";
     uvm_report_info("Sequencer", str.str() );
   }
+}
+
+template <typename REQ, typename RSP>
+bool uvm_sequencer_param_base<REQ,RSP>::m_wait_for_req_item()
+{
+  while (!this->m_req_fifo.nb_can_peek())
+  {
+    if (this->m_check_and_clear_aborted_grant())
+      return false;
+
+    sc_core::sc_event_or_list ev =
+      this->m_req_fifo.ok_to_peek() | this->m_grant_cancelled_ev;
+    if (this->m_granted_seq != nullptr && this->m_granted_proc.valid())
+      ev |= this->m_granted_proc.terminated_event();
+    sc_core::wait(ev);
+  }
+  return true;
 }
 
 //----------------------------------------------------------------------

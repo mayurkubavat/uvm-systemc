@@ -1,24 +1,36 @@
 target_sources (uvm-systemc PRIVATE
+  uvm_cmdline_processor.cpp
+  uvm_cmdline_settings.cpp
   uvm_component.cpp
   uvm_component_name.cpp
   uvm_coreservice_t.cpp
   uvm_default_coreservice_t.cpp
+  uvm_enum_wrapper.cpp
   uvm_event_callback.cpp
+  uvm_barrier.cpp
   uvm_event.cpp
+  uvm_heartbeat.cpp
   uvm_globals.cpp
   uvm_mutex.cpp
   uvm_object.cpp
   uvm_object_globals.cpp
   uvm_root.cpp
+  uvm_run_test_callback.cpp
   uvm_transaction.cpp
+  uvm_traversal.cpp
   uvm_version.cpp
   uvm_base.h
+  uvm_cmdline_processor.h
+  uvm_cmdline_settings.h
   uvm_component.h
   uvm_component_name.h
   uvm_coreservice_t.h
   uvm_default_coreservice_t.h
+  uvm_enum_wrapper.h
   uvm_event_callback.h
+  uvm_barrier.h
   uvm_event.h
+  uvm_heartbeat.h
   uvm_export_base.h
   uvm_globals.h
   uvm_mutex.h
@@ -26,18 +38,24 @@ target_sources (uvm-systemc PRIVATE
   uvm_object_globals.h
   uvm_port_base.h
   uvm_root.h
+  uvm_run_test_callback.h
   uvm_transaction.h
+  uvm_traversal.h
   uvm_void.h
   uvm_version.h)
 
 install_headers (
   uvm_base.h
+  uvm_cmdline_processor.h
   uvm_component.h
   uvm_component_name.h
   uvm_coreservice_t.h
   uvm_default_coreservice_t.h
+  uvm_enum_wrapper.h
   uvm_event_callback.h
+  uvm_barrier.h
   uvm_event.h
+  uvm_heartbeat.h
   uvm_export_base.h
   uvm_globals.h
   uvm_mutex.h
@@ -45,6 +63,8 @@ install_headers (
   uvm_object_globals.h
   uvm_port_base.h
   uvm_root.h
+  uvm_run_test_callback.h
   uvm_transaction.h
+  uvm_traversal.h
   uvm_void.h
   uvm_version.h)

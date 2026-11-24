@@ -44,9 +44,11 @@ class uvm_report_message;
 
 class uvm_sequence_item: public uvm_transaction
 {
+  friend class uvm_sequence_base;
   friend class uvm_sequencer_base;
   template <typename REQ, typename RSP> friend class uvm_sequencer_param_base;
   template <typename REQ, typename RSP> friend class uvm_sequencer;
+  template <typename REQ, typename RSP> friend class uvm_push_sequencer;
 
  public:
   //--------------------------------------------------------------------------
@@ -55,6 +57,8 @@ class uvm_sequence_item: public uvm_transaction
 
   uvm_sequence_item();
   explicit uvm_sequence_item( uvm_object_name name_ );
+  uvm_sequence_item( const uvm_sequence_item& rhs );
+  uvm_sequence_item& operator=( const uvm_sequence_item& rhs );
 
   virtual ~uvm_sequence_item();
 
@@ -156,6 +160,8 @@ class uvm_sequence_item: public uvm_transaction
 
   virtual void do_print( const uvm_printer& printer ) const;
 
+  virtual bool m_uvm_randomize();
+
 
 protected:
 
@@ -166,6 +172,7 @@ protected:
  private:
 
   virtual void m_set_p_sequencer();
+  void m_cleanup_tr_tracking();
 
   // member variables below
 
@@ -180,6 +187,9 @@ protected:
   bool m_use_sequence_info;
   int m_sequence_id;
   mutable int m_depth;
+  uvm_sequence_base* m_tr_seq;
+  uvm_sequencer_base* m_tr_sqr;
+  int m_tr_sqr_handle;
 
 };
 

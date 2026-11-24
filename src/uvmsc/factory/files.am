@@ -1,4 +1,6 @@
 H_FILES += \
+	factory/uvm_abstract_component_registry.h \
+	factory/uvm_abstract_object_registry.h \
 	factory/uvm_component_registry.h \
 	factory/uvm_default_factory.h \
 	factory/uvm_fact_reg.h \

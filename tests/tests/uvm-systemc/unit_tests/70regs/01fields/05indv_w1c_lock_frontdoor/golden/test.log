@@ -1,0 +1,53 @@
+SystemC Simulation
+UVM_INFO @ 0 s: reporter [RNTST] Running test test...
+UVM_INFO <removed by verify-uvm.pl> @ 0 s: reporter [REG_NO_ADAPT] Adapter not specified for map 'blk.map2'. Accesses via this map will send abstract 'uvm_reg_item' items to sequencer 'test.sqr2'
+UVM_WARNING <removed by verify-uvm.pl> @ 0 s: reporter [RegModel] Target bus does not support byte enabling, and the field 'blk.r_mix.f_rw' is not the only field within the entire bus width. Individual field access will not be available. Accessing complete register instead.
+sibling_write=0x455
+ro_after_set0=1
+w1c_update=0x1
+UVM_WARNING <removed by verify-uvm.pl> @ 2 ns: reporter [RegModel] Register 'blk.r_mix' is not contained within map 'blk.map2' (called from write())
+UVM_WARNING <removed by verify-uvm.pl> @ 2 ns: reporter [RegModel] Register 'blk.r_mix' is not contained within map 'blk.map2' (called from read())
+caught_unmapped=2 thread1b=1 stuck_reading=0
+fd_w=1 wk=1 fd_r=1 rk=1 rval=0xab
+UVM_WARNING <removed by verify-uvm.pl> @ 7 ns: reporter [RegModel] Target bus does not support byte enabling, and the field 'blk.r_mix.f_rw' is not the only field within the entire bus width. Individual field access will not be available. Accessing complete register instead.
+thread2_done=1
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'blk.r_mix' is not contained within map 'blk.map2' (called from get_frontdoor())
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Target bus does not support byte enabling, and the field 'blk.r_mix.f_rw' is not the only field within the entire bus width. Individual field access will not be available. Accessing complete register instead.
+no_adp_indv=0
+indv_pw_pred_ok=1
+indv_bkdr_ok=1 rval=0x7e
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' has no parent block or regfile for default HDL path
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' has no parent block or regfile for default HDL path
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' has no parent block or regfile for default HDL path
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' has no parent block or regfile for default HDL path
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] No backdoor access available for register 'parentless_reg' . Using frontdoor instead.
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' is not registered with any map
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' has no parent block or regfile for default HDL path
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] No backdoor access available for register 'parentless_reg' . Using frontdoor instead.
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' is not registered with any map
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' has no parent block or regfile for default HDL path
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] Register 'parentless_reg' has no parent block or regfile for default HDL path
+UVM_WARNING <removed by verify-uvm.pl> @ 27 ns: reporter [RegModel] uvm_reg_field::poke(): Value exceeds size of field 'unconf_f'
+parentless_ok=1 null_errs=12 sm_rval=0xa5
+** UVM TEST PASSED **
+UVM_INFO <removed by verify-uvm.pl> @ 29 ns: reporter [UVM/REPORT/CATCHER]
+--- UVM Report catcher Summary ---
+Number of demoted UVM_FATAL reports  :    0
+Number of demoted UVM_ERROR reports  :    0
+Number of demoted UVM_WARNING reports:    0
+Number of caught UVM_FATAL reports   :    0
+Number of caught UVM_ERROR reports   :   14
+Number of caught UVM_WARNING reports :    0
+UVM_INFO <removed by verify-uvm.pl> @ 29 ns: reporter [UVM/REPORT/SERVER]
+--- UVM Report Summary ---
+** Report counts by severity
+UVM_INFO      :   3
+UVM_WARNING   :  18
+UVM_ERROR     :   0
+UVM_FATAL     :   0
+** Report counts by id
+[REG_NO_ADAPT]          1
+[RNTST]                 1
+[RegModel]             18
+[UVM/REPORT/CATCHER]    1
+UVM_INFO @ 29 ns: reporter [FINISH] UVM-SystemC phasing completed; simulation finished

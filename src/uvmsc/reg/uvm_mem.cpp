@@ -537,7 +537,47 @@ uvm_vreg_field* uvm_mem::get_vfield_by_name( const std::string& name ) const
 uvm_vreg* uvm_mem::get_vreg_by_offset( uvm_reg_addr_t offset,
                                        const uvm_reg_map* map ) const
 {
-  UVM_ERROR("RegModel", "uvm_mem::get_vreg_by_offset() not yet implemented");
+  uint64_t mem_off = offset.to_uint64();
+
+  if (map != nullptr)
+  {
+    uvm_reg_map* lmap = get_local_map(map, "get_vreg_by_offset()");
+    if (lmap == nullptr)
+      return nullptr;
+    uvm_reg_map_info* map_info = lmap->get_mem_map_info(this);
+    if (map_info == nullptr || map_info->unmapped)
+      return nullptr;
+
+    const uint64_t min_addr = map_info->mem_range.min.to_uint64();
+    const uint64_t max_addr = map_info->mem_range.max.to_uint64();
+    const uint64_t stride = map_info->mem_range.stride;
+    if (mem_off < min_addr || mem_off > max_addr || stride == 0)
+      return nullptr;
+    const uint64_t delta = mem_off - min_addr;
+    if ((delta % stride) != 0)
+      return nullptr;
+    mem_off = delta / stride;
+  }
+
+  std::vector<uvm_vreg*> vregs;
+  get_virtual_registers(vregs);
+  for (std::size_t i = 0; i < vregs.size(); ++i)
+  {
+    uvm_vreg* vr = vregs[i];
+    if (vr == nullptr || vr->get_size() == 0)
+      continue;
+    const uint64_t base0 = vr->get_offset_in_memory(0).to_uint64();
+    const unsigned int incr = vr->get_incr();
+    const unsigned int n_locs = vr->get_n_memlocs();
+    if (mem_off < base0 || incr == 0)
+      continue;
+    const uint64_t rel = mem_off - base0;
+    const uint64_t elem_idx = rel / incr;
+    const uint64_t loc_in_elem = rel % incr;
+    if (elem_idx < vr->get_size() && loc_in_elem < n_locs)
+      return vr;
+  }
+
   return nullptr;
 }
 
@@ -1449,7 +1489,8 @@ void uvm_mem::backdoor_write( uvm_reg_item* rw )
 uvm_status_e uvm_mem::backdoor_read_func( uvm_reg_item* rw )
 {
   std::vector<uvm_hdl_path_concat> paths;
-  uvm_hdl_data_t val;
+  // the type which backdoor_write() deposits
+  uvm_reg_data_t val;
   bool ok = true;
 
   get_full_hdl_path(paths, rw->bd_kind);
@@ -2057,7 +2098,7 @@ void uvm_mem::do_write( uvm_reg_item* rw )
 
     if (rw->status != UVM_NOT_OK)
       for ( uvm_reg_addr_t idx = rw->offset;
-          idx <= rw->offset + rw->value.size();
+          idx < rw->offset + rw->value.size();
           idx++ )
       {
         m_sample(map_info->mem_range.stride * idx, 0, rw->map);
@@ -2174,7 +2215,7 @@ void uvm_mem::do_read( uvm_reg_item* rw )
 
     if (rw->status != UVM_NOT_OK)
       for (uvm_reg_addr_t idx = rw->offset;
-          idx <= rw->offset + rw->value.size();
+          idx < rw->offset + rw->value.size();
           idx++ )
       {
         m_sample(map_info->mem_range.stride * idx, 1, rw->map);

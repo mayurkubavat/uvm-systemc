@@ -23,6 +23,7 @@
 //   permissions and limitations under the License.
 //-----------------------------------------------------------------------------
 
+#include "uvmsc/conf/uvm_resource_db.h"
 #include "uvmsc/reg/uvm_reg_indirect_data.h"
 #include "uvmsc/reg/uvm_reg_indirect_ftdr_seq.h"
 #include "uvmsc/reg/uvm_reg_frontdoor.h"
@@ -77,9 +78,8 @@ void uvm_reg_indirect_data::configure( uvm_reg* idx,
 
   // Not testable using pre-defined sequences
 
-  // TODO support normal types in uvm_resource_db
-  //uvm_resource_db<bool>::set("REG::" + get_full_name(),
-  //    "NO_REG_TESTS", true);
+  uvm_resource_db<bool>::set("REG::" + get_full_name(),
+      "NO_REG_TESTS", true, this);
 
   // Add a frontdoor to each indirectly-accessed register
   // for every address map this register is in.
@@ -125,6 +125,15 @@ void uvm_reg_indirect_data::add_map( uvm_reg_map* map )
 
 void uvm_reg_indirect_data::add_frontdoors( uvm_reg_map* map )
 {
+  if (map == nullptr || m_tbl.empty())
+    return;
+
+  if (m_idx == nullptr)
+  {
+    UVM_ERROR(get_full_name(), "Indirect address register is null; cannot add frontdoors.");
+    return;
+  }
+
   for( unsigned int i = 0; i < m_tbl.size(); i++)
   {
     uvm_reg_indirect_ftdr_seq* fd;
@@ -159,13 +168,21 @@ void uvm_reg_indirect_data::do_predict( uvm_reg_item* rw,
                                         uvm_predict_e kind,
                                         uvm_reg_byte_en_t be )
 {
-  if (m_idx->get() >= m_tbl.size())
+  if (m_idx == nullptr)
+  {
+    UVM_ERROR(get_full_name(), "Indirect address register is null.");
+    rw->status = UVM_NOT_OK;
+    return;
+  }
+
+  uvm_reg_data_t idx_val = m_idx->get();
+  if (idx_val >= m_tbl.size())
   {
     std::ostringstream str;
     str << "Address register "
         << m_idx->get_full_name()
         << " has a value ("
-        << m_idx->get()
+        << idx_val
         << ") greater than the maximum indirect register array size ("
         << m_tbl.size()
         << ").";
@@ -174,11 +191,17 @@ void uvm_reg_indirect_data::do_predict( uvm_reg_item* rw,
     return;
   }
 
-  //NOTE limit to 2**32 registers
+  std::size_t idx = static_cast<std::size_t>(idx_val.to_uint64());
+  if (m_tbl[idx] == nullptr)
   {
-    unsigned int idx = m_idx->get();
-    m_tbl[idx]->do_predict(rw, kind, be);
+    std::ostringstream str;
+    str << "Indirect register at index " << idx << " is null.";
+    UVM_ERROR(get_full_name(), str.str());
+    rw->status = UVM_NOT_OK;
+    return;
   }
+
+  m_tbl[idx]->do_predict(rw, kind, be);
 }
 
 //-----------------------------------------------------------------------------
@@ -190,6 +213,11 @@ void uvm_reg_indirect_data::do_predict( uvm_reg_item* rw,
 uvm_reg_map* uvm_reg_indirect_data::get_local_map( const uvm_reg_map* map,
                                                    const std::string& caller ) const
 {
+  if (m_idx == nullptr)
+  {
+    UVM_ERROR(get_full_name(), "Indirect address register is null.");
+    return nullptr;
+  }
   return m_idx->get_local_map(map,caller);
 }
 
@@ -243,8 +271,37 @@ uvm_reg_data_t uvm_reg_indirect_data::get( const std::string& fname,
 uvm_reg* uvm_reg_indirect_data::get_indirect_reg( const std::string& fname,
                                                   int lineno ) const
 {
-  unsigned int idx = m_idx->get_mirrored_value();
-  return(m_tbl[idx]);
+  if (m_idx == nullptr)
+  {
+    UVM_ERROR(get_full_name(), "Indirect address register is null.");
+    return nullptr;
+  }
+
+  uvm_reg_data_t idx_val = m_idx->get_mirrored_value();
+  if (idx_val >= m_tbl.size())
+  {
+    std::ostringstream str;
+    str << "Address register "
+        << m_idx->get_full_name()
+        << " has a mirrored value ("
+        << idx_val
+        << ") greater than or equal to the indirect register array size ("
+        << m_tbl.size()
+        << ").";
+    UVM_ERROR(get_full_name(), str.str());
+    return nullptr;
+  }
+
+  std::size_t idx = static_cast<std::size_t>(idx_val.to_uint64());
+  if (m_tbl[idx] == nullptr)
+  {
+    std::ostringstream str;
+    str << "Indirect register at index " << idx << " is null.";
+    UVM_ERROR(get_full_name(), str.str());
+    return nullptr;
+  }
+
+  return m_tbl[idx];
 }
 
 //-----------------------------------------------------------------------------
@@ -277,6 +334,12 @@ void uvm_reg_indirect_data::write( uvm_status_e& status,
   if (path == UVM_DEFAULT_PATH)
   {
     uvm_reg_block* blk = get_parent();
+    if (blk == nullptr)
+    {
+      UVM_ERROR(get_full_name(), "Indirect data register has no parent block");
+      status = UVM_NOT_OK;
+      return;
+    }
     path = blk->get_default_path();
   }
 
@@ -334,6 +397,12 @@ void uvm_reg_indirect_data::read( uvm_status_e&      status,
   if (path == UVM_DEFAULT_PATH)
   {
     uvm_reg_block* blk = get_parent();
+    if (blk == nullptr)
+    {
+      UVM_ERROR(get_full_name(), "Indirect data register has no parent block");
+      status = UVM_NOT_OK;
+      return;
+    }
     path = blk->get_default_path();
   }
 

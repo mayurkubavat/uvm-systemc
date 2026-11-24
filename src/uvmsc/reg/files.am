@@ -1,4 +1,5 @@
 H_FILES += \
+	reg/uvm_fc4sc_reg_cvr.h \
 	reg/uvm_hdl_path_concat.h \
 	reg/uvm_mem.h \
 	reg/uvm_mem_mam.h \
@@ -21,6 +22,7 @@ H_FILES += \
 	reg/uvm_reg_item.h \
 	reg/uvm_reg_layer.h \
 	reg/uvm_reg_map.h \
+	reg/uvm_reg_transaction_order_policy.h \
 	reg/uvm_reg_model.h \
 	reg/uvm_reg_predictor.h \
 	reg/uvm_reg_read_only_cbs.h \
@@ -28,12 +30,20 @@ H_FILES += \
 	reg/uvm_reg_tlm_adapter.h \
 	reg/uvm_reg_write_only_cbs.h \
 	reg/uvm_sc_if.h \
+	reg/uvm_verilator_reg_backdoor.h \
 	reg/uvm_vreg.h \
 	reg/uvm_vreg_cbs.h \
 	reg/uvm_vreg_field.h \
 	reg/uvm_vreg_field_cbs.h \
+    reg/sequences/uvm_mem_access_seq.h \
+    reg/sequences/uvm_mem_walk_seq.h \
+    reg/sequences/uvm_reg_access_seq.h \
     reg/sequences/uvm_reg_bit_bash_seq.h \
-    reg/sequences/uvm_reg_mem_hdl_paths_seq.h
+    reg/sequences/uvm_reg_hw_reset_seq.h \
+    reg/sequences/uvm_reg_mem_built_in_seq.h \
+    reg/sequences/uvm_reg_mem_hdl_paths_seq.h \
+    reg/sequences/uvm_reg_mem_shared_access_seq.h \
+    reg/sequences/uvm_reg_randval.h
 
 CXX_FILES += \
 	reg/uvm_mem.cpp \

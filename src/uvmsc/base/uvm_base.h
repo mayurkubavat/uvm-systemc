@@ -21,18 +21,24 @@
 #define UVM_BASE_H_
 
 #include "uvmsc/base/uvm_root.h"
+#include "uvmsc/base/uvm_cmdline_processor.h"
 #include "uvmsc/base/uvm_coreservice_t.h"
 #include "uvmsc/base/uvm_default_coreservice_t.h"
+#include "uvmsc/base/uvm_enum_wrapper.h"
 #include "uvmsc/base/uvm_component_name.h"
 #include "uvmsc/base/uvm_globals.h"
 #include "uvmsc/base/uvm_component.h"
 #include "uvmsc/base/uvm_mutex.h"
 #include "uvmsc/base/uvm_object.h"
 #include "uvmsc/base/uvm_object_globals.h"
+#include "uvmsc/base/uvm_run_test_callback.h"
 #include "uvmsc/base/uvm_transaction.h"
+#include "uvmsc/base/uvm_traversal.h"
 #include "uvmsc/base/uvm_port_base.h"
 #include "uvmsc/base/uvm_export_base.h"
 #include "uvmsc/base/uvm_event.h"
+#include "uvmsc/base/uvm_barrier.h"
 #include "uvmsc/base/uvm_event_callback.h"
+#include "uvmsc/base/uvm_heartbeat.h"
 
 #endif /* UVM_BASE_H_ */
